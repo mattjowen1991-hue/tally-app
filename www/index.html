@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0e27">
+  <title>Tally</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="/assets/index-Bdtr5HGQ.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CwURKJsu.css">
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Splash Screen (pure HTML/SVG/SMIL - runs before React mounts) -->
+  <div class="splash-screen" id="splash">
+    <div class="splash-stack">
+      <svg class="splash-logo" width="120" height="120" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" aria-label="Tally logo" role="img">
+        <defs>
+          <linearGradient id="splashGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#1E63D6" />
+            <stop offset="100%" stop-color="#34C759" />
+          </linearGradient>
+        </defs>
+        <g transform="rotate(-4 69 130)">
+          <rect x="58" y="52" width="22" height="0" rx="14" fill="url(#splashGrad)">
+            <animate attributeName="height" values="0;156" dur="0.24s" begin="indefinite" fill="freeze" calcMode="spline" keySplines="0.22 0.9 0.25 1" class="anim-bar1"/>
+          </rect>
+        </g>
+        <g transform="rotate(2 107 128)">
+          <rect x="94" y="48" width="26" height="0" rx="14" fill="url(#splashGrad)">
+            <animate attributeName="height" values="0;160" dur="0.24s" begin="indefinite" fill="freeze" calcMode="spline" keySplines="0.22 0.9 0.25 1" class="anim-bar2"/>
+          </rect>
+        </g>
+        <g transform="rotate(-2 143.5 129)">
+          <rect x="132" y="54" width="23" height="0" rx="14" fill="url(#splashGrad)">
+            <animate attributeName="height" values="0;150" dur="0.24s" begin="indefinite" fill="freeze" calcMode="spline" keySplines="0.22 0.9 0.25 1" class="anim-bar3"/>
+          </rect>
+        </g>
+        <g transform="rotate(3 180.5 129)">
+          <rect x="168" y="50" width="25" height="0" rx="14" fill="url(#splashGrad)">
+            <animate attributeName="height" values="0;158" dur="0.24s" begin="indefinite" fill="freeze" calcMode="spline" keySplines="0.22 0.9 0.25 1" class="anim-bar4"/>
+          </rect>
+        </g>
+        <path d="M38 170 Q128 120 220 92" fill="none" stroke="url(#splashGrad)" stroke-width="20" stroke-linecap="round" stroke-dasharray="420" stroke-dashoffset="420">
+          <animate attributeName="stroke-dashoffset" values="420;0" dur="0.42s" begin="indefinite" fill="freeze" calcMode="spline" keySplines="0.22 0.9 0.25 1" class="anim-strike"/>
+        </path>
+      </svg>
+
+      <svg class="splash-text" width="280" height="90" viewBox="0 0 520 170" xmlns="http://www.w3.org/2000/svg" aria-label="Tally" role="img" style="margin-top:14px;">
+        <defs>
+          <linearGradient id="splashWordGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#2F6BFF" />
+            <stop offset="55%" stop-color="#22C3A6" />
+            <stop offset="100%" stop-color="#7AD957" />
+          </linearGradient>
+          <mask id="wordRevealDiag">
+            <rect x="-300" y="-260" width="0" height="520" fill="#fff" transform="rotate(-12 260 85)">
+              <animate attributeName="width" values="0;1100" dur="0.52s" begin="indefinite" fill="freeze" calcMode="spline" keySplines="0.22 0.9 0.25 1" class="anim-reveal"/>
+            </rect>
+          </mask>
+        </defs>
+        <g mask="url(#wordRevealDiag)">
+          <text x="260" y="118" text-anchor="middle" fill="url(#splashWordGrad)" font-size="110" font-weight="800" letter-spacing="-6" font-family="ui-rounded, 'SF Pro Rounded', Nunito, Quicksand, 'Avenir Next Rounded', 'Segoe UI', system-ui, -apple-system, Arial" transform="skewX(-6)">
+            <tspan>T</tspan><tspan dx="-16" dy="4">a</tspan><tspan dy="-3">l</tspan><tspan dy="5">l</tspan><tspan dy="-4">y</tspan>
+          </text>
+        </g>
+        <g mask="url(#wordRevealDiag)">
+          <text x="260" y="118" text-anchor="middle" fill="url(#splashWordGrad)" fill-opacity="0" font-size="110" font-weight="800" letter-spacing="-6" font-family="ui-rounded, 'SF Pro Rounded', Nunito, Quicksand, 'Avenir Next Rounded', 'Segoe UI', system-ui, -apple-system, Arial" transform="skewX(-6)">
+            <tspan>T</tspan><tspan dx="-16" dy="4">a</tspan><tspan dy="-3">l</tspan><tspan dy="5">l</tspan><tspan dy="-4">y</tspan>
+            <animate attributeName="fill-opacity" values="0;1" dur="0.22s" begin="indefinite" fill="freeze" class="anim-fade"/>
+          </text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+</body>
+</html>

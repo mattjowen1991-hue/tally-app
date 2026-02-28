@@ -1,0 +1,3576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0e27">
+  <title>Tally</title>
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-primary: #0a0e27;
+      --bg-secondary: #121630;
+      --bg-card: rgba(25, 31, 61, 0.6);
+      --accent-primary: #00d4ff;
+      --accent-secondary: #7c3aed;
+      --accent-tertiary: #f59e0b;
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border: rgba(255, 255, 255, 0.08);
+      --glass: rgba(255, 255, 255, 0.03);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+    
+    /* Animated background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 50%, rgba(124, 58, 237, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(0, 212, 255, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 40% 90%, rgba(245, 158, 11, 0.1) 0%, transparent 50%);
+      animation: backgroundPulse 20s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    @keyframes backgroundPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    /* Grain texture overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.5;
+    }
+    
+    #root {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      min-height: 100vh;
+    }
+    
+    /* Glass morphism utilities */
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .glass-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 
+        0 12px 48px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+    
+    /* Typography */
+    .font-display {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    /* Animations */
+    @keyframes slideInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes shimmer {
+      0% {
+        background-position: -1000px 0;
+      }
+      100% {
+        background-position: 1000px 0;
+      }
+    }
+    
+    .animate-in {
+      animation: slideInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    
+    /* Button styles */
+    .btn {
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 500;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      transition: left 0.5s;
+    }
+    
+    .btn:hover::before {
+      left: 100%;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 212, 255, 0.3);
+    }
+    
+    .btn-secondary {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+    }
+    
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+    
+    .btn-icon {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+    }
+    
+    /* Input styles */
+    .input {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    
+    .input:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+    }
+
+    .input.input-error {
+      border-color: #ef4444;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+    }
+    .input.input-error:focus {
+      border-color: #ef4444;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+    }
+    
+    .input::placeholder {
+      color: var(--text-muted);
+    }
+    
+    /* Stat card */
+    .stat-card {
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    .stat-card:hover::before {
+      opacity: 1;
+    }
+    
+    /* Chart container */
+    .chart-container {
+      position: relative;
+      height: 250px;
+      margin: 20px 0;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    
+    /* Modal overlay */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      animation: fadeIn 0.2s;
+    }
+
+    body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+    
+    .modal-content {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+      animation: slideInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      body {
+        padding-bottom: 0;
+      }
+      
+      .glass-card {
+        border-radius: 16px;
+      }
+      
+      .btn {
+        padding: 12px 24px;
+        font-size: 14px;
+        min-height: 44px; /* iOS touch target */
+      }
+      
+      .btn-icon {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
+      }
+      
+      /* Make stat cards stack on mobile */
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+      }
+      
+      /* Mobile table becomes cards */
+      .mobile-bill-card {
+        background: var(--bg-card);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 12px;
+        transition: all 0.3s;
+      }
+      
+      .mobile-bill-card:active {
+        transform: scale(0.98);
+        background: rgba(255, 255, 255, 0.05);
+      }
+      
+      /* Hide desktop table on mobile */
+      .desktop-table {
+        display: none;
+      }
+      
+      /* Mobile-specific layouts */
+      .mobile-header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--bg-primary);
+        padding: 16px 20px;
+        margin: -20px -20px 20px -20px;
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid var(--border);
+      }
+      
+      .mobile-quick-stats {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        padding: 8px 0;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      
+      .mobile-quick-stats::-webkit-scrollbar {
+        display: none;
+      }
+      
+      .mobile-stat-pill {
+        flex-shrink: 0;
+        padding: 8px 16px;
+        background: var(--glass);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      
+      /* Category filters as horizontal scroll */
+      .mobile-category-scroll {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding: 4px 0;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        margin-bottom: 16px;
+      }
+      
+      .mobile-category-scroll::-webkit-scrollbar {
+        display: none;
+      }
+      
+      /* Collapsible sections */
+      .mobile-section {
+        margin-bottom: 16px;
+      }
+      
+      .mobile-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background: var(--glass);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        cursor: pointer;
+        margin-bottom: 8px;
+        transition: all 0.2s;
+      }
+      
+      .mobile-section-header:active {
+        background: rgba(255, 255, 255, 0.05);
+        transform: scale(0.98);
+      }
+      
+      /* Chart on mobile */
+      .chart-container {
+        height: 200px;
+      }
+      
+      /* Modal full screen on mobile */
+      .modal-content {
+        max-width: 100%;
+        max-height: 100vh;
+        margin: 0;
+        border-radius: 24px 24px 0 0;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+      }
+      
+      /* Input improvements */
+      .input {
+        font-size: 16px; /* Prevents iOS zoom */
+        min-height: 44px;
+      }
+
+      input[type="date"] {
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  z-index: 10;
+  cursor: pointer;
+  color: transparent;
+}
+
+input[type="date"]::-webkit-datetime-edit {
+  display: none;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+input[type="date"]::before {
+  content: 'Select date...';
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+input[type="date"].has-value::before {
+  content: none;
+}
+
+input[type="date"].has-value {
+  color: var(--text-primary);
+}
+
+.modal-content {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 200px;
+}
+      
+      /* Better spacing */
+      .mobile-spacing {
+        padding: 12px 20px;
+      }
+      
+      /* Font size adjustments */
+      h1 {
+        font-size: 32px !important;
+      }
+      
+      h2 {
+        font-size: 20px !important;
+      }
+      
+      /* Grid adjustments */
+      .two-col-mobile {
+        grid-template-columns: 1fr !important;
+      }
+    }
+    
+    /* Small mobile (iPhone SE, etc.) */
+    @media (max-width: 375px) {
+      .stats-grid {
+        grid-template-columns: 1fr !important;
+      }
+      
+      .btn {
+        padding: 10px 16px;
+        font-size: 13px;
+      }
+      
+      h1 {
+        font-size: 28px !important;
+      }
+    }
+    
+    /* Landscape mobile */
+    @media (max-width: 768px) and (orientation: landscape) {
+      .mobile-header {
+        position: relative;
+        margin: 0 0 20px 0;
+      }
+      
+      .stats-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+      }
+    }
+
+    /* Swipe Navigation */
+    .swipe-container {
+      overflow: hidden;
+      position: relative;
+      touch-action: pan-y;
+      flex: 1;
+    }
+    .swipe-track {
+      display: flex;
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      will-change: transform;
+      align-items: flex-start;
+    }
+    .swipe-track.swiping {
+      transition: none;
+    }
+    .swipe-panel {
+      min-width: 100%;
+      width: 100%;
+      flex-shrink: 0;
+      padding: 0 4px;
+    }
+    .swipe-panel:not(.panel-active) {
+      height: 0;
+      overflow: hidden;
+    }
+    .swipe-panel.panel-active {
+      height: auto;
+    }
+    .nav-dots {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      padding: 12px 0 16px;
+    }
+    .nav-dot-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .nav-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: all 0.3s;
+    }
+    .nav-dot-item.active .nav-dot {
+      width: 24px;
+      border-radius: 4px;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    }
+    .nav-dot-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      transition: all 0.3s;
+    }
+    .nav-dot-item.active .nav-dot-label {
+      color: var(--accent-primary);
+    }
+
+    /* Splash screen */
+    .splash-screen {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: var(--bg-primary);
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    .splash-screen.active {
+      opacity: 1;
+    }
+    .splash-screen.fade-out {
+      opacity: 0;
+    }
+
+    .splash-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .splash-screen.active .splash-stack {
+      animation: splashSettle 120ms ease-out forwards;
+      animation-delay: 1680ms;
+    }
+
+    @keyframes splashSettle {
+      0%   { transform: scale(1); }
+      60%  { transform: scale(1.025); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <div class="splash-screen" id="splash">
+    <div class="splash-stack">
+      <svg class="splash-logo" width="120" height="120" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" aria-label="Tally logo" role="img">
+        <defs>
+          <linearGradient id="splashGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#1E63D6" />
+            <stop offset="100%" stop-color="#34C759" />
+          </linearGradient>
+        </defs>
+        <g transform="rotate(-4 69 130)">
+          <rect x="58" y="52" width="22" height="0" rx="14" fill="url(#splashGrad)">
+            <animate attributeName="height" values="0;156" dur="0.24s" begin="indefinite" fill="freeze" calcMode="spline" keySplines="0.22 0.9 0.25 1" class="anim-bar1"/>
+          </rect>
+        </g>
+        <g transform="rotate(2 107 128)">
+          <rect x="94" y="48" width="26" height="0" rx="14" fill="url(#splashGrad)">
+            <animate attributeName="height" values="0;160" dur="0.24s" begin="indefinite" fill="freeze" calcMode="spline" keySplines="0.22 0.9 0.25 1" class="anim-bar2"/>
+          </rect>
+        </g>
+        <g transform="rotate(-2 143.5 129)">
+          <rect x="132" y="54" width="23" height="0" rx="14" fill="url(#splashGrad)">
+            <animate attributeName="height" values="0;150" dur="0.24s" begin="indefinite" fill="freeze" calcMode="spline" keySplines="0.22 0.9 0.25 1" class="anim-bar3"/>
+          </rect>
+        </g>
+        <g transform="rotate(3 180.5 129)">
+          <rect x="168" y="50" width="25" height="0" rx="14" fill="url(#splashGrad)">
+            <animate attributeName="height" values="0;158" dur="0.24s" begin="indefinite" fill="freeze" calcMode="spline" keySplines="0.22 0.9 0.25 1" class="anim-bar4"/>
+          </rect>
+        </g>
+        <path d="M38 170 Q128 120 220 92" fill="none" stroke="url(#splashGrad)" stroke-width="20" stroke-linecap="round" stroke-dasharray="420" stroke-dashoffset="420">
+          <animate attributeName="stroke-dashoffset" values="420;0" dur="0.42s" begin="indefinite" fill="freeze" calcMode="spline" keySplines="0.22 0.9 0.25 1" class="anim-strike"/>
+        </path>
+      </svg>
+
+      <svg class="splash-text" width="280" height="90" viewBox="0 0 520 170" xmlns="http://www.w3.org/2000/svg" aria-label="Tally" role="img" style="margin-top:14px;">
+        <defs>
+          <linearGradient id="splashWordGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#2F6BFF" />
+            <stop offset="55%" stop-color="#22C3A6" />
+            <stop offset="100%" stop-color="#7AD957" />
+          </linearGradient>
+          <mask id="wordRevealDiag">
+            <rect x="-300" y="-260" width="0" height="520" fill="#fff" transform="rotate(-12 260 85)">
+              <animate attributeName="width" values="0;1100" dur="0.52s" begin="indefinite" fill="freeze" calcMode="spline" keySplines="0.22 0.9 0.25 1" class="anim-reveal"/>
+            </rect>
+          </mask>
+        </defs>
+        <g mask="url(#wordRevealDiag)">
+          <text x="260" y="118" text-anchor="middle" fill="url(#splashWordGrad)" font-size="110" font-weight="800" letter-spacing="-6" font-family="ui-rounded, 'SF Pro Rounded', Nunito, Quicksand, 'Avenir Next Rounded', 'Segoe UI', system-ui, -apple-system, Arial" transform="skewX(-6)">
+            <tspan>T</tspan><tspan dx="-16" dy="4">a</tspan><tspan dy="-3">l</tspan><tspan dy="5">l</tspan><tspan dy="-4">y</tspan>
+          </text>
+        </g>
+        <g mask="url(#wordRevealDiag)">
+          <text x="260" y="118" text-anchor="middle" fill="url(#splashWordGrad)" fill-opacity="0" font-size="110" font-weight="800" letter-spacing="-6" font-family="ui-rounded, 'SF Pro Rounded', Nunito, Quicksand, 'Avenir Next Rounded', 'Segoe UI', system-ui, -apple-system, Arial" transform="skewX(-6)">
+            <tspan>T</tspan><tspan dx="-16" dy="4">a</tspan><tspan dy="-3">l</tspan><tspan dy="5">l</tspan><tspan dy="-4">y</tspan>
+            <animate attributeName="fill-opacity" values="0;1" dur="0.22s" begin="indefinite" fill="freeze" class="anim-fade"/>
+          </text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <script type="text/babel">
+    // Capacitor Storage shim - bridges window.storage to Capacitor Preferences
+(function() {
+  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Preferences) {
+    const Prefs = window.Capacitor.Plugins.Preferences;
+    window.storage = {
+      get: async (key) => {
+        const result = await Prefs.get({ key });
+        return result.value ? { value: result.value } : null;
+      },
+      set: async (key, value) => {
+        await Prefs.set({ key, value });
+        return { key, value };
+      },
+      delete: async (key) => {
+        await Prefs.remove({ key });
+        return { key, deleted: true };
+      }
+    };
+  } else if (!window.storage) {
+    // Fallback for browser testing
+    window.storage = {
+      get: async (key) => {
+        const v = localStorage.getItem(key);
+        return v ? { value: v } : null;
+      },
+      set: async (key, value) => {
+        localStorage.setItem(key, value);
+        return { key, value };
+      },
+      delete: async (key) => {
+        localStorage.removeItem(key);
+        return { key, deleted: true };
+      }
+    };
+  }
+})();
+// Dismiss native splash, then trigger animated splash
+(async function() {
+  try {
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SplashScreen) {
+      await window.Capacitor.Plugins.SplashScreen.hide();
+    }
+  } catch(e) {}
+
+  const splash = document.getElementById('splash');
+  splash.classList.add('active');
+
+  // Kick off SMIL animations with staggered timing
+  const start = (sel, delay) => setTimeout(() => {
+    const el = document.querySelector(sel);
+    if (el) el.beginElement();
+  }, delay);
+
+  start('.anim-bar1', 0);
+  start('.anim-bar2', 160);
+  start('.anim-bar3', 320);
+  start('.anim-bar4', 480);
+  start('.anim-strike', 740);
+  start('.anim-reveal', 1160);
+  start('.anim-fade', 1280);
+
+  // Fade out and remove after animation completes
+  setTimeout(() => {
+    splash.classList.add('fade-out');
+    setTimeout(() => splash.style.display = 'none', 500);
+  }, 2200);
+})();
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // Auto-add has-value class to date inputs
+    document.addEventListener('change', (e) => {
+      if (e.target.type === 'date') {
+        e.target.classList.toggle('has-value', !!e.target.value);
+      }
+    });
+    
+    // Icon Components
+    const Icons = {
+      DollarSign: ({ size = 24, className = "" }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <line x1="12" y1="1" x2="12" y2="23"></line>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+      ),
+      TrendingUp: ({ size = 24, className = "" }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+          <polyline points="17 6 23 6 23 12"></polyline>
+        </svg>
+      ),
+      TrendingDown: ({ size = 24, className = "" }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+          <polyline points="17 18 23 18 23 12"></polyline>
+        </svg>
+      ),
+      Calendar: ({ size = 24, className = "" }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+      ),
+      Edit: ({ size = 24, className = "" }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+        </svg>
+      ),
+      Trash: ({ size = 24, className = "" }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      ),
+      Plus: ({ size = 24, className = "" }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      ),
+      Check: ({ size = 24, className = "", style = {} }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <polyline points="20 6 9 17 4 12"></polyline>
+  </svg>
+),
+      X: ({ size = 24, className = "" }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      ),
+      PieChart: ({ size = 24, className = "" }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+          <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+        </svg>
+      ),
+      Home: ({ size = 24, className = "" }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+      ),
+      Tally: ({ size = 40 }) => (
+        <svg width={size} height={size} viewBox="30 40 200 180" fill="none">
+          <defs>
+            <linearGradient id="tallyGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#1E63D6" />
+              <stop offset="100%" stopColor="#34C759" />
+            </linearGradient>
+          </defs>
+          <g fill="url(#tallyGrad)">
+            <rect x="58" y="52" width="22" height="156" rx="14" transform="rotate(-4 69 130)" />
+            <rect x="94" y="48" width="26" height="160" rx="14" transform="rotate(2 107 128)" />
+            <rect x="132" y="54" width="23" height="150" rx="14" transform="rotate(-2 143.5 129)" />
+            <rect x="168" y="50" width="25" height="158" rx="14" transform="rotate(3 180.5 129)" />
+          </g>
+          <path d="M38 170 Q128 120 220 92" fill="none" stroke="url(#tallyGrad)" strokeWidth="20" strokeLinecap="round" />
+        </svg>
+      ),
+    };
+
+    // Initial bills data from your spreadsheet
+    const initialBills = [
+      // HOME
+      { id: '1', name: 'Eon', category: 'HOME', projected: 124, actual: 124, paymentDate: '1st', paid: true },
+      { id: '2', name: 'Domestic & General', category: 'HOME', projected: 10.50, actual: 10.50, paymentDate: '1st', paid: true },
+      { id: '3', name: 'Vodafone Airtime', category: 'HOME', projected: 23.40, actual: 23.40, paymentDate: '1st', paid: true },
+      { id: '4', name: 'Vodafone Broadband', category: 'HOME', projected: 22.50, actual: 22.50, paymentDate: '1st', paid: true },
+      { id: '5', name: 'TV License', category: 'HOME', projected: 7.50, actual: 7.50, paymentDate: '1st', paid: true },
+      { id: '6', name: 'Rent', category: 'HOME', projected: 244.84, actual: 244.84, paymentDate: '1st', paid: true },
+      { id: '7', name: 'OneCall', category: 'HOME', projected: 8.50, actual: 8.50, paymentDate: '1st', paid: true },
+      { id: '8', name: 'Shopping', category: 'HOME', projected: 200, actual: 200, paymentDate: '1st', paid: true },
+      { id: '9', name: 'Council Tax', category: 'HOME', projected: 0, actual: 0, paymentDate: 'TBC', paid: false },
+      { id: '10', name: 'SevernTrent', category: 'HOME', projected: 57, actual: 57, paymentDate: '12th', paid: true },
+      { id: '11', name: 'Ring', category: 'HOME', projected: 4, actual: 4, paymentDate: '1st', paid: true },
+      { id: '12', name: 'Virgin Pure', category: 'HOME', projected: 7.50, actual: 7.50, paymentDate: '4th', paid: true },
+      { id: '13', name: 'Tesco Mobile', category: 'HOME', projected: 8, actual: 8, paymentDate: '1st', paid: true },
+      { id: '14', name: 'Vodafone Device', category: 'HOME', projected: 23, actual: 23, paymentDate: '1st', paid: true },
+      { id: '15', name: 'Lisa', category: 'HOME', projected: 10, actual: 10, paymentDate: '1st', paid: true },
+      
+      // TRANSPORTATION
+      { id: '16', name: 'Fuel', category: 'TRANSPORTATION', projected: 60, actual: 60, paymentDate: '1st', paid: true },
+      
+      // CREDIT CARDS
+      { id: '17', name: 'Loan', category: 'CREDIT CARDS', projected: 250, actual: 250, paymentDate: '1st', paid: true },
+      { id: '18', name: 'PayPal', category: 'CREDIT CARDS', projected: 0, actual: 0, paymentDate: '1st', paid: false },
+      { id: '19', name: 'Barclays', category: 'CREDIT CARDS', projected: 0, actual: 0, paymentDate: 'N/A', paid: false },
+      
+      // ENTERTAINMENT
+      { id: '20', name: 'Netflix', category: 'ENTERTAINMENT', projected: 6.50, actual: 6.50, paymentDate: '1st', paid: true },
+      { id: '21', name: 'Lottery', category: 'ENTERTAINMENT', projected: 12, actual: 12, paymentDate: '1st', paid: true },
+      { id: '22', name: 'Disney Plus', category: 'ENTERTAINMENT', projected: 0, actual: 0, paymentDate: '3rd', paid: false },
+      { id: '23', name: 'Roblox Premium', category: 'ENTERTAINMENT', projected: 2.50, actual: 2.50, paymentDate: '5th', paid: true },
+      { id: '24', name: 'Google Play Stuff', category: 'ENTERTAINMENT', projected: 29, actual: 29, paymentDate: 'Via phone', paid: true },
+      { id: '25', name: 'TunnelBear', category: 'ENTERTAINMENT', projected: 0, actual: 0, paymentDate: 'N/A', paid: false },
+      { id: '26', name: 'PlayStation Plus', category: 'ENTERTAINMENT', projected: 6.99, actual: 6.99, paymentDate: '1st', paid: true },
+      { id: '27', name: 'Amazon Prime', category: 'ENTERTAINMENT', projected: 0, actual: 0, paymentDate: '1st', paid: false },
+      { id: '28', name: 'National Trust', category: 'ENTERTAINMENT', projected: 14, actual: 14, paymentDate: '1st', paid: true },
+      { id: '29', name: 'Takeaway', category: 'ENTERTAINMENT', projected: 0, actual: 0, paymentDate: '1st', paid: false },
+      
+      // HEALTH
+      { id: '30', name: 'L&G Life Insurance', category: 'HEALTH', projected: 9.90, actual: 9.90, paymentDate: '1st', paid: true },
+      { id: '31', name: 'Pet Insurance', category: 'HEALTH', projected: 15, actual: 15, paymentDate: '1st', paid: true },
+      { id: '32', name: 'Pet Healthcare', category: 'HEALTH', projected: 9.50, actual: 9.50, paymentDate: '1st', paid: true },
+      { id: '33', name: 'Medicine/Prescriptions', category: 'HEALTH', projected: 12, actual: 12, paymentDate: '1st', paid: true },
+      { id: '34', name: 'Therapy', category: 'HEALTH', projected: 50, actual: 50, paymentDate: '1st', paid: true },
+      
+      // PAYMENTS
+      { id: '35', name: 'FraserPlus', category: 'PAYMENTS', projected: 50, actual: 50, paymentDate: '1st', paid: true },
+      { id: '36', name: 'SLC', category: 'PAYMENTS', projected: 5, actual: 5, paymentDate: '1st', paid: true },
+      { id: '37', name: 'Sofa', category: 'PAYMENTS', projected: 12.50, actual: 12.50, paymentDate: '1st', paid: true },
+      { id: '38', name: 'Klarna Monthly Payments', category: 'PAYMENTS', projected: 70, actual: 70, paymentDate: '1st', paid: true },
+      { id: '39', name: 'Vodafone Extra Costs', category: 'PAYMENTS', projected: 0, actual: 0, paymentDate: 'N/A', paid: false },
+    ];
+
+    const shouldAutoPay = (bill) => {
+  if (!bill.recurring || bill.missed || bill.paused) return false;
+  
+  const now = new Date();
+  const today = now.getDate();
+  const currentDay = now.getDay();
+  const currentMonth = now.getMonth() + 1;
+  
+  switch (bill.frequency || 'Monthly') {
+    case 'Weekly':
+      return currentDay === parseInt(bill.paymentDay);
+      
+    case 'Fortnightly': {
+      if (!bill.startDate) return false;
+      const start = new Date(bill.startDate);
+      const diffDays = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+      const diffWeeks = Math.floor(diffDays / 7);
+      return diffWeeks % 2 === 0 && currentDay === parseInt(bill.paymentDay);
+    }
+    
+    case 'Monthly':
+      return today >= parseInt(bill.paymentDate);
+      
+    case 'Quarterly': {
+      const startMonth = parseInt(bill.startMonth) || 1;
+      const payMonths = [startMonth, startMonth + 3, startMonth + 6, startMonth + 9]
+        .map(m => ((m - 1) % 12) + 1);
+      return payMonths.includes(currentMonth) && today >= parseInt(bill.paymentDate);
+    }
+    
+    case 'Yearly': {
+      const yearlyDate = new Date(bill.paymentDate);
+      return currentMonth === (yearlyDate.getMonth() + 1) && today >= yearlyDate.getDate();
+    }
+    
+    default:
+      return false;
+  }
+};
+
+    function BillsTracker() {
+      const [bills, setBills] = useState([]);
+      const [income, setIncome] = useState(1960);
+      const [editingId, setEditingId] = useState(null);
+      const [editForm, setEditForm] = useState({});
+      const [showAddModal, setShowAddModal] = useState(false);
+      const [newBill, setNewBill] = useState({
+        name: '',
+        category: 'HOME',
+        amount: '',
+        paymentDate: '',
+        paymentDay: '',
+        startDate: '',
+        startMonth: '',
+        paid: false,
+        recurring: false,
+        missed: false,
+        frequency: 'Monthly'
+      });
+      const [selectedCategory, setSelectedCategory] = useState('ALL');
+      const [customCategories, setCustomCategories] = useState([]);
+      const [showCategoryModal, setShowCategoryModal] = useState(false);
+      const [newCategoryName, setNewCategoryName] = useState('');
+      const [statusFilter, setStatusFilter] = useState('ALL');
+      const [isMobile, setIsMobile] = useState(false);
+      const chartRef = useRef(null);
+      const chartInstance = useRef(null);
+      const scrollYRef = useRef(0);
+      
+      // Debt tracking state
+      const [debts, setDebts] = useState([]);
+      const [expandedDebtId, setExpandedDebtId] = useState(null);
+      const [showAddDebtModal, setShowAddDebtModal] = useState(false);
+      const [editingDebtId, setEditingDebtId] = useState(null);
+      const [debtPayoffAmount, setDebtPayoffAmount] = useState('');
+      const [debtPaymentInput, setDebtPaymentInput] = useState({});
+      const [validationErrors, setValidationErrors] = useState({});
+      const [newDebt, setNewDebt] = useState({
+        name: '',
+        type: 'Credit Card',
+        totalAmount: '',
+        startDate: '',
+        endDate: '',
+        recurringPayment: ''
+      });
+
+      // Savings state
+      const [savings, setSavings] = useState([]);
+      const [expandedSavingsId, setExpandedSavingsId] = useState(null);
+      const [showAddSavingsModal, setShowAddSavingsModal] = useState(false);
+      const [editingSavingsId, setEditingSavingsId] = useState(null);
+      const [savingsDepositInput, setSavingsDepositInput] = useState({});
+      const [newSavings, setNewSavings] = useState({
+        name: '',
+        category: 'Emergency',
+        targetAmount: '',
+        currentAmount: '',
+        monthlyContribution: '',
+        priority: 1,
+        startDate: ''
+      });
+      const savingsCategories = ['Emergency', 'Holiday', 'Big Purchase', 'Education', 'Home', 'Retirement', 'Investment', 'Other'];
+
+      // Swipe navigation state
+      const [activePanel, setActivePanel] = useState(0);
+      const swipeRef = useRef(null);
+      const categoryScrollRef = useRef(null);
+      const touchStartX = useRef(0);
+      const touchStartY = useRef(0);
+      const touchDeltaX = useRef(0);
+      const isSwiping = useRef(false);
+      const panelNames = ['Overview', 'Actions', 'Bills', 'Debt', 'Savings'];
+
+      // Lock body scroll when modals are open
+useEffect(() => {
+  if (showAddModal || showAddDebtModal || showCategoryModal || showAddSavingsModal) {
+    scrollYRef.current = window.scrollY;
+    document.body.classList.add('modal-open');
+    document.body.style.top = `-${scrollYRef.current}px`;
+  } else {
+    document.body.classList.remove('modal-open');
+    document.body.style.top = '';
+    window.scrollTo(0, scrollYRef.current);
+  }
+}, [showAddModal, showAddDebtModal, showCategoryModal, showAddSavingsModal]);
+
+      // Detect mobile screen size
+      useEffect(() => {
+        const checkMobile = () => {
+          const mobile = window.innerWidth <= 768;
+          setIsMobile(mobile);
+          // On mobile, default to first category instead of ALL
+          if (mobile && selectedCategory === 'ALL') {
+            setSelectedCategory('HOME');
+          }
+        };
+        
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        
+        return () => window.removeEventListener('resize', checkMobile);
+      }, []);
+
+      // Load data from storage
+      useEffect(() => {
+        loadData();
+      }, []);
+
+      const loadData = async () => {
+  try {
+    const stored = await window.storage.get('bills-data');
+    if (stored && stored.value) {
+      const data = JSON.parse(stored.value);
+      let loadedBills = data.bills || initialBills;
+      const savedMonth = data.lastMonth || null;
+      const now = new Date();
+      const currentMonth = now.getFullYear() + '-' + (now.getMonth() + 1);
+      const today = now.getDate();
+      const isNewMonth = savedMonth && savedMonth !== currentMonth;
+      
+      // Process bills
+      loadedBills = loadedBills.map(b => {
+        // Missed bills — never auto-touch, keep flagged
+        if (b.missed) {
+          return isNewMonth ? { ...b, paid: false } : b;
+        }
+        
+        // New month — reset all non-missed bills to unpaid first
+        if (isNewMonth) {
+          b = { ...b, paid: false };
+        }
+        
+        // Only process recurring bills
+        if (!b.recurring) return b;
+        
+        // For weekly/fortnightly: reset to unpaid if last auto-pay was a different day
+        if (b.frequency === 'Weekly' || b.frequency === 'Fortnightly') {
+          if (b.paid && b.lastAutoPaid) {
+            const lastPaid = new Date(b.lastAutoPaid);
+            const daysSince = Math.floor((now - lastPaid) / (1000 * 60 * 60 * 24));
+            const resetDays = b.frequency === 'Weekly' ? 6 : 13;
+            if (daysSince >= resetDays) {
+              b = { ...b, paid: false };
+            }
+          }
+        }
+        
+        // Already paid? Leave it
+        if (b.paid) return b;
+        
+        // Check if bill should auto-pay based on frequency
+        if (shouldAutoPay(b)) {
+          return { ...b, paid: true, lastAutoPaid: new Date().toISOString() };
+        }
+        
+        return b;
+      });
+      
+      setBills(loadedBills);
+      setIncome(data.income || 1960);
+      // Process debts - auto-reduce on new month
+      let loadedDebts = data.debts || [];
+      if (isNewMonth) {
+        loadedDebts = loadedDebts.map(d => {
+          if (!d.recurringPayment || d.recurringPayment <= 0 || d.totalAmount <= 0) return d;
+          const lastPay = d.lastPaymentMonth || '';
+          if (lastPay === currentMonth) return d;
+          const payment = Math.min(d.recurringPayment, d.totalAmount);
+          const newTotal = Math.max(0, d.totalAmount - payment);
+          const newPayments = [...(d.payments || []), { date: new Date().toISOString(), amount: payment, type: 'recurring' }];
+          return { ...d, totalAmount: newTotal, lastPaymentMonth: currentMonth, payments: newPayments, originalAmount: d.originalAmount || d.totalAmount + payment };
+        });
+      }
+      // Ensure all debts have originalAmount
+      loadedDebts = loadedDebts.map(d => ({
+        ...d,
+        originalAmount: d.originalAmount || d.totalAmount,
+        payments: d.payments || []
+      }));
+      setDebts(loadedDebts);
+      // Load savings
+      let loadedSavings = data.savings || [];
+      if (isNewMonth) {
+        loadedSavings = loadedSavings.map(s => {
+          if (!s.monthlyContribution || s.monthlyContribution <= 0) return s;
+          const lastSave = s.lastSaveMonth || '';
+          if (lastSave === currentMonth) return s;
+          const newAmount = (s.currentAmount || 0) + s.monthlyContribution;
+          const capped = s.targetAmount > 0 ? Math.min(newAmount, s.targetAmount) : newAmount;
+          const newTransactions = [...(s.transactions || []), { date: new Date().toISOString(), amount: s.monthlyContribution, type: 'auto' }];
+          return { ...s, currentAmount: capped, lastSaveMonth: currentMonth, transactions: newTransactions };
+        });
+      }
+      loadedSavings = loadedSavings.map(s => ({
+        ...s,
+        transactions: s.transactions || [],
+        currentAmount: s.currentAmount || 0
+      }));
+      setSavings(loadedSavings);
+      setCustomCategories(data.customCategories || []);
+    } else {
+      setBills(initialBills);
+      setDebts([]);
+    }
+  } catch (error) {
+    console.log('No stored data, using initial bills');
+    setBills(initialBills);
+    setDebts([]);
+  }
+};
+
+      // Save data to storage
+      useEffect(() => {
+        if (bills.length > 0 || debts.length > 0 || savings.length > 0 || customCategories.length > 0) {
+          saveData();
+        }
+      }, [bills, income, debts, savings, customCategories]);
+
+      const saveData = async () => {
+  try {
+    const currentMonth = new Date().getFullYear() + '-' + (new Date().getMonth() + 1);
+    await window.storage.set('bills-data', JSON.stringify({ bills, income, debts, savings, customCategories, lastMonth: currentMonth }));
+  } catch (error) {
+    console.error('Error saving data:', error);
+  }
+};
+
+      // Calculate totals
+      const totals = {
+        projectedExpenses: bills.reduce((sum, bill) => sum + (bill.projected || 0), 0),
+        actualExpenses: bills.reduce((sum, bill) => sum + (bill.actual || 0), 0),
+        paidBills: bills.filter(b => b.paid).length,
+        totalBills: bills.length,
+      };
+
+      totals.projectedBalance = income - totals.projectedExpenses;
+      totals.actualBalance = income - totals.actualExpenses;
+      totals.difference = totals.actualExpenses - totals.projectedExpenses;
+
+      // Category breakdown
+      const defaultCategories = ['HOME', 'TRANSPORTATION', 'CREDIT CARDS', 'ENTERTAINMENT', 'HEALTH', 'PAYMENTS'];
+      const categories = [...defaultCategories, ...customCategories];
+      const categoryTotals = categories.map(cat => ({
+        name: cat,
+        total: bills.filter(b => b.category === cat).reduce((sum, b) => sum + (b.actual || 0), 0)
+      })).filter(c => c.total > 0);
+
+      // Update chart
+      useEffect(() => {
+        if (chartRef.current && categoryTotals.length > 0) {
+          const ctx = chartRef.current.getContext('2d');
+          
+          if (chartInstance.current) {
+            chartInstance.current.destroy();
+          }
+
+          const colors = [
+            'rgba(0, 212, 255, 0.8)',
+            'rgba(124, 58, 237, 0.8)',
+            'rgba(245, 158, 11, 0.8)',
+            'rgba(16, 185, 129, 0.8)',
+            'rgba(239, 68, 68, 0.8)',
+            'rgba(168, 85, 247, 0.8)',
+          ];
+
+          chartInstance.current = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: categoryTotals.map(c => c.name),
+              datasets: [{
+                data: categoryTotals.map(c => c.total),
+                backgroundColor: colors.slice(0, categoryTotals.length),
+                borderColor: 'rgba(10, 14, 39, 0.8)',
+                borderWidth: 2,
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+  display: false
+},
+                tooltip: {
+                  backgroundColor: 'rgba(18, 22, 48, 0.95)',
+                  titleColor: '#e2e8f0',
+                  bodyColor: '#94a3b8',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  borderWidth: 1,
+                  padding: 12,
+                  displayColors: true,
+                  callbacks: {
+                    label: function(context) {
+                      return `£${context.parsed.toFixed(2)}`;
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        return () => {
+          if (chartInstance.current) {
+            chartInstance.current.destroy();
+          }
+        };
+      }, [categoryTotals]);
+
+      const handleEditStart = (bill) => {
+        setEditingId(bill.id);
+        setEditForm({ ...bill });
+      };
+
+      const handleEditSave = () => {
+        setBills(bills.map(b => b.id === editingId ? { ...editForm } : b));
+        setEditingId(null);
+        setEditForm({});
+      };
+
+      const handleDelete = (id) => {
+        if (confirm('Are you sure you want to delete this bill?')) {
+          setBills(bills.filter(b => b.id !== id));
+        }
+      };
+
+      const handleAddBill = () => {
+  const errors = {};
+  if (!newBill.name.trim()) errors['bill-name'] = true;
+  if (!newBill.amount && newBill.amount !== 0) errors['bill-amount'] = true;
+  if (Object.keys(errors).length > 0) {
+    setValidationErrors(errors);
+    return;
+  }
+  setValidationErrors({});
+  const id = Date.now().toString();
+  const amount = parseFloat(newBill.amount) || 0;
+  const bill = { ...newBill, id, projected: amount, actual: amount };
+  
+  if (shouldAutoPay(bill)) {
+    bill.paid = true;
+    bill.lastAutoPaid = new Date().toISOString();
+  }
+  
+  setBills([...bills, bill]);
+  setShowAddModal(false);
+  setValidationErrors({});
+  setNewBill({
+  name: '',
+  category: 'HOME',
+  amount: '',
+  paymentDate: '',
+  paymentDay: '',
+  startDate: '',
+  startMonth: '',
+  paid: false,
+  recurring: false,
+  missed: false,
+  frequency: 'Monthly'
+});
+};
+
+      const handleTogglePaid = (id) => {
+  setBills(bills.map(b => {
+    if (b.id !== id) return b;
+    if (b.missed) {
+      return { ...b, paid: true, missed: false };
+    }
+    return { ...b, paid: !b.paid, missed: false };
+  }));
+};
+
+const handleToggleMissed = (id) => {
+  setBills(bills.map(b => {
+    if (b.id !== id) return b;
+    return { ...b, missed: !b.missed, paid: false };
+  }));
+};
+
+const handleTogglePaused = (id) => {
+  setBills(bills.map(b => {
+    if (b.id !== id) return b;
+    return { ...b, paused: !b.paused };
+  }));
+};
+
+const handleAddCategory = () => {
+        const name = newCategoryName.trim().toUpperCase();
+        if (!name) return;
+        if (categories.includes(name)) {
+          alert('This category already exists!');
+          return;
+        }
+        setCustomCategories([...customCategories, name]);
+        setNewCategoryName('');
+      };
+
+      const handleDeleteCategory = (cat) => {
+        const billsUsing = bills.filter(b => b.category === cat).length;
+        if (billsUsing > 0) {
+          alert(`Can't delete "${cat}" — ${billsUsing} bill${billsUsing > 1 ? 's are' : ' is'} still using it. Reassign them first.`);
+          return;
+        }
+        if (confirm(`Delete category "${cat}"?`)) {
+          setCustomCategories(customCategories.filter(c => c !== cat));
+          if (selectedCategory === cat) {
+            setSelectedCategory('HOME');
+            if (categoryScrollRef.current) categoryScrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+          }
+        }
+      };
+
+// Swipe touch handlers
+      const handleTouchStart = useCallback((e) => {
+        // Don't start swipe if touching a horizontally scrollable area
+        const target = e.target.closest('.mobile-category-scroll');
+        if (target) {
+          isSwiping.current = false;
+          touchDeltaX.current = 0;
+          return;
+        }
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+        touchDeltaX.current = 0;
+        isSwiping.current = false;
+      }, []);
+
+      const handleTouchMove = useCallback((e) => {
+        // Skip swipe if touching category scroll area
+        const target = e.target.closest('.mobile-category-scroll');
+        if (target) return;
+        const dx = e.touches[0].clientX - touchStartX.current;
+        const dy = e.touches[0].clientY - touchStartY.current;
+        if (!isSwiping.current && Math.abs(dx) > 10) {
+          if (Math.abs(dx) > Math.abs(dy) * 1.2) {
+            isSwiping.current = true;
+          }
+        }
+        if (isSwiping.current) {
+          e.preventDefault();
+          touchDeltaX.current = dx;
+          // Resist swiping past edges
+          if ((activePanel === 0 && dx > 0) || (activePanel === panelNames.length - 1 && dx < 0)) {
+            touchDeltaX.current = dx * 0.2;
+          }
+          if (swipeRef.current) {
+            swipeRef.current.classList.add('swiping');
+            const base = -activePanel * 100;
+            const effectiveDx = (activePanel === 0 && dx > 0) || (activePanel === panelNames.length - 1 && dx < 0) ? dx * 0.2 : dx;
+            const pct = (effectiveDx / window.innerWidth) * 100;
+            swipeRef.current.style.transform = `translateX(${base + pct}%)`;
+          }
+        }
+      }, [activePanel]);
+
+      const handleTouchEnd = useCallback(() => {
+        if (!isSwiping.current) return;
+        if (swipeRef.current) swipeRef.current.classList.remove('swiping');
+        const threshold = window.innerWidth * 0.2;
+        let newPanel = activePanel;
+        if (touchDeltaX.current < -threshold && activePanel < panelNames.length - 1) newPanel = activePanel + 1;
+        else if (touchDeltaX.current > threshold && activePanel > 0) newPanel = activePanel - 1;
+        setActivePanel(newPanel);
+        if (swipeRef.current) swipeRef.current.style.transform = `translateX(${-newPanel * 100}%)`;
+        touchDeltaX.current = 0;
+        isSwiping.current = false;
+      }, [activePanel]);
+
+      const goToPanel = (idx) => {
+        setActivePanel(idx);
+        if (swipeRef.current) swipeRef.current.style.transform = `translateX(${-idx * 100}%)`;
+      };
+
+      const filteredBills = bills.filter(b => {
+        const catMatch = selectedCategory === 'ALL' || b.category === selectedCategory;
+        if (!catMatch) return false;
+        switch (statusFilter) {
+          case 'PAID': return b.paid && !b.missed;
+          case 'UNPAID': return !b.paid && !b.missed && !b.paused;
+          case 'MISSED': return b.missed;
+          case 'PAUSED': return b.paused;
+          case 'RECURRING': return b.recurring;
+          case 'ONE-OFF': return !b.recurring;
+          default: return true;
+        }
+      });
+      
+      // Debt types
+      const debtTypes = [
+        'Credit Card',
+        'Personal Loan',
+        'Student Loan',
+        'Car Loan',
+        'Mortgage',
+        'Medical Debt',
+        'Payday Loan',
+        'Other'
+      ];
+      
+      // Debt handlers
+      const handleAddDebt = () => {
+        const errors = {};
+        if (!newDebt.name.trim()) errors['debt-name'] = true;
+        if (!newDebt.totalAmount && newDebt.totalAmount !== 0) errors['debt-balance'] = true;
+        if (Object.keys(errors).length > 0) {
+          setValidationErrors(errors);
+          return;
+        }
+        setValidationErrors({});
+        const id = Date.now().toString();
+        const amount = parseFloat(newDebt.totalAmount) || 0;
+        const original = parseFloat(newDebt.originalAmount) || amount;
+        setDebts([...debts, { ...newDebt, id, totalAmount: amount, originalAmount: original, payments: [] }]);
+        setShowAddDebtModal(false);
+        setValidationErrors({});
+        setNewDebt({
+          name: '',
+          type: 'Credit Card',
+          totalAmount: '',
+          originalAmount: '',
+          startDate: '',
+          endDate: '',
+          recurringPayment: ''
+        });
+      };
+      
+      const handleDeleteDebt = (id) => {
+        if (confirm('Are you sure you want to delete this debt?')) {
+          setDebts(debts.filter(d => d.id !== id));
+          if (expandedDebtId === id) setExpandedDebtId(null);
+        }
+      };
+      
+      const handleUpdateDebt = (id, updates) => {
+        setDebts(debts.map(d => d.id === id ? { ...d, ...updates } : d));
+      };
+      
+      const handleMakePayment = (id, amount) => {
+        if (!amount || amount <= 0) return;
+        setDebts(debts.map(d => {
+          if (d.id !== id) return d;
+          const payment = Math.min(amount, d.totalAmount);
+          return {
+            ...d,
+            totalAmount: Math.max(0, d.totalAmount - payment),
+            payments: [...(d.payments || []), { date: new Date().toISOString(), amount: payment, type: 'manual' }]
+          };
+        }));
+      };
+
+      // Savings handlers
+      const handleAddSavings = () => {
+        const errors = {};
+        if (!newSavings.name.trim()) errors['savings-name'] = true;
+        if (!newSavings.targetAmount && newSavings.targetAmount !== 0) errors['savings-target'] = true;
+        if (Object.keys(errors).length > 0) {
+          setValidationErrors(errors);
+          return;
+        }
+        // Check for duplicate priority (only if a priority was entered)
+        const newPriority = newSavings.priority === '' ? null : (parseInt(newSavings.priority) || 1);
+if (newPriority !== null) {
+  const nextAvailable = getNextAvailablePriority();
+  if (newPriority !== nextAvailable) {
+    setValidationErrors({ 'savings-priority': true });
+    return;
+  }
+}
+        setValidationErrors({});
+        const id = Date.now().toString();
+        const target = parseFloat(newSavings.targetAmount) || 0;
+        const current = parseFloat(newSavings.currentAmount) || 0;
+        const monthly = parseFloat(newSavings.monthlyContribution) || 0;
+        setSavings([...savings, { ...newSavings, id, targetAmount: target, currentAmount: current, monthlyContribution: monthly, priority: newSavings.priority === '' ? null : (parseInt(newSavings.priority) || 1), transactions: current > 0 ? [{ date: new Date().toISOString(), amount: current, type: 'initial' }] : [] }]);
+        setShowAddSavingsModal(false);
+        setValidationErrors({});
+        setNewSavings({ name: '', category: 'Emergency', targetAmount: '', currentAmount: '', monthlyContribution: '', priority: '', startDate: '' });
+      };
+
+      const handleDeleteSavings = (id) => {
+        if (confirm('Are you sure you want to delete this savings goal?')) {
+          setSavings(savings.filter(s => s.id !== id));
+          if (expandedSavingsId === id) setExpandedSavingsId(null);
+        }
+      };
+
+      const handleUpdateSavings = (id, updates) => {
+        if (updates.priority !== undefined && updates.priority !== '') {
+          const newP = parseInt(updates.priority) || 1;
+          const duplicate = savings.find(s => s.id !== id && (s.priority || 1) === newP);
+          if (duplicate) {
+            setValidationErrors({ 'savings-priority': true });
+            return;
+          }
+          setValidationErrors(v => { const n = {...v}; delete n['savings-priority']; return n; });
+        }
+        setSavings(savings.map(s => s.id === id ? { ...s, ...updates } : s));
+      };
+
+      const handleSavingsDeposit = (id, amount) => {
+        if (!amount || amount === 0) return;
+        setSavings(savings.map(s => {
+          if (s.id !== id) return s;
+          const newAmount = Math.max(0, (s.currentAmount || 0) + amount);
+          const capped = s.targetAmount > 0 ? Math.min(newAmount, s.targetAmount) : newAmount;
+          return {
+            ...s,
+            currentAmount: capped,
+            transactions: [...(s.transactions || []), { date: new Date().toISOString(), amount, type: amount > 0 ? 'deposit' : 'withdraw' }]
+          };
+        }));
+      };
+
+      const calculateSavingsEstimate = (goal) => {
+        if (!goal.monthlyContribution || goal.monthlyContribution <= 0 || !goal.targetAmount || goal.targetAmount <= 0) return null;
+        const remaining = goal.targetAmount - (goal.currentAmount || 0);
+        if (remaining <= 0) return { months: 0, date: new Date() };
+        const months = Math.ceil(remaining / goal.monthlyContribution);
+        const date = new Date();
+        date.setMonth(date.getMonth() + months);
+        return { months, date };
+      };
+
+      const getNextAvailablePriority = () => {
+        if (savings.length === 0) return 1;
+        const usedPriorities = savings.map(s => s.priority || 1);
+        let next = 1;
+        while (usedPriorities.includes(next)) next++;
+        return next;
+      };
+
+      // Savings totals
+      const totalSaved = savings.reduce((sum, s) => sum + (s.currentAmount || 0), 0);
+      const totalSavingsTarget = savings.reduce((sum, s) => sum + (s.targetAmount || 0), 0);
+      const sortedSavings = [...savings].sort((a, b) => (a.priority || 99) - (b.priority || 99));
+
+      // Calculate debt totals
+      const totalDebt = debts.reduce((sum, debt) => sum + (debt.totalAmount || 0), 0);
+      
+      // Calculate payoff timeline
+      const calculatePayoffTimeline = () => {
+        if (debtPayoffAmount <= 0 || totalDebt <= 0) return null;
+        const months = Math.ceil(totalDebt / debtPayoffAmount);
+        const years = Math.floor(months / 12);
+        const remainingMonths = months % 12;
+        return { months, years, remainingMonths };
+      };
+      
+      const payoffTimeline = calculatePayoffTimeline();
+      const calculateDebtPayoff = (debt) => {
+        if (!debt.recurringPayment || debt.recurringPayment <= 0 || debt.totalAmount <= 0) return null;
+        const months = Math.ceil(debt.totalAmount / debt.recurringPayment);
+        const date = new Date();
+        date.setMonth(date.getMonth() + months);
+        return { months, date };
+      };
+
+      return (
+       <div style={{ padding: isMobile ? '12px' : '20px', maxWidth: '1400px', margin: '0 auto' }}>
+          {/* Header */}
+          <div style={{ marginBottom: isMobile ? '20px' : '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }} className="animate-in">
+            <svg width={isMobile ? 150 : 190} viewBox="10 30 400 120" fill="none" style={{ display: 'block' }}>
+              <defs>
+                <linearGradient id="wordmarkGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#2F6BFF" />
+                  <stop offset="55%" stopColor="#22C3A6" />
+                  <stop offset="100%" stopColor="#7AD957" />
+                </linearGradient>
+              </defs>
+              <text x="210" y="118" textAnchor="middle" fill="url(#wordmarkGrad)" fontSize="110" fontWeight="800" letterSpacing="-6" fontFamily="ui-rounded, 'SF Pro Rounded', Nunito, Quicksand, 'Avenir Next Rounded', 'Segoe UI', system-ui, -apple-system, Arial" transform="skewX(-6)">
+                <tspan>T</tspan>
+                <tspan dx="-16" dy="4">a</tspan>
+                <tspan dy="-3">l</tspan>
+                <tspan dy="5">l</tspan>
+                <tspan dy="-4">y</tspan>
+              </text>
+            </svg>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', textAlign: 'center' }}>
+              Finance tracking made easy
+            </p>
+          </div>
+
+          {/* Navigation Dots - Mobile Only */}
+          {isMobile && (
+            <div className="nav-dots">
+              {panelNames.map((name, i) => (
+                <div key={name} className={`nav-dot-item ${activePanel === i ? 'active' : ''}`} onClick={() => goToPanel(i)}>
+                  <div className="nav-dot"></div>
+                  <span className="nav-dot-label">{name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Mobile Swipe Layout */}
+          {isMobile ? (
+            <div className="swipe-container" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+              <div className="swipe-track" ref={swipeRef} style={{ transform: `translateX(${-activePanel * 100}%)` }}>
+                {/* Panel 1: Overview */}
+                <div className={`swipe-panel ${activePanel === 0 ? 'panel-active' : ''}`}>
+          {/* Stats Grid */}
+          <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: isMobile ? '12px' : '20px', marginBottom: isMobile ? '20px' : '40px' }}>
+            <div className="glass-card stat-card animate-in" style={{ padding: isMobile ? '16px' : '24px', animationDelay: '0.1s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Income</span>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981' }}>
+                  <Icons.DollarSign size={20} />
+                </div>
+              </div>
+              <div className="font-mono" style={{ fontSize: isMobile ? '28px' : '36px', fontWeight: '700', marginBottom: '8px', wordBreak: 'break-word' }}>
+                £{income.toFixed(2)}
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                Monthly income
+              </div>
+            </div>
+
+            <div className="glass-card stat-card animate-in" style={{ padding: isMobile ? '16px' : '24px', animationDelay: '0.2s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Expenses</span>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.05))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>
+                  <Icons.TrendingUp size={20} />
+                </div>
+              </div>
+              <div className="font-mono" style={{ fontSize: isMobile ? '28px' : '36px', fontWeight: '700', marginBottom: '8px', wordBreak: 'break-word' }}>
+                £{totals.actualExpenses.toFixed(2)}
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                {totals.paidBills} of {totals.totalBills} bills paid
+              </div>
+            </div>
+
+            <div className="glass-card stat-card animate-in" style={{ padding: isMobile ? '16px' : '24px', animationDelay: '0.3s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Balance</span>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: `linear-gradient(135deg, ${totals.actualBalance >= 0 ? 'rgba(0, 212, 255, 0.2), rgba(0, 212, 255, 0.05)' : 'rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.05)'})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: totals.actualBalance >= 0 ? '#00d4ff' : '#ef4444' }}>
+                  {totals.actualBalance >= 0 ? <Icons.TrendingUp size={20} /> : <Icons.TrendingDown size={20} />}
+                </div>
+              </div>
+              <div className="font-mono" style={{ fontSize: isMobile ? '28px' : '36px', fontWeight: '700', marginBottom: '8px', wordBreak: 'break-word', color: totals.actualBalance >= 0 ? '#10b981' : '#ef4444' }}>
+                £{totals.actualBalance.toFixed(2)}
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                Remaining this month
+              </div>
+            </div>
+
+            <div className="glass-card stat-card animate-in" style={{ padding: isMobile ? '16px' : '24px', animationDelay: '0.4s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Variance</span>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: `linear-gradient(135deg, ${Math.abs(totals.difference) < 10 ? 'rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.05)' : 'rgba(124, 58, 237, 0.2), rgba(124, 58, 237, 0.05)'})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: Math.abs(totals.difference) < 10 ? '#f59e0b' : '#7c3aed' }}>
+                  <Icons.PieChart size={20} />
+                </div>
+              </div>
+              <div className="font-mono" style={{ fontSize: isMobile ? '28px' : '36px', fontWeight: '700', marginBottom: '8px', wordBreak: 'break-word', color: totals.difference === 0 ? '#10b981' : totals.difference > 0 ? '#ef4444' : '#00d4ff' }}>
+                {totals.difference > 0 ? '+' : ''}£{totals.difference.toFixed(2)}
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                vs projected budget
+              </div>
+            </div>
+          </div>
+
+          {/* Chart and Actions Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(300px, 1fr))', gap: isMobile ? '16px' : '20px', marginBottom: isMobile ? '20px' : '40px' }}>
+            <div className="glass-card animate-in" style={{ padding: '32px', animationDelay: '0.5s' }}>
+              <h2 className="font-display" style={{ fontSize: '24px', marginBottom: '24px' }}>
+                Expense Breakdown
+              </h2>
+              <div className="chart-container">
+  <canvas ref={chartRef}></canvas>
+</div>
+<div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px', maxHeight: '250px', overflowY: 'auto' }}>
+  {categoryTotals.map((cat, i) => {
+    const colors = [
+      'rgba(0, 212, 255, 0.8)',
+      'rgba(124, 58, 237, 0.8)',
+      'rgba(245, 158, 11, 0.8)',
+      'rgba(16, 185, 129, 0.8)',
+      'rgba(239, 68, 68, 0.8)',
+      'rgba(168, 85, 247, 0.8)',
+    ];
+    const percentage = ((cat.total / totals.actualExpenses) * 100).toFixed(1);
+    return (
+      <div key={cat.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--glass)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: colors[i], flexShrink: 0 }}></div>
+          <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{cat.name}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span className="font-mono" style={{ fontSize: '14px', fontWeight: '600' }}>£{cat.total.toFixed(2)}</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)', minWidth: '45px', textAlign: 'right' }}>{percentage}%</span>
+        </div>
+      </div>
+    );
+  })}
+</div>
+            </div>
+          </div>
+                </div>
+                {/* Panel 2: Actions */}
+                <div className={`swipe-panel ${activePanel === 1 ? 'panel-active' : ''}`}>
+
+            <div className="glass-card animate-in" style={{ padding: '32px', animationDelay: '0.6s' }}>
+              <h2 className="font-display" style={{ fontSize: '24px', marginBottom: '24px' }}>
+                Quick Actions
+              </h2>
+              
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                  Monthly Income
+                </label>
+                <input
+                  type="number"
+                  className="input"
+                  value={income}
+                  onChange={(e) => setIncome(parseFloat(e.target.value) || 0)}
+                  style={{ marginBottom: '0' }}
+                />
+              </div>
+
+              <button 
+                className="btn btn-primary" 
+                onClick={() => setShowAddModal(true)}
+                style={{ width: '100%', justifyContent: 'center', marginBottom: '16px' }}
+              >
+                <Icons.Plus size={20} />
+                Add New Bill
+              </button>
+
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setShowCategoryModal(true)}
+                style={{ width: '100%', justifyContent: 'center', marginBottom: '16px' }}
+              >
+                Manage Categories
+              </button>
+
+              <div style={{ padding: '20px', background: 'var(--glass)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-secondary)' }}>
+                  Category Summary
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {categoryTotals.map((cat, i) => (
+                    <div key={cat.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
+                      <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{cat.name}</span>
+                      <span className="font-mono" style={{ fontSize: '14px', fontWeight: '600' }}>£{cat.total.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+                </div>
+                {/* Panel 3: Bills */}
+                <div className={`swipe-panel ${activePanel === 2 ? 'panel-active' : ''}`}>
+          {/* Category Filter */}
+          <div className="animate-in" style={{ marginBottom: isMobile ? '16px' : '20px', animationDelay: '0.7s' }}>
+            <div ref={categoryScrollRef} className={isMobile ? 'mobile-category-scroll' : ''} style={{ display: 'flex', gap: '8px', flexWrap: isMobile ? 'nowrap' : 'wrap', overflowX: isMobile ? 'auto' : 'visible' }}>
+              {!isMobile && (
+                <button 
+                  className={`btn ${selectedCategory === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setSelectedCategory('ALL')}
+                >
+                  All Bills
+                </button>
+              )}
+              {categories.map(cat => (
+                <button 
+                  key={cat}
+                  className={`btn ${selectedCategory === cat ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setSelectedCategory(cat)}
+                  style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <div className={isMobile ? 'mobile-category-scroll' : ''} style={{ display: 'flex', gap: '6px', flexWrap: isMobile ? 'nowrap' : 'wrap', overflowX: isMobile ? 'auto' : 'visible', marginTop: '8px' }}>
+              {[
+                { key: 'ALL', label: 'All', color: null },
+                { key: 'PAID', label: '✓ Paid', color: '#10b981' },
+                { key: 'UNPAID', label: 'Unpaid', color: '#64748b' },
+                { key: 'MISSED', label: '✗ Missed', color: '#ef4444' },
+                { key: 'PAUSED', label: '⏸ Paused', color: '#f59e0b' },
+                { key: 'RECURRING', label: '↻ Recurring', color: '#00d4ff' },
+                { key: 'ONE-OFF', label: 'One-off', color: '#f59e0b' },
+              ].map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setStatusFilter(f.key)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    border: statusFilter === f.key ? `2px solid ${f.color || 'var(--accent-primary)'}` : '1px solid var(--border)',
+                    background: statusFilter === f.key ? `${f.color || 'var(--accent-primary)'}20` : 'var(--glass)',
+                    color: statusFilter === f.key ? (f.color || 'var(--accent-primary)') : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Bills List */}
+          <div className="glass-card animate-in" style={{ padding: isMobile ? '16px' : '0', overflow: 'hidden', animationDelay: '0.8s' }}>
+            <div style={{ padding: isMobile ? '0 0 16px 0' : '24px', borderBottom: isMobile ? 'none' : '1px solid var(--border)' }}>
+              <h2 className="font-display" style={{ fontSize: isMobile ? '24px' : '28px' }}>
+                {selectedCategory === 'ALL' ? 'All Bills' : selectedCategory}
+              </h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
+                {filteredBills.length} {filteredBills.length === 1 ? 'bill' : 'bills'}{statusFilter !== 'ALL' ? ` · ${statusFilter.toLowerCase()}` : ''}
+              </p>
+            </div>
+
+            {/* Mobile Card View */}
+            {isMobile ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {filteredBills.map((bill) => (
+                  <div key={bill.id} className="mobile-bill-card" style={{
+                      borderLeft: bill.paused ? '3px solid #f59e0b' : bill.paid ? '3px solid #10b981' : bill.missed ? '3px solid #ef4444' : undefined,
+borderColor: bill.paused ? 'rgba(245, 158, 11, 0.3)' : bill.paid ? 'rgba(16, 185, 129, 0.3)' : bill.missed ? 'rgba(239, 68, 68, 0.3)' : undefined,
+                      position: 'relative'
+                    }}>
+                    {editingId !== bill.id && bill.paid && !bill.missed && (
+                      <div style={{ position: 'absolute', top: '12px', right: '12px', fontSize: '11px', color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(16, 185, 129, 0.1)', padding: '3px 10px', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.3)', fontWeight: '600' }}>
+                        ✓ Paid
+                      </div>
+                    )}
+                    {editingId !== bill.id && bill.missed && (
+                      <div style={{ position: 'absolute', top: '12px', right: '12px', fontSize: '11px', color: '#ef4444', display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(239, 68, 68, 0.1)', padding: '3px 10px', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.3)', fontWeight: '600' }}>
+                        ✗ Missed
+                      </div>
+                    )}
+                    {editingId !== bill.id && bill.paused && !bill.missed && !bill.paid && (
+                      <div style={{ position: 'absolute', top: '12px', right: '12px', fontSize: '11px', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(245, 158, 11, 0.1)', padding: '3px 10px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.3)', fontWeight: '600' }}>
+                        ⏸ Paused
+                      </div>
+                    )}
+                    {editingId === bill.id ? (
+                      // Edit Mode
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <input
+                          className="input"
+                          value={editForm.name}
+                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                          placeholder="Bill name"
+                        />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <div>
+                            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                              Projected
+                            </label>
+                            <input
+                              type="number"
+                              className="input"
+                              value={editForm.projected}
+                              onChange={(e) => setEditForm({ ...editForm, projected: parseFloat(e.target.value) || 0 })}
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                              Actual
+                            </label>
+                            <input
+                              type="number"
+                              className="input"
+                              value={editForm.actual}
+                              onChange={(e) => setEditForm({ ...editForm, actual: parseFloat(e.target.value) || 0 })}
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
+                        <select
+                          className="input"
+                          value={editForm.category}
+                          onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                        >
+                          {categories.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                        <div>
+                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                            Bill Type
+                          </label>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              type="button"
+                              onClick={() => setEditForm({ ...editForm, recurring: true })}
+                              style={{
+                                flex: 1,
+                                padding: '10px',
+                                borderRadius: '10px',
+                                border: editForm.recurring ? '2px solid #00d4ff' : '1px solid var(--border)',
+                                background: editForm.recurring ? 'rgba(0, 212, 255, 0.1)' : 'var(--glass)',
+                                color: editForm.recurring ? '#00d4ff' : 'var(--text-muted)',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '500'
+                              }}
+                            >
+                              ↻ Recurring
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditForm({ ...editForm, recurring: false })}
+                              style={{
+                                flex: 1,
+                                padding: '10px',
+                                borderRadius: '10px',
+                                border: !editForm.recurring ? '2px solid #f59e0b' : '1px solid var(--border)',
+                                background: !editForm.recurring ? 'rgba(245, 158, 11, 0.1)' : 'var(--glass)',
+                                color: !editForm.recurring ? '#f59e0b' : 'var(--text-muted)',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '500'
+                              }}
+                            >
+                              One-off
+                            </button>
+                          </div>
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                            Frequency
+                          </label>
+                          <select
+                            className="input"
+                            value={editForm.frequency || 'Monthly'}
+                            onChange={(e) => setEditForm({ ...editForm, frequency: e.target.value, paymentDate: '', paymentDay: '', startMonth: '', startDate: '' })}
+                          >
+                            {editForm.recurring ? (
+                              <>
+                                <option value="Weekly">Weekly</option>
+                                <option value="Fortnightly">Fortnightly</option>
+                                <option value="Monthly">Monthly</option>
+                                <option value="Quarterly">Quarterly</option>
+                                <option value="Yearly">Yearly</option>
+                              </>
+                            ) : (
+                              <option value="One-off">One-off</option>
+                            )}
+                          </select>
+                        </div>
+
+                        {!editForm.recurring ? (
+                          <div>
+                            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                              Due date
+                            </label>
+                            <input
+                              type="date" onKeyDown={(e) => e.preventDefault()}
+
+                              className="input"
+                              value={editForm.paymentDate}
+                              onChange={(e) => setEditForm({ ...editForm, paymentDate: e.target.value })}
+                            />
+                          </div>
+                        ) : (editForm.frequency === 'Weekly' || editForm.frequency === 'Fortnightly') ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div>
+                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                                Day of week
+                              </label>
+                              <select
+                                className="input"
+                                value={editForm.paymentDay || ''}
+                                onChange={(e) => setEditForm({ ...editForm, paymentDay: e.target.value })}
+                              >
+                                <option value="">Select day...</option>
+                                <option value="1">Monday</option>
+                                <option value="2">Tuesday</option>
+                                <option value="3">Wednesday</option>
+                                <option value="4">Thursday</option>
+                                <option value="5">Friday</option>
+                                <option value="6">Saturday</option>
+                                <option value="0">Sunday</option>
+                              </select>
+                            </div>
+                            {editForm.frequency === 'Fortnightly' && (
+                              <div>
+                                <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                                  Starting from
+                                </label>
+                                <input
+                                  type="date" onKeyDown={(e) => e.preventDefault()}
+                                  className="input"
+                                  value={editForm.startDate || ''}
+                                  onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ) : editForm.frequency === 'Monthly' ? (
+                          <div>
+                            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                              Day of month
+                            </label>
+                            <input
+                              type="number"
+                              className="input"
+                              placeholder="1-31"
+                              min="1"
+                              max="31"
+                              value={editForm.paymentDate}
+                              onChange={(e) => setEditForm({ ...editForm, paymentDate: e.target.value })}
+                            />
+                          </div>
+                        ) : editForm.frequency === 'Quarterly' ? (
+                          <div style={{ display: 'flex', gap: '12px' }}>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                                Day of month
+                              </label>
+                              <input
+                                type="number"
+                                className="input"
+                                placeholder="1-31"
+                                min="1"
+                                max="31"
+                                value={editForm.paymentDate}
+                                onChange={(e) => setEditForm({ ...editForm, paymentDate: e.target.value })}
+                              />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                                Starting month
+                              </label>
+                              <select
+                                className="input"
+                                value={editForm.startMonth || ''}
+                                onChange={(e) => setEditForm({ ...editForm, startMonth: e.target.value })}
+                              >
+                                <option value="">Select...</option>
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                              </select>
+                            </div>
+                          </div>
+                        ) : editForm.frequency === 'Yearly' ? (
+                          <div>
+                            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                              Annual date
+                            </label>
+                            <input
+                              type="date" onKeyDown={(e) => e.preventDefault()}
+                              className="input"
+                              value={editForm.paymentDate}
+                              onChange={(e) => setEditForm({ ...editForm, paymentDate: e.target.value })}
+                            />
+                          </div>
+                        ) : null}
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button className="btn btn-primary" onClick={handleEditSave} style={{ flex: 1 }}>
+                            <Icons.Check size={18} /> Save
+                          </button>
+                          <button className="btn btn-secondary" onClick={() => setEditingId(null)} style={{ flex: 1 }}>
+                            <Icons.X size={18} /> Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // View Mode
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <button
+                                  onClick={() => handleTogglePaid(bill.id)}
+                                  style={{
+                                    width: '28px',
+                                    height: '28px',
+                                    minWidth: '28px',
+                                    borderRadius: '8px',
+                                    border: bill.paid ? 'none' : '2px solid var(--border)',
+                                    background: bill.paid ? 'linear-gradient(135deg, #10b981, #059669)' : 'transparent',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s'
+                                  }}
+                                >
+                                  {bill.paid && <Icons.Check size={16} style={{ color: '#ffffff' }} />}
+                                </button>
+                                <button
+                                  onClick={() => handleToggleMissed(bill.id)}
+                                  style={{
+                                    width: '28px',
+                                    height: '28px',
+                                    minWidth: '28px',
+                                    borderRadius: '8px',
+                                    border: bill.missed ? 'none' : '2px solid var(--border)',
+                                    background: bill.missed ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'transparent',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s'
+                                  }}
+                                >
+                                  {bill.missed && <Icons.X size={16} style={{ color: '#ffffff' }} />}
+                                </button>
+                                {!bill.recurring && (
+                                <button
+                                  onClick={() => handleTogglePaused(bill.id)}
+                                  style={{
+                                    width: '28px',
+                                    height: '28px',
+                                    minWidth: '28px',
+                                    borderRadius: '8px',
+                                    border: bill.paused ? 'none' : '2px solid var(--border)',
+                                    background: bill.paused ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'transparent',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s'
+                                  }}
+                                >
+                                  {bill.paused && <span style={{ color: '#ffffff', fontSize: '14px', fontWeight: '700' }}>⏸</span>}
+                                </button>
+                                )}
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: '600', fontSize: '16px', marginBottom: '2px' }}>{bill.name}</div>
+                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{bill.category}</div>
+                              </div>
+                            </div>
+    <div style={{ display: 'flex', gap: '6px', marginLeft: '40px', flexWrap: 'wrap', alignItems: 'center' }}>
+  {bill.recurring ? (
+    <div style={{ fontSize: '11px', color: '#00d4ff', display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(0, 212, 255, 0.1)', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(0, 212, 255, 0.3)' }}>
+      ↻ Recurring
+    </div>
+  ) : (
+    <div style={{ fontSize: '11px', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(245, 158, 11, 0.1)', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+      One-off
+    </div>
+  )}
+  {bill.missed && bill.recurring && (
+    <div style={{ fontSize: '11px', color: '#ef4444', display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(239, 68, 68, 0.05)', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+      ⚠️ Paused until paid
+    </div>
+  )}
+  {bill.paused && (
+    <div style={{ fontSize: '11px', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(245, 158, 11, 0.05)', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+      ⏸ Paused
+    </div>
+  )}
+</div>
+                          </div>
+                        </div>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '12px', background: 'var(--glass)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                          <div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Projected</div>
+                            <div className="font-mono" style={{ fontSize: '16px', fontWeight: '600' }}>£{bill.projected.toFixed(2)}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actual</div>
+                            <div className="font-mono" style={{ fontSize: '16px', fontWeight: '600' }}>£{bill.actual.toFixed(2)}</div>
+                            {bill.actual !== bill.projected && (
+                              <div style={{ fontSize: '11px', color: bill.actual > bill.projected ? '#ef4444' : '#10b981', marginTop: '2px' }}>
+                                {bill.actual > bill.projected ? '+' : ''}£{(bill.actual - bill.projected).toFixed(2)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', background: 'var(--glass)', borderRadius: '8px', border: '1px solid var(--border)', flex: 1 }}>
+                            <Icons.Calendar size={14} />
+                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Due: {bill.paymentDate}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px', marginLeft: '8px' }}>
+                            <button 
+                              onClick={() => handleEditStart(bill)}
+                              style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '10px',
+                                background: 'var(--glass)',
+                                border: '1px solid var(--border)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'var(--text-primary)',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <Icons.Edit size={18} />
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(bill.id)}
+                              style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '10px',
+                                background: 'var(--glass)',
+                                border: '1px solid var(--border)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#ef4444',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <Icons.Trash size={18} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              // Desktop Table View
+              <div style={{ overflowX: 'auto' }} className="desktop-table">
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ padding: '16px 24px', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                    <th style={{ padding: '16px 24px', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Bill Name</th>
+                    <th style={{ padding: '16px 24px', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</th>
+                    <th style={{ padding: '16px 24px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Projected</th>
+                    <th style={{ padding: '16px 24px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actual</th>
+                    <th style={{ padding: '16px 24px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Due Date</th>
+                    <th style={{ padding: '16px 24px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredBills.map((bill, index) => (
+                    <tr key={bill.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--glass)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                      <td style={{ padding: '16px 24px' }}>
+                        <button
+                          onClick={() => handleTogglePaid(bill.id)}
+                          style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '6px',
+                            border: bill.paid ? 'none' : '2px solid var(--border)',
+                            background: bill.paid ? 'linear-gradient(135deg, #10b981, #059669)' : 'transparent',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {bill.paid && <Icons.Check size={16} style={{ color: '#ffffff' }} />}
+                        </button>
+                      </td>
+                      <td style={{ padding: '16px 24px' }}>
+                        {editingId === bill.id ? (
+                          <input
+                            className="input"
+                            value={editForm.name}
+                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                            style={{ minWidth: '200px', padding: '8px 12px' }}
+                          />
+                        ) : (
+                          <div>
+                            <div style={{ fontWeight: '500', fontSize: '15px', marginBottom: '2px' }}>{bill.name}</div>
+                            {bill.paid && (
+                              <div style={{ fontSize: '12px', color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                                <Icons.Check size={12} style={{ color: '#ffffff' }} />
+                                Paid
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: '16px 24px' }}>
+                        {editingId === bill.id ? (
+                          <select
+                            className="input"
+                            value={editForm.category}
+                            onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                            style={{ padding: '8px 12px' }}
+                          >
+                            {categories.map(cat => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{bill.category}</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                        {editingId === bill.id ? (
+                          <input
+                            type="number"
+                            className="input"
+                            value={editForm.projected}
+                            onChange={(e) => setEditForm({ ...editForm, projected: parseFloat(e.target.value) || 0 })}
+                            style={{ width: '100px', padding: '8px 12px', textAlign: 'right' }}
+                          />
+                        ) : (
+                          <span className="font-mono" style={{ fontSize: '14px', fontWeight: '500' }}>£{bill.projected.toFixed(2)}</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                        {editingId === bill.id ? (
+                          <input
+                            type="number"
+                            className="input"
+                            value={editForm.actual}
+                            onChange={(e) => setEditForm({ ...editForm, actual: parseFloat(e.target.value) || 0 })}
+                            style={{ width: '100px', padding: '8px 12px', textAlign: 'right' }}
+                          />
+                        ) : (
+                          <div>
+                            <span className="font-mono" style={{ fontSize: '14px', fontWeight: '600' }}>£{bill.actual.toFixed(2)}</span>
+                            {bill.actual !== bill.projected && (
+                              <div style={{ fontSize: '11px', color: bill.actual > bill.projected ? '#ef4444' : '#10b981', marginTop: '2px' }}>
+                                {bill.actual > bill.projected ? '+' : ''}£{(bill.actual - bill.projected).toFixed(2)}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: '16px 24px', textAlign: 'center' }}>
+                        {editingId === bill.id ? (
+                          <input
+                            className="input"
+                            value={editForm.paymentDate}
+                            onChange={(e) => setEditForm({ ...editForm, paymentDate: e.target.value })}
+                            style={{ width: '100px', padding: '8px 12px', textAlign: 'center' }}
+                          />
+                        ) : (
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'var(--glass)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                            <Icons.Calendar size={14} />
+                            <span style={{ fontSize: '13px' }}>{bill.paymentDate}</span>
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          {editingId === bill.id ? (
+                            <>
+                              <button className="btn btn-icon btn-primary" onClick={handleEditSave}>
+                                <Icons.Check size={18} style={{ color: '#ffffff' }} />
+                              </button>
+                              <button className="btn btn-icon btn-secondary" onClick={() => setEditingId(null)}>
+                                <Icons.X size={18} />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button className="btn btn-icon btn-secondary" onClick={() => handleEditStart(bill)}>
+                                <Icons.Edit size={18} />
+                              </button>
+                              <button className="btn btn-icon btn-secondary" onClick={() => handleDelete(bill.id)} style={{ color: '#ef4444' }}>
+                                <Icons.Trash size={18} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            )}
+          </div>
+                </div>
+                {/* Panel 4: Debt */}
+                <div className={`swipe-panel ${activePanel === 3 ? 'panel-active' : ''}`}>
+          <div className="glass-card animate-in" style={{ padding: isMobile ? '16px' : '24px', animationDelay: '0.9s' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h2 className="font-display" style={{ fontSize: isMobile ? '24px' : '28px' }}>
+                  Debt Tracking
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
+                  {debts.length} {debts.length === 1 ? 'debt' : 'debts'} · Remaining: £{totalDebt.toFixed(2)}
+                </p>
+              </div>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => setShowAddDebtModal(true)}
+                style={{ whiteSpace: 'nowrap' }}
+              >
+                <Icons.Plus size={18} />
+                {!isMobile && 'Add Debt'}
+              </button>
+            </div>
+
+            {/* Debt Payoff Calculator */}
+            {debts.length > 0 && (
+              <div style={{ padding: isMobile ? '16px' : '20px', background: 'var(--glass)', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '24px' }}>
+                <h3 className="font-display" style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Icons.TrendingDown size={20} style={{ color: 'var(--accent-primary)' }} />
+                  Payoff Calculator
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                      Monthly Payment Amount
+                    </label>
+                    <input
+                      type="number"
+                      className="input"
+                      value={debtPayoffAmount}
+                      onChange={(e) => setDebtPayoffAmount(e.target.value === '' ? '' : parseFloat(e.target.value) || 0)}
+                      placeholder="Enter monthly payment"
+                    />
+                  </div>
+                  {payoffTimeline && (
+                    <div style={{ padding: '16px', background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(124, 58, 237, 0.1))', borderRadius: '12px', border: '1px solid var(--accent-primary)' }}>
+                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Time to Pay Off All Debt</div>
+                      <div className="font-mono" style={{ fontSize: '24px', fontWeight: '700', color: 'var(--accent-primary)' }}>
+                        {payoffTimeline.years > 0 && `${payoffTimeline.years}y `}
+                        {payoffTimeline.remainingMonths}m
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                        {payoffTimeline.months} months total
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Debt List */}
+            {debts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+                <p>No debts tracked yet. Add one to get started!</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {debts.map((debt) => {
+                  const paidOff = (debt.originalAmount || debt.totalAmount) - debt.totalAmount;
+                  const progressPct = debt.originalAmount > 0 ? Math.min(100, (paidOff / debt.originalAmount) * 100) : 0;
+                  const debtEstimate = calculateDebtPayoff(debt);
+                  return (
+                  <div key={debt.id} className="glass-card" style={{ padding: '16px', transition: 'all 0.3s' }}>
+                    <div 
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                      onClick={() => setExpandedDebtId(expandedDebtId === debt.id ? null : debt.id)}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '600', fontSize: '16px', marginBottom: '4px' }}>{debt.name}</div>
+                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{debt.type}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div className="font-mono" style={{ fontSize: '18px', fontWeight: '700', color: debt.totalAmount <= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                            {debt.totalAmount <= 0 ? 'PAID OFF' : `£${(debt.totalAmount || 0).toFixed(2)}`}
+                          </div>
+                          {debt.recurringPayment > 0 && debt.totalAmount > 0 && (
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                              £{debt.recurringPayment}/mo
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.3s', transform: expandedDebtId === debt.id ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar - always visible */}
+                    <div style={{ marginTop: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>£{paidOff.toFixed(2)} paid</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{progressPct.toFixed(0)}%</span>
+                      </div>
+                      <div style={{ height: '8px', background: 'var(--glass)', borderRadius: '4px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%',
+                          width: `${progressPct}%`,
+                          background: progressPct >= 100 ? 'linear-gradient(90deg, #10b981, #059669)' : 'linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))',
+                          borderRadius: '4px',
+                          transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}></div>
+                      </div>
+                      {debtEstimate && debt.totalAmount > 0 && (
+                        <div style={{ fontSize: '11px', color: 'var(--accent-primary)', marginTop: '6px' }}>
+                          Debt-free by {debtEstimate.date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} ({debtEstimate.months}mo)
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Expanded Details */}
+                    {expandedDebtId === debt.id && (
+                      <div style={{ marginTop: '16px', paddingTop: '16px', paddingLeft: isMobile ? '8px' : '0', paddingRight: isMobile ? '8px' : '0', borderTop: '1px solid var(--border)', animation: 'slideInUp 0.3s' }}>
+                        {editingDebtId === debt.id ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div>
+                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>Debt Name</label>
+                              <input className="input" value={debt.name} onChange={(e) => handleUpdateDebt(debt.id, { name: e.target.value })} />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>Debt Type</label>
+                              <select className="input" value={debt.type} onChange={(e) => handleUpdateDebt(debt.id, { type: e.target.value })}>
+                                {debtTypes.map(type => (<option key={type} value={type}>{type}</option>))}
+                              </select>
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>Remaining Balance</label>
+                              <input type="number" className="input" value={debt.totalAmount} onChange={(e) => handleUpdateDebt(debt.id, { totalAmount: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })} />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>Original Amount</label>
+                              <input type="number" className="input" value={debt.originalAmount || ''} onChange={(e) => handleUpdateDebt(debt.id, { originalAmount: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })} />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '8px' : '12px' }}>
+                              <div>
+                                <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>Start Date</label>
+                                <input type="date" onKeyDown={(e) => e.preventDefault()} className="input" value={debt.startDate} onChange={(e) => handleUpdateDebt(debt.id, { startDate: e.target.value })} />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>End Date</label>
+                                <input type="date" onKeyDown={(e) => e.preventDefault()} className="input" value={debt.endDate} onChange={(e) => handleUpdateDebt(debt.id, { endDate: e.target.value })} />
+                              </div>
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>Recurring Payment</label>
+                              <input type="number" className="input" value={debt.recurringPayment} onChange={(e) => handleUpdateDebt(debt.id, { recurringPayment: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                              <button className="btn btn-primary" onClick={() => setEditingDebtId(null)} style={{ flex: 1 }}><Icons.Check size={18} /> Done</button>
+                              <button className="btn btn-secondary" onClick={() => handleDeleteDebt(debt.id)} style={{ color: '#ef4444' }}><Icons.Trash size={18} /> Delete</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            {/* Stats grid */}
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '12px', marginBottom: '16px' }}>
+                              <div style={{ padding: '12px', background: 'var(--glass)', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Original Amount</div>
+                                <div className="font-mono" style={{ fontSize: '14px', fontWeight: '600' }}>£{(debt.originalAmount || debt.totalAmount).toFixed(2)}</div>
+                              </div>
+                              <div style={{ padding: '12px', background: 'var(--glass)', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Total Paid</div>
+                                <div className="font-mono" style={{ fontSize: '14px', fontWeight: '600', color: 'var(--success)' }}>£{paidOff.toFixed(2)}</div>
+                              </div>
+                              {debt.startDate && (
+                                <div style={{ padding: '12px', background: 'var(--glass)', borderRadius: '8px' }}>
+                                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Start Date</div>
+                                  <div style={{ fontSize: '14px', fontWeight: '500' }}>{new Date(debt.startDate).toLocaleDateString()}</div>
+                                </div>
+                              )}
+                              {debt.recurringPayment > 0 && (
+                                <div style={{ padding: '12px', background: 'var(--glass)', borderRadius: '8px' }}>
+                                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Monthly Payment</div>
+                                  <div className="font-mono" style={{ fontSize: '14px', fontWeight: '600' }}>£{debt.recurringPayment.toFixed(2)}/mo</div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Make Payment */}
+                            {debt.totalAmount > 0 && (
+                              <div style={{ padding: '16px', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.02))', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)', marginBottom: '16px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '10px', color: 'var(--success)' }}>Make a Payment</div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <input
+                                    type="number"
+                                    className="input"
+                                    placeholder="Amount"
+                                    value={debtPaymentInput[debt.id] || ''}
+                                    onChange={(e) => setDebtPaymentInput({ ...debtPaymentInput, [debt.id]: e.target.value })}
+                                    style={{ flex: 1 }}
+                                  />
+                                  <button
+                                    className="btn btn-primary"
+                                    onClick={() => {
+                                      const amt = parseFloat(debtPaymentInput[debt.id]);
+                                      if (amt > 0) {
+                                        handleMakePayment(debt.id, amt);
+                                        setDebtPaymentInput({ ...debtPaymentInput, [debt.id]: '' });
+                                      }
+                                    }}
+                                    style={{ whiteSpace: 'nowrap' }}
+                                  >
+                                    Pay
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Payment History */}
+                            {debt.payments && debt.payments.length > 0 && (
+                              <div style={{ marginBottom: '16px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '10px', color: 'var(--text-secondary)' }}>Payment History</div>
+                                <div style={{ maxHeight: '150px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  {[...debt.payments].reverse().map((p, i) => (
+                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--glass)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <div style={{
+                                          width: '6px', height: '6px', borderRadius: '50%',
+                                          background: p.type === 'manual' ? 'var(--success)' : 'var(--accent-primary)'
+                                        }}></div>
+                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                          {new Date(p.date).toLocaleDateString()}
+                                        </span>
+                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '1px 6px', background: 'var(--glass)', borderRadius: '4px' }}>
+                                          {p.type === 'manual' ? 'Manual' : 'Auto'}
+                                        </span>
+                                      </div>
+                                      <span className="font-mono" style={{ fontSize: '13px', fontWeight: '600', color: 'var(--success)' }}>
+                                        -£{p.amount.toFixed(2)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <button 
+                              className="btn btn-secondary" 
+                              onClick={() => setEditingDebtId(debt.id)}
+                              style={{ width: '100%' }}
+                            >
+                              <Icons.Edit size={18} /> Edit Details
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+                </div>
+                {/* Panel 5: Savings */}
+                <div className={`swipe-panel ${activePanel === 4 ? 'panel-active' : ''}`}>
+          <div className="glass-card animate-in" style={{ padding: isMobile ? '16px' : '24px', animationDelay: '0.9s' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h2 className="font-display" style={{ fontSize: isMobile ? '24px' : '28px' }}>Savings Goals</h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
+                  {savings.length} {savings.length === 1 ? 'goal' : 'goals'} · Saved: £{totalSaved.toFixed(2)}
+                </p>
+              </div>
+              <button className="btn btn-primary" onClick={() => { setNewSavings(s => ({ ...s, priority: '' })); setShowAddSavingsModal(true); }} style={{ whiteSpace: 'nowrap' }}>
+                <Icons.Plus size={18} />
+                {!isMobile && 'Add Goal'}
+              </button>
+            </div>
+
+            {/* Savings Summary */}
+            {savings.length > 0 && (
+              <div style={{ padding: isMobile ? '16px' : '20px', background: 'var(--glass)', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '16px' }}>
+                  <div style={{ padding: '12px', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.02))', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>Total Saved</div>
+                    <div className="font-mono" style={{ fontSize: '22px', fontWeight: '700', color: 'var(--success)' }}>£{totalSaved.toFixed(2)}</div>
+                  </div>
+                  <div style={{ padding: '12px', background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(0, 212, 255, 0.02))', borderRadius: '12px', border: '1px solid rgba(0, 212, 255, 0.2)' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>Target Total</div>
+                    <div className="font-mono" style={{ fontSize: '22px', fontWeight: '700', color: 'var(--accent-primary)' }}>£{totalSavingsTarget.toFixed(2)}</div>
+                  </div>
+                  <div style={{ padding: '12px', background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(124, 58, 237, 0.02))', borderRadius: '12px', border: '1px solid rgba(124, 58, 237, 0.2)' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>Overall Progress</div>
+                    <div className="font-mono" style={{ fontSize: '22px', fontWeight: '700', color: 'var(--accent-secondary)' }}>{totalSavingsTarget > 0 ? Math.min(100, (totalSaved / totalSavingsTarget * 100)).toFixed(0) : 0}%</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Savings Goals List */}
+            {savings.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+                <p>No savings goals yet. Add one to start saving!</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {sortedSavings.map((goal) => {
+                  const progressPct = goal.targetAmount > 0 ? Math.min(100, ((goal.currentAmount || 0) / goal.targetAmount) * 100) : 0;
+                  const estimate = calculateSavingsEstimate(goal);
+                  const isComplete = goal.targetAmount > 0 && (goal.currentAmount || 0) >= goal.targetAmount;
+                  return (
+                  <div key={goal.id} className="glass-card" style={{ padding: '16px', transition: 'all 0.3s', borderColor: isComplete ? 'rgba(16, 185, 129, 0.3)' : undefined }}>
+                    <div
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                      onClick={() => setExpandedSavingsId(expandedSavingsId === goal.id ? null : goal.id)}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          {isComplete && <span style={{ fontSize: '16px' }}>🎉</span>}
+                          <div style={{ fontWeight: '600', fontSize: '16px' }}>{goal.name}</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--accent-secondary)', background: 'rgba(124, 58, 237, 0.1)', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(124, 58, 237, 0.3)' }}>{goal.category}</span>
+                          <span style={{ fontSize: '11px', color: goal.priority ? 'var(--text-muted)' : 'var(--text-muted)', background: goal.priority ? 'var(--glass)' : 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '6px', border: goal.priority ? '1px solid var(--border)' : '1px solid rgba(245, 158, 11, 0.3)' }}>{goal.priority ? `P${goal.priority}` : 'Low'}</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div className="font-mono" style={{ fontSize: '18px', fontWeight: '700', color: isComplete ? 'var(--success)' : 'var(--accent-primary)' }}>
+                            {isComplete ? 'COMPLETE!' : `£${(goal.currentAmount || 0).toFixed(2)}`}
+                          </div>
+                          {!isComplete && goal.targetAmount > 0 && (
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>of £{goal.targetAmount.toFixed(2)}</div>
+                          )}
+                        </div>
+                        <div style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.3s', transform: expandedSavingsId === goal.id ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div style={{ marginTop: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>£{(goal.currentAmount || 0).toFixed(2)} saved</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{progressPct.toFixed(0)}%</span>
+                      </div>
+                      <div style={{ height: '8px', background: 'var(--glass)', borderRadius: '4px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%',
+                          width: `${progressPct}%`,
+                          background: isComplete ? 'linear-gradient(90deg, #10b981, #059669)' : 'linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))',
+                          borderRadius: '4px',
+                          transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}></div>
+                      </div>
+                      {estimate && !isComplete && estimate.months > 0 && (
+                        <div style={{ fontSize: '11px', color: 'var(--accent-primary)', marginTop: '6px' }}>
+                          Goal reached by {estimate.date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} ({estimate.months}mo)
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Expanded Details */}
+                    {expandedSavingsId === goal.id && (
+                      <div style={{ marginTop: '16px', paddingTop: '16px', paddingLeft: isMobile ? '8px' : '0', paddingRight: isMobile ? '8px' : '0', borderTop: '1px solid var(--border)' }}>
+                        {editingSavingsId === goal.id ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div>
+                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>Goal Name</label>
+                              <input className="input" value={goal.name} onChange={(e) => handleUpdateSavings(goal.id, { name: e.target.value })} />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>Category</label>
+                              <select className="input" value={goal.category} onChange={(e) => handleUpdateSavings(goal.id, { category: e.target.value })}>
+                                {savingsCategories.map(c => (<option key={c} value={c}>{c}</option>))}
+                              </select>
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>Target Amount</label>
+                              <input type="number" className="input" value={goal.targetAmount} onChange={(e) => handleUpdateSavings(goal.id, { targetAmount: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })} />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>Current Amount</label>
+                              <input type="number" className="input" value={goal.currentAmount} onChange={(e) => handleUpdateSavings(goal.id, { currentAmount: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })} />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>Monthly Contribution</label>
+                              <input type="number" className="input" value={goal.monthlyContribution} onChange={(e) => handleUpdateSavings(goal.id, { monthlyContribution: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })} />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>Priority (1 = most important to save for!)</label>
+                              <input type="number" className={`input ${validationErrors['savings-priority'] ? 'input-error' : ''}`} min="1" max="10" value={goal.priority === '' ? '' : (goal.priority || 1)} onChange={(e) => handleUpdateSavings(goal.id, { priority: e.target.value === '' ? '' : parseInt(e.target.value) || 1 })} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                              <button className="btn btn-primary" onClick={() => setEditingSavingsId(null)} style={{ flex: 1 }}><Icons.Check size={18} /> Done</button>
+                              <button className="btn btn-secondary" onClick={() => handleDeleteSavings(goal.id)} style={{ color: '#ef4444' }}><Icons.Trash size={18} /> Delete</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            {/* Stats grid */}
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '12px', marginBottom: '16px' }}>
+                              <div style={{ padding: '12px', background: 'var(--glass)', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Target</div>
+                                <div className="font-mono" style={{ fontSize: '14px', fontWeight: '600' }}>£{(goal.targetAmount || 0).toFixed(2)}</div>
+                              </div>
+                              <div style={{ padding: '12px', background: 'var(--glass)', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Remaining</div>
+                                <div className="font-mono" style={{ fontSize: '14px', fontWeight: '600', color: 'var(--accent-primary)' }}>£{Math.max(0, (goal.targetAmount || 0) - (goal.currentAmount || 0)).toFixed(2)}</div>
+                              </div>
+                              {goal.monthlyContribution > 0 && (
+                                <div style={{ padding: '12px', background: 'var(--glass)', borderRadius: '8px' }}>
+                                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Monthly Auto-Save</div>
+                                  <div className="font-mono" style={{ fontSize: '14px', fontWeight: '600' }}>£{goal.monthlyContribution.toFixed(2)}/mo</div>
+                                </div>
+                              )}
+                              <div style={{ padding: '12px', background: 'var(--glass)', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Priority</div>
+                                <div style={{ fontSize: '14px', fontWeight: '600' }}>{goal.priority ? `#${goal.priority}` : 'Low'}</div>
+                              </div>
+                            </div>
+
+                            {/* Deposit / Withdraw */}
+                            {!isComplete && (
+                              <div style={{ padding: '16px', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.02))', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)', marginBottom: '16px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '10px', color: 'var(--success)' }}>Add / Withdraw</div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <input
+                                    type="number"
+                                    className="input"
+                                    placeholder="Amount"
+                                    value={savingsDepositInput[goal.id] || ''}
+                                    onChange={(e) => setSavingsDepositInput({ ...savingsDepositInput, [goal.id]: e.target.value })}
+                                    style={{ flex: 1 }}
+                                  />
+                                  <button className="btn btn-primary" onClick={() => { const amt = parseFloat(savingsDepositInput[goal.id]); if (amt > 0) { handleSavingsDeposit(goal.id, amt); setSavingsDepositInput({ ...savingsDepositInput, [goal.id]: '' }); } }} style={{ whiteSpace: 'nowrap' }}>+Add</button>
+                                  <button className="btn btn-secondary" onClick={() => { const amt = parseFloat(savingsDepositInput[goal.id]); if (amt > 0) { handleSavingsDeposit(goal.id, -amt); setSavingsDepositInput({ ...savingsDepositInput, [goal.id]: '' }); } }} style={{ whiteSpace: 'nowrap', color: 'var(--danger)' }}>−Take</button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Transaction History */}
+                            {goal.transactions && goal.transactions.length > 0 && (
+                              <div style={{ marginBottom: '16px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '10px', color: 'var(--text-secondary)' }}>Transaction History</div>
+                                <div style={{ maxHeight: '150px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  {[...goal.transactions].reverse().map((t, i) => (
+                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--glass)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: t.amount > 0 ? 'var(--success)' : 'var(--danger)' }}></div>
+                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{new Date(t.date).toLocaleDateString()}</span>
+                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '1px 6px', background: 'var(--glass)', borderRadius: '4px' }}>
+                                          {t.type === 'auto' ? 'Auto' : t.type === 'initial' ? 'Initial' : t.type === 'deposit' ? 'Deposit' : 'Withdraw'}
+                                        </span>
+                                      </div>
+                                      <span className="font-mono" style={{ fontSize: '13px', fontWeight: '600', color: t.amount > 0 ? 'var(--success)' : 'var(--danger)' }}>
+                                        {t.amount > 0 ? '+' : ''}£{Math.abs(t.amount).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <button className="btn btn-secondary" onClick={() => setEditingSavingsId(goal.id)} style={{ width: '100%' }}>
+                              <Icons.Edit size={18} /> Edit Details
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Add Bill Modal */}
+          {showAddModal && (
+            <div className="modal-overlay" onClick={() => {
+  setShowAddModal(false);
+  setValidationErrors({});
+  setNewBill({
+  name: '',
+  category: 'HOME',
+  amount: '',
+  paymentDate: '',
+  paymentDay: '',
+  startDate: '',
+  startMonth: '',
+  paid: false,
+  recurring: false,
+  missed: false,
+  frequency: 'Monthly'
+});
+}}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div style={{ padding: isMobile ? '24px' : '32px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '24px' : '32px' }}>
+                    <h2 className="font-display" style={{ fontSize: isMobile ? '24px' : '28px' }}>Add New Bill</h2>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div>
+                      <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                        Bill Name
+                      </label>
+                      <input
+                        className={`input ${validationErrors['bill-name'] ? 'input-error' : ''}`}
+                        placeholder="e.g., Electric Bill"
+                        value={newBill.name}
+                        onChange={(e) => { setNewBill({ ...newBill, name: e.target.value }); setValidationErrors(v => { const n = {...v}; delete n['bill-name']; return n; }); }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                        Category
+                      </label>
+                      <select
+                        className="input"
+                        value={newBill.category}
+                        onChange={(e) => setNewBill({ ...newBill, category: e.target.value })}
+                      >
+                        {categories.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                        Amount
+                      </label>
+                      <input
+                        type="number"
+                        className={`input ${validationErrors['bill-amount'] ? 'input-error' : ''}`}
+                        placeholder="0.00"
+                        value={newBill.amount}
+                        onChange={(e) => { setNewBill({ ...newBill, amount: e.target.value }); setValidationErrors(v => { const n = {...v}; delete n['bill-amount']; return n; }); }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                        Bill Type
+                      </label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setNewBill({ ...newBill, recurring: true })}
+                          style={{
+                            flex: 1,
+                            padding: '10px',
+                            borderRadius: '10px',
+                            border: newBill.recurring ? '2px solid #00d4ff' : '1px solid var(--border)',
+                            background: newBill.recurring ? 'rgba(0, 212, 255, 0.1)' : 'var(--glass)',
+                            color: newBill.recurring ? '#00d4ff' : 'var(--text-muted)',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: '500'
+                          }}
+                        >
+                          ↻ Recurring
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewBill({ ...newBill, recurring: false })}
+                          style={{
+                            flex: 1,
+                            padding: '10px',
+                            borderRadius: '10px',
+                            border: !newBill.recurring ? '2px solid #f59e0b' : '1px solid var(--border)',
+                            background: !newBill.recurring ? 'rgba(245, 158, 11, 0.1)' : 'var(--glass)',
+                            color: !newBill.recurring ? '#f59e0b' : 'var(--text-muted)',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: '500'
+                          }}
+                        >
+                          One-off
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                        Frequency
+                      </label>
+                      <select
+                        className="input"
+                        value={newBill.frequency || 'Monthly'}
+                        onChange={(e) => setNewBill({ ...newBill, frequency: e.target.value, paymentDate: '', paymentDay: '', startMonth: '', startDate: '' })}
+                      >
+                        {newBill.recurring ? (
+                          <>
+                            <option value="Weekly">Weekly</option>
+                            <option value="Fortnightly">Fortnightly</option>
+                            <option value="Monthly">Monthly</option>
+                            <option value="Quarterly">Quarterly</option>
+                            <option value="Yearly">Yearly</option>
+                          </>
+                        ) : (
+                          <option value="One-off">One-off</option>
+                        )}
+                      </select>
+                    </div>
+
+                    {!newBill.recurring ? (
+                      <div>
+                        <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                          Due date
+                        </label>
+                        <input
+                          type="date" onKeyDown={(e) => e.preventDefault()}
+                          className="input"
+                          value={newBill.paymentDate}
+                          onChange={(e) => setNewBill({ ...newBill, paymentDate: e.target.value })}
+                        />
+                      </div>
+                    ) : (newBill.frequency === 'Weekly' || newBill.frequency === 'Fortnightly') ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div>
+                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                            Day of week
+                          </label>
+                          <select
+                            className="input"
+                            value={newBill.paymentDay || ''}
+                            onChange={(e) => setNewBill({ ...newBill, paymentDay: e.target.value })}
+                          >
+                            <option value="">Select day...</option>
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                            <option value="0">Sunday</option>
+                          </select>
+                        </div>
+                        {newBill.frequency === 'Fortnightly' && (
+                          <div>
+                            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                              Starting from
+                            </label>
+                            <input
+                              type="date" onKeyDown={(e) => e.preventDefault()}
+                              className="input"
+                              value={newBill.startDate || ''}
+                              onChange={(e) => setNewBill({ ...newBill, startDate: e.target.value })}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : newBill.frequency === 'Monthly' ? (
+                      <div>
+                        <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                          Day of month
+                        </label>
+                        <input
+                          type="number"
+                          className="input"
+                          placeholder="1-31"
+                          min="1"
+                          max="31"
+                          value={newBill.paymentDate}
+                          onChange={(e) => setNewBill({ ...newBill, paymentDate: e.target.value })}
+                        />
+                      </div>
+                    ) : newBill.frequency === 'Quarterly' ? (
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                            Day of month
+                          </label>
+                          <input
+                            type="number"
+                            className="input"
+                            placeholder="1-31"
+                            min="1"
+                            max="31"
+                            value={newBill.paymentDate}
+                            onChange={(e) => setNewBill({ ...newBill, paymentDate: e.target.value })}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                            Starting month
+                          </label>
+                          <select
+                            className="input"
+                            value={newBill.startMonth || ''}
+                            onChange={(e) => setNewBill({ ...newBill, startMonth: e.target.value })}
+                          >
+                            <option value="">Select...</option>
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                          </select>
+                        </div>
+                      </div>
+                    ) : newBill.frequency === 'Yearly' ? (
+                      <div>
+                        <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                          Annual date
+                        </label>
+                        <input
+                          type="date" onKeyDown={(e) => e.preventDefault()}
+                          className="input"
+                          value={newBill.paymentDate}
+                          onChange={(e) => setNewBill({ ...newBill, paymentDate: e.target.value })}
+                        />
+                      </div>
+                    ) : null}
+
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                      <button 
+                        className="btn btn-primary" 
+                        onClick={handleAddBill}
+                        style={{ flex: 1, justifyContent: 'center' }}
+                      >
+                        <Icons.Plus size={20} />
+                        Add Bill
+</button>
+<button 
+  className="btn btn-secondary" 
+  onClick={() => {
+    setShowAddModal(false);
+    setValidationErrors({});
+    setNewBill({
+  name: '',
+  category: 'HOME',
+  amount: '',
+  paymentDate: '',
+  paymentDay: '',
+  startDate: '',
+  startMonth: '',
+  paid: false,
+  recurring: false,
+  missed: false,
+  frequency: 'Monthly'
+});
+  }}
+  style={{ flex: 1, justifyContent: 'center' }}
+>
+  Cancel
+</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Category Management Modal */}
+          {showCategoryModal && (
+            <div className="modal-overlay" onClick={() => setShowCategoryModal(false)}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div style={{ padding: isMobile ? '24px' : '32px' }}>
+                  <h2 className="font-display" style={{ fontSize: isMobile ? '24px' : '28px', marginBottom: '24px' }}>Manage Categories</h2>
+                  
+                  <div style={{ marginBottom: '24px' }}>
+                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                      Add New Category
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        className="input"
+                        placeholder="e.g., GROCERIES"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { handleAddCategory(); e.target.blur(); } }}
+                        style={{ flex: 1 }}
+                      />
+                      <button className="btn btn-primary" onMouseDown={(e) => { e.preventDefault(); if (!newCategoryName.trim()) { e.target.closest('div').querySelector('input').focus(); return; } handleAddCategory(); document.activeElement.blur(); }}>
+                        <Icons.Plus size={18} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: '500' }}>DEFAULT CATEGORIES</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {defaultCategories.map(cat => {
+                        const count = bills.filter(b => b.category === cat).length;
+                        return (
+                          <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--glass)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                            <div>
+                              <span style={{ fontWeight: '500', fontSize: '14px' }}>{cat}</span>
+                              <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>{count} bills</span>
+                            </div>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '3px 8px', background: 'var(--glass)', borderRadius: '6px' }}>Default</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {customCategories.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: '500' }}>CUSTOM CATEGORIES</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {customCategories.map(cat => {
+                          const count = bills.filter(b => b.category === cat).length;
+                          return (
+                            <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--glass)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                              <div>
+                                <span style={{ fontWeight: '500', fontSize: '14px' }}>{cat}</span>
+                                <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>{count} bills</span>
+                              </div>
+                              <button 
+                                onClick={() => handleDeleteCategory(cat)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: count > 0 ? 'var(--text-muted)' : '#ef4444', padding: '4px', opacity: count > 0 ? 0.5 : 1 }}
+                              >
+                                <Icons.Trash size={16} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={() => setShowCategoryModal(false)}
+                    style={{ width: '100%', justifyContent: 'center', marginTop: '8px' }}
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Add Debt Modal */}
+          {showAddDebtModal && (
+            <div className="modal-overlay" onClick={() => {
+  setShowAddDebtModal(false);
+  setValidationErrors({});
+  setNewDebt({
+    name: '',
+    type: 'Credit Card',
+    totalAmount: '',
+    originalAmount: '',
+    startDate: '',
+    endDate: '',
+    recurringPayment: ''
+  });
+}}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div style={{ padding: isMobile ? '16px' : '32px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '24px' : '32px' }}>
+<h2 className="font-display" style={{ fontSize: isMobile ? '24px' : '28px' }}>Add New Debt</h2>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div>
+                      <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                        Debt Name *
+                      </label>
+                      <input
+                        className={`input ${validationErrors['debt-name'] ? 'input-error' : ''}`}
+                        placeholder="e.g., Credit Card, Student Loan"
+                        value={newDebt.name}
+                        onChange={(e) => { setNewDebt({ ...newDebt, name: e.target.value }); setValidationErrors(v => { const n = {...v}; delete n['debt-name']; return n; }); }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                        Debt Type *
+                      </label>
+                      <select
+                        className="input"
+                        value={newDebt.type}
+                        onChange={(e) => setNewDebt({ ...newDebt, type: e.target.value })}
+                      >
+                        {debtTypes.map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                        Current Balance *
+                      </label>
+                      <input
+                        type="number"
+                        className={`input ${validationErrors['debt-balance'] ? 'input-error' : ''}`}
+                        placeholder="What you owe right now"
+                        value={newDebt.totalAmount}
+                        onChange={(e) => { setNewDebt({ ...newDebt, totalAmount: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 }); setValidationErrors(v => { const n = {...v}; delete n['debt-balance']; return n; }); }}
+                      />
+                    </div>
+
+                    <div style={{ padding: isMobile ? '12px' : '16px', background: 'var(--glass)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-secondary)' }}>
+                        Optional Details
+                      </div>
+                      
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                          Original Amount
+                        </label>
+                        <input
+                          type="number"
+                          className="input"
+                          placeholder="What you originally borrowed"
+                          value={newDebt.originalAmount || ''}
+                          onChange={(e) => setNewDebt({ ...newDebt, originalAmount: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '8px' : '16px', marginBottom: '16px' }}>
+                        <div>
+                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                            Start Date
+                          </label>
+                          <input
+  type="date" onKeyDown={(e) => e.preventDefault()}
+  className="input"
+  value={newDebt.startDate}
+  onChange={(e) => setNewDebt({ ...newDebt, startDate: e.target.value })}
+/>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                            End Date
+                          </label>
+                          <input
+  type="date" onKeyDown={(e) => e.preventDefault()}
+  className="input"
+  value={newDebt.endDate}
+  onChange={(e) => setNewDebt({ ...newDebt, endDate: e.target.value })}
+/>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>
+                          Recurring Payment
+                        </label>
+                        <input
+                          type="number"
+                          className="input"
+                          placeholder="Monthly payment amount"
+                          value={newDebt.recurringPayment}
+                        onChange={(e) => setNewDebt({ ...newDebt, recurringPayment: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+  <button 
+    className="btn btn-primary" 
+    onClick={handleAddDebt}
+    style={{ flex: 1, justifyContent: 'center' }}
+  >
+    <Icons.Plus size={20} />
+    Add Debt
+  </button>
+  <button 
+    className="btn btn-secondary" 
+    onClick={() => {
+      setShowAddDebtModal(false);
+      setValidationErrors({});
+      setNewDebt({
+        name: '',
+        type: 'Credit Card',
+        totalAmount: '',
+        originalAmount: '',
+        startDate: '',
+        endDate: '',
+        recurringPayment: ''
+      });
+    }}
+    style={{ flex: 1, justifyContent: 'center' }}
+  >
+    Cancel
+  </button>
+</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* Add Savings Modal */}
+          {showAddSavingsModal && (
+            <div className="modal-overlay" onClick={() => {
+  setShowAddSavingsModal(false);
+  setValidationErrors({});
+  setNewSavings({ name: '', category: 'Emergency', targetAmount: '', currentAmount: '', monthlyContribution: '', priority: '', startDate: '' });
+}}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div style={{ padding: isMobile ? '16px' : '32px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '24px' : '32px' }}>
+                    <h2 className="font-display" style={{ fontSize: isMobile ? '24px' : '28px' }}>Add Savings Goal</h2>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div>
+                      <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Goal Name *</label>
+                      <input
+                        className={`input ${validationErrors['savings-name'] ? 'input-error' : ''}`}
+                        placeholder="e.g., Holiday Fund, Emergency Savings"
+                        value={newSavings.name}
+                        onChange={(e) => { setNewSavings({ ...newSavings, name: e.target.value }); setValidationErrors(v => { const n = {...v}; delete n['savings-name']; return n; }); }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Category</label>
+                      <select className="input" value={newSavings.category} onChange={(e) => setNewSavings({ ...newSavings, category: e.target.value })}>
+                        {savingsCategories.map(c => (<option key={c} value={c}>{c}</option>))}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Target Amount *</label>
+                      <input
+                        type="number"
+                        className={`input ${validationErrors['savings-target'] ? 'input-error' : ''}`}
+                        placeholder="How much do you want to save?"
+                        value={newSavings.targetAmount}
+                        onChange={(e) => { setNewSavings({ ...newSavings, targetAmount: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 }); setValidationErrors(v => { const n = {...v}; delete n['savings-target']; return n; }); }}
+                      />
+                    </div>
+                    <div style={{ padding: isMobile ? '12px' : '16px', background: 'var(--glass)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-secondary)' }}>Optional Details</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div>
+                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Starting Amount</label>
+                          <input type="number" className="input" placeholder="Already saved?" value={newSavings.currentAmount} onChange={(e) => setNewSavings({ ...newSavings, currentAmount: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Monthly Auto-Save</label>
+                          <input type="number" className="input" placeholder="Auto-add each month" value={newSavings.monthlyContribution} onChange={(e) => setNewSavings({ ...newSavings, monthlyContribution: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Priority (1 = most important to save for!)
+</label>
+                          <input type="number" className={`input ${validationErrors['savings-priority'] ? 'input-error' : ''}`} min="1" max="10" placeholder={`Next available: ${getNextAvailablePriority()}`} value={newSavings.priority === '' ? '' : newSavings.priority} onChange={(e) => { setNewSavings({ ...newSavings, priority: e.target.value === '' ? '' : (parseInt(e.target.value) || '') }); setValidationErrors(v => { const n = {...v}; delete n['savings-priority']; return n; }); }} />
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                      <button className="btn btn-primary" onClick={handleAddSavings} style={{ flex: 1, justifyContent: 'center' }}>
+                        <Icons.Plus size={20} /> Add Goal
+                      </button>
+                      <button className="btn btn-secondary" onClick={() => { setShowAddSavingsModal(false); setValidationErrors({}); setNewSavings({ name: '', category: 'Emergency', targetAmount: '', currentAmount: '', monthlyContribution: '', priority: '', startDate: '' }); }} style={{ flex: 1, justifyContent: 'center' }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<BillsTracker />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+import { useState, useRef, useCallback, useEffect } from 'react';
+import haptic from '../utils/haptics';
+
+export default function useSwipe(panelCount) {
+  const [activePanel, setActivePanel] = useState(0);
+  const activePanelRef = useRef(0);
+  const swipeRef = useRef(null);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const touchDeltaX = useRef(0);
+  const isSwiping = useRef(false);
+  const directionLocked = useRef(false);
+  const scrollPositions = useRef(new Array(panelCount).fill(0));
+  const visitedPanels = useRef(new Set([0])); // Panel 0 is visited on load
+
+  useEffect(() => { activePanelRef.current = activePanel; }, [activePanel]);
+
+  const switchToPanel = useCallback((fromPanel, toPanel) => {
+    scrollPositions.current[fromPanel] = window.scrollY;
+    visitedPanels.current.add(fromPanel);
+
+    setActivePanel(toPanel);
+    activePanelRef.current = toPanel;
+    if (swipeRef.current) swipeRef.current.style.transform = `translateX(${-toPanel * 100}%)`;
+
+    document.body.setAttribute('data-switching', 'true');
+    requestAnimationFrame(() => {
+      const savedPos = scrollPositions.current[toPanel];
+      
+      window.scrollTo(0, savedPos);
+      visitedPanels.current.add(toPanel);
+      
+      setTimeout(() => {
+        window.__tallySyncScrollDirect?.(savedPos);
+        document.body.removeAttribute('data-switching');
+      }, 200);
+    });
+  }, []);
+
+  // Expose scroll positions and active panel so header can adjust them
+  useEffect(() => {
+    window.__tallyScrollPositions = scrollPositions;
+    window.__tallyActivePanel = activePanelRef;
+    window.__tallyVisitedPanels = visitedPanels;
+    return () => { 
+      delete window.__tallyScrollPositions; 
+      delete window.__tallyActivePanel;
+      delete window.__tallyVisitedPanels;
+    };
+  }, []);
+
+  const finishSwipe = useCallback(() => {
+    if (!isSwiping.current) return;
+    if (swipeRef.current) swipeRef.current.classList.remove('swiping');
+
+    const threshold = window.innerWidth * 0.2;
+    const panel = activePanelRef.current;
+    let newPanel = panel;
+    if (touchDeltaX.current < -threshold && panel < panelCount - 1) newPanel = panel + 1;
+    else if (touchDeltaX.current > threshold && panel > 0) newPanel = panel - 1;
+
+    if (newPanel !== panel) {
+      switchToPanel(panel, newPanel);
+      haptic.selection();
+    } else {
+      // Snap back to current panel
+      if (swipeRef.current) swipeRef.current.style.transform = `translateX(${-panel * 100}%)`;
+    }
+
+    touchDeltaX.current = 0;
+    isSwiping.current = false;
+    directionLocked.current = false;
+  }, [panelCount, switchToPanel]);
+
+  const onTouchMove = useCallback((e) => {
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+
+    if (!directionLocked.current && (Math.abs(dx) > 15 || Math.abs(dy) > 15)) {
+      directionLocked.current = true;
+      isSwiping.current = Math.abs(dx) > Math.abs(dy) * 1.5;
+      if (!isSwiping.current) {
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onTouchEnd);
+        document.removeEventListener('touchcancel', onTouchEnd);
+        return;
+      }
+    }
+
+    if (!isSwiping.current) return;
+    e.preventDefault();
+    touchDeltaX.current = dx;
+
+    const panel = activePanelRef.current;
+    const atEdge = (panel === 0 && dx > 0) || (panel === panelCount - 1 && dx < 0);
+    const effectiveDx = atEdge ? dx * 0.2 : dx;
+
+    if (swipeRef.current) {
+      swipeRef.current.classList.add('swiping');
+      const base = -panel * 100;
+      swipeRef.current.style.transform = `translateX(${base + (effectiveDx / window.innerWidth) * 100}%)`;
+    }
+  }, [panelCount]);
+
+  const onTouchEnd = useCallback(() => {
+    document.removeEventListener('touchmove', onTouchMove);
+    document.removeEventListener('touchend', onTouchEnd);
+    document.removeEventListener('touchcancel', onTouchEnd);
+    finishSwipe();
+  }, [onTouchMove, finishSwipe]);
+
+  const handleTouchStart = useCallback((e) => {
+    if (e.target.closest('.mobile-category-scroll')) return;
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    touchDeltaX.current = 0;
+    isSwiping.current = false;
+    directionLocked.current = false;
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd, { passive: true });
+    document.addEventListener('touchcancel', onTouchEnd, { passive: true });
+  }, [onTouchMove, onTouchEnd]);
+
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [onTouchMove, onTouchEnd]);
+
+  const goToPanel = (idx) => {
+    const fromPanel = activePanelRef.current;
+    if (idx !== fromPanel) {
+      switchToPanel(fromPanel, idx);
+    }
+  };
+
+  return { activePanel, swipeRef, handleTouchStart, goToPanel };
+}

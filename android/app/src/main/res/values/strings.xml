@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Tally</string>
+    <string name="title_activity_main">Tally</string>
+    <string name="package_name">com.tally.billtracker</string>
+    <string name="custom_url_scheme">com.tally.billtracker</string>
+    <string name="server_client_id">135467683617-n5sck8vo4ot0h35lmbepc064d7legva1.apps.googleusercontent.com</string>
+</resources>
