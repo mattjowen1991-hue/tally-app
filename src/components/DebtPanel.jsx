@@ -418,7 +418,16 @@ export default function DebtPanel({
                       </>
                     )}
                     {debt.totalAmount === 0 && (
-                      <div style={{ padding: '8px 12px', background: tc.successTint, borderRadius: '8px', border: '1px solid rgba(16,185,129,0.3)', color: tc.success, fontSize: '13px', fontWeight: '600', textAlign: 'center' }}>✓ Paid off!</div>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ flex: 1, padding: '8px 12px', background: tc.successTint, borderRadius: '8px', border: '1px solid rgba(16,185,129,0.3)', color: tc.success, fontSize: '13px', fontWeight: '600', textAlign: 'center' }}>✓ Paid off!</div>
+                        {debt.archivedAt && (
+                          <button onClick={() => handleArchiveDebt(debt.id)} style={{
+                            padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px',
+                            background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600',
+                            color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px',
+                          }}>📦 Archive</button>
+                        )}
+                      </div>
                     )}
                     {debt.payments && debt.payments.length > 0 && (
                       <div style={{ marginTop: '12px' }}>
@@ -465,19 +474,17 @@ export default function DebtPanel({
               {showArchived && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
                   {archivedDebts.map((debt) => (
-                    <SwipeToDelete key={debt.id} onDelete={() => handleDeleteDebt(debt.id)} onEdit={() => handleUnarchiveDebt(debt.id)}>
-                    <div className="glass-card" style={{ padding: '16px', opacity: 0.7, borderLeft: '3px solid var(--success)' }}>
+                    <div key={debt.id} className="glass-card" style={{ padding: '16px', opacity: 0.7, borderLeft: '3px solid var(--success)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: '600', fontSize: '15px', marginBottom: '2px' }}>{debt.name}</div>
                           <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                             {debt.type} • Paid off {debt.archivedAt ? new Date(debt.archivedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ fontSize: '12px', color: tc.success, background: tc.successTint, padding: '4px 10px', borderRadius: '8px', fontWeight: '600' }}>✓ Paid Off</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                           {debt.originalAmount > 0 && (
-                            <div className="font-mono" style={{ fontSize: '14px', color: 'var(--text-muted)', textDecoration: 'line-through' }}>£{debt.originalAmount.toFixed(2)}</div>
+                            <div className="font-mono" style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'line-through' }}>£{debt.originalAmount.toFixed(2)}</div>
                           )}
                         </div>
                       </div>
@@ -486,8 +493,19 @@ export default function DebtPanel({
                           {debt.payments.length} payment{debt.payments.length !== 1 ? 's' : ''} made • Total: £{debt.payments.reduce((s, p) => s + (p.amount || 0), 0).toFixed(2)}
                         </div>
                       )}
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                        <button onClick={() => handleUnarchiveDebt(debt.id)} style={{
+                          flex: 1, padding: '8px', border: '1px solid var(--border)', borderRadius: '10px',
+                          background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600',
+                          color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                        }}>↩ Restore</button>
+                        <button onClick={() => handleDeleteDebt(debt.id)} style={{
+                          padding: '8px 14px', border: 'none', borderRadius: '10px',
+                          background: tc.dangerTintLight, cursor: 'pointer', fontSize: '12px', fontWeight: '600',
+                          color: tc.danger, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                        }}>✕</button>
+                      </div>
                     </div>
-                    </SwipeToDelete>
                   ))}
                 </div>
               )}

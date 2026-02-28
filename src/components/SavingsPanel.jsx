@@ -114,7 +114,16 @@ export default function SavingsPanel({
                         <button className="btn btn-secondary" onClick={() => handleSavingsWithdraw(goal.id)} style={{ whiteSpace: 'nowrap', color: tc.danger }}>Withdraw</button>
                       </div>
                     ) : (
-                      <div style={{ padding: '8px 12px', background: tc.successTint, borderRadius: '8px', border: '1px solid rgba(16,185,129,0.3)', color: tc.success, fontSize: '13px', fontWeight: '600', textAlign: 'center' }}>✓ Goal reached!</div>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ flex: 1, padding: '8px 12px', background: tc.successTint, borderRadius: '8px', border: '1px solid rgba(16,185,129,0.3)', color: tc.success, fontSize: '13px', fontWeight: '600', textAlign: 'center' }}>✓ Goal reached!</div>
+                        {goal.archivedAt && (
+                          <button onClick={() => handleArchiveSavings(goal.id)} style={{
+                            padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px',
+                            background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600',
+                            color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px',
+                          }}>📦 Archive</button>
+                        )}
+                      </div>
                     )}
                     {goal.transactions && goal.transactions.length > 0 && (
                       <div style={{ marginTop: '12px' }}>
@@ -161,27 +170,34 @@ export default function SavingsPanel({
               {showArchived && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
                   {archivedSavings.map((goal) => (
-                    <SwipeToDelete key={goal.id} onDelete={() => handleDeleteSavings(goal.id)} onEdit={() => handleUnarchiveSavings(goal.id)}>
-                    <div className="glass-card" style={{ padding: '16px', opacity: 0.7, borderLeft: '3px solid var(--success)' }}>
+                    <div key={goal.id} className="glass-card" style={{ padding: '16px', opacity: 0.7, borderLeft: '3px solid var(--success)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: '600', fontSize: '15px', marginBottom: '2px' }}>{goal.name}</div>
                           <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                             {goal.category || 'Savings'} • Reached {goal.archivedAt ? new Date(goal.archivedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ fontSize: '12px', color: tc.success, background: tc.successTint, padding: '4px 10px', borderRadius: '8px', fontWeight: '600' }}>✓ Goal Reached</div>
-                          <div className="font-mono" style={{ fontSize: '14px', color: tc.success, fontWeight: '600' }}>£{(goal.currentAmount || 0).toFixed(2)}</div>
-                        </div>
+                        <div className="font-mono" style={{ fontSize: '13px', color: tc.success, fontWeight: '600', flexShrink: 0 }}>£{(goal.currentAmount || 0).toFixed(2)}</div>
                       </div>
                       {goal.transactions && goal.transactions.length > 0 && (
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
                           {goal.transactions.length} transaction{goal.transactions.length !== 1 ? 's' : ''} • Target: £{(goal.targetAmount || 0).toFixed(2)}
                         </div>
                       )}
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                        <button onClick={() => handleUnarchiveSavings(goal.id)} style={{
+                          flex: 1, padding: '8px', border: '1px solid var(--border)', borderRadius: '10px',
+                          background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600',
+                          color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                        }}>↩ Restore</button>
+                        <button onClick={() => handleDeleteSavings(goal.id)} style={{
+                          padding: '8px 14px', border: 'none', borderRadius: '10px',
+                          background: tc.dangerTintLight, cursor: 'pointer', fontSize: '12px', fontWeight: '600',
+                          color: tc.danger, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                        }}>✕</button>
+                      </div>
                     </div>
-                    </SwipeToDelete>
                   ))}
                 </div>
               )}
