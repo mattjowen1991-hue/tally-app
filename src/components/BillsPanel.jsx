@@ -221,7 +221,7 @@ export default function BillsPanel({
                       <div>
                         <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>{editForm.recurring ? 'Day of month' : 'Due date'}</label>
                         {editForm.recurring ? (
-                          <input type="number" className="input" placeholder="1-31" min="1" max="31" value={editForm.paymentDate || ''} onChange={(e) => setEditForm({ ...editForm, paymentDate: e.target.value })} />
+                          <input type="number" className="input" placeholder="1-31" min="1" max="31" value={editForm.paymentDate || ''} onChange={(e) => { const v = e.target.value; if (v === '') { setEditForm({ ...editForm, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setEditForm({ ...editForm, paymentDate: String(Math.min(31, Math.max(1, n))) }); }} />
                         ) : (
                           <input type="date" className={`input ${editForm.paymentDate ? 'has-value' : ''}`} value={editForm.paymentDate || ''} onChange={(e) => setEditForm({ ...editForm, paymentDate: e.target.value })} />
                         )}

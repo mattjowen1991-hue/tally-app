@@ -314,7 +314,7 @@ export default function DebtPanel({
                     {(editDebtForm.paymentMode || 'recurring') === 'recurring' && (
                       <div>
                         <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Payment Day (1-31)</label>
-                        <input type="number" className="input" placeholder="1-31" min="1" max="31" value={editDebtForm.paymentDate || ''} onChange={(e) => setEditDebtForm({ ...editDebtForm, paymentDate: e.target.value })} />
+                        <input type="number" className="input" placeholder="1-31" min="1" max="31" value={editDebtForm.paymentDate || ''} onChange={(e) => { const v = e.target.value; if (v === '') { setEditDebtForm({ ...editDebtForm, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setEditDebtForm({ ...editDebtForm, paymentDate: String(Math.min(31, Math.max(1, n))) }); }} />
                       </div>
                     )}
                     <div style={{ display: 'flex', gap: '8px' }}>

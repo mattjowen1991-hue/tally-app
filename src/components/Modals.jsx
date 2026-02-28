@@ -73,13 +73,13 @@ export function AddBillModal({ show, onClose, newBill, setNewBill, handleAddBill
             ) : newBill.frequency === 'Monthly' ? (
               <div>
                 <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Day of month</label>
-                <input type="number" className="input" placeholder="1-31" min="1" max="31" value={newBill.paymentDate} onChange={(e) => setNewBill({ ...newBill, paymentDate: e.target.value })} onKeyDown={dismissKeyboard} />
+                <input type="number" className="input" placeholder="1-31" min="1" max="31" value={newBill.paymentDate} onChange={(e) => { const v = e.target.value; if (v === '') { setNewBill({ ...newBill, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setNewBill({ ...newBill, paymentDate: String(Math.min(31, Math.max(1, n))) }); }} onKeyDown={dismissKeyboard} />
               </div>
             ) : newBill.frequency === 'Quarterly' ? (
               <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Day of month</label>
-                  <input type="number" className="input" placeholder="1-31" min="1" max="31" value={newBill.paymentDate} onChange={(e) => setNewBill({ ...newBill, paymentDate: e.target.value })} onKeyDown={dismissKeyboard} />
+                  <input type="number" className="input" placeholder="1-31" min="1" max="31" value={newBill.paymentDate} onChange={(e) => { const v = e.target.value; if (v === '') { setNewBill({ ...newBill, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setNewBill({ ...newBill, paymentDate: String(Math.min(31, Math.max(1, n))) }); }} onKeyDown={dismissKeyboard} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Starting month</label>
@@ -236,7 +236,7 @@ export function AddDebtModal({ show, onClose, newDebt, setNewDebt, handleAddDebt
                 </div>
                 <div>
                   <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Payment Day</label>
-                  <input type="number" className="input" placeholder="Day of month (1-31)" min="1" max="31" value={newDebt.paymentDate || ''} onKeyDown={dismissKeyboard} onChange={(e) => setNewDebt({ ...newDebt, paymentDate: e.target.value })} />
+                  <input type="number" className="input" placeholder="Day of month (1-31)" min="1" max="31" value={newDebt.paymentDate || ''} onKeyDown={dismissKeyboard} onChange={(e) => { const v = e.target.value; if (v === '') { setNewDebt({ ...newDebt, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setNewDebt({ ...newDebt, paymentDate: String(Math.min(31, Math.max(1, n))) }); }} />
                 </div>
               </>
             )}
