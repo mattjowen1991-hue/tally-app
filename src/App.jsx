@@ -333,14 +333,6 @@ function AppContent() {
       el.style.maxHeight = '0px';
       el.style.opacity = '0';
       el.style.padding = '0';
-      const positions = window.__tallyScrollPositions?.current;
-      const active = window.__tallyActivePanel?.current;
-      const visited = window.__tallyVisitedPanels?.current;
-      if (positions) {
-        for (let i = 0; i < positions.length; i++) {
-          if (i !== active && visited?.has(i) && positions[i] > 0) positions[i] = Math.max(0, positions[i] - 70);
-        }
-      }
     };
 
     const expandHeader = (el) => {
@@ -348,14 +340,6 @@ function AppContent() {
       el.style.maxHeight = '70px';
       el.style.opacity = '1';
       el.style.padding = '10px 0 4px';
-      const positions = window.__tallyScrollPositions?.current;
-      const active = window.__tallyActivePanel?.current;
-      const visited = window.__tallyVisitedPanels?.current;
-      if (positions) {
-        for (let i = 0; i < positions.length; i++) {
-          if (i !== active && visited?.has(i) && positions[i] > 0) positions[i] = positions[i] + 70;
-        }
-      }
     };
 
     window.__tallyCollapseHeader = () => { const el = headerRef.current; if (el) collapseHeader(el); };
@@ -365,7 +349,9 @@ function AppContent() {
     const updateHeader = () => {
       const el = headerRef.current;
       if (!el || document.body.hasAttribute('data-switching')) { ticking = false; return; }
-      const currentY = window.scrollY;
+      const activeIdx = window.__tallyActivePanel?.current ?? 0;
+      const activePanel = window.__tallyGetPanel?.(activeIdx);
+      const currentY = activePanel ? activePanel.scrollTop : 0;
       const delta = currentY - lastScrollY.current;
       
       const dbg = document.getElementById('debug-header');
@@ -378,10 +364,10 @@ function AppContent() {
       if (scrollingDown && !headerCollapsedRef.current && currentY > 30) {
         collapseHeader(el);
         lastScrollY.current = currentY;
-        // Ignore scroll events briefly while layout shifts
         document.body.setAttribute('data-switching', 'true');
         setTimeout(() => {
-          lastScrollY.current = window.scrollY;
+          const ap = window.__tallyGetPanel?.(window.__tallyActivePanel?.current ?? 0);
+          lastScrollY.current = ap ? ap.scrollTop : 0;
           document.body.removeAttribute('data-switching');
         }, 300);
       } else if (!scrollingDown && headerCollapsedRef.current && currentY < 30) {
@@ -389,7 +375,8 @@ function AppContent() {
         lastScrollY.current = currentY;
         document.body.setAttribute('data-switching', 'true');
         setTimeout(() => {
-          lastScrollY.current = window.scrollY;
+          const ap = window.__tallyGetPanel?.(window.__tallyActivePanel?.current ?? 0);
+          lastScrollY.current = ap ? ap.scrollTop : 0;
           document.body.removeAttribute('data-switching');
         }, 300);
       } else {
@@ -417,17 +404,21 @@ function AppContent() {
       if (!el) return;
       const dy = (e.changedTouches[0]?.clientY || 0) - touchStartScreenY;
       const dx = (e.changedTouches[0]?.clientX || 0) - touchStartScreenX;
-      if (dy > 30 && Math.abs(dy) > Math.abs(dx) * 2 && window.scrollY <= 5) {
+      const activeIdx = window.__tallyActivePanel?.current ?? 0;
+      const ap = window.__tallyGetPanel?.(activeIdx);
+      const panelScrollY = ap ? ap.scrollTop : 0;
+      if (dy > 30 && Math.abs(dy) > Math.abs(dx) * 2 && panelScrollY <= 5) {
         expandHeader(el);
         lastScrollY.current = 0;
       }
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    const panels = swipeRef.current?.children ? Array.from(swipeRef.current.children) : [];
+    panels.forEach(p => p.addEventListener('scroll', handleScroll, { passive: true }));
     window.addEventListener('touchstart', onTouchStart, { passive: true });
     window.addEventListener('touchend', onTouchEnd, { passive: true });
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      panels.forEach(p => p.removeEventListener('scroll', handleScroll));
       window.removeEventListener('touchstart', onTouchStart);
       window.removeEventListener('touchend', onTouchEnd);
       delete window.__tallyCollapseHeader;

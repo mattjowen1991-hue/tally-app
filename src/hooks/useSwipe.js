@@ -10,13 +10,14 @@ export default function useSwipe(panelCount) {
   const touchDeltaX = useRef(0);
   const isSwiping = useRef(false);
   const directionLocked = useRef(false);
-  const scrollPositions = useRef(new Array(panelCount).fill(0));
+  // Each panel now scrolls independently via CSS overflow-y: auto
   const visitedPanels = useRef(new Set([0])); // Panel 0 is visited on load
 
   useEffect(() => { activePanelRef.current = activePanel; }, [activePanel]);
 
+  const getPanel = (idx) => swipeRef.current?.children[idx] || null;
+
   const switchToPanel = useCallback((fromPanel, toPanel) => {
-    scrollPositions.current[fromPanel] = window.scrollY;
     visitedPanels.current.add(fromPanel);
 
     setActivePanel(toPanel);
@@ -25,13 +26,12 @@ export default function useSwipe(panelCount) {
 
     document.body.setAttribute('data-switching', 'true');
     requestAnimationFrame(() => {
-      const savedPos = scrollPositions.current[toPanel];
-      
-      window.scrollTo(0, savedPos);
+      const panel = getPanel(toPanel);
+      const scrollPos = panel ? panel.scrollTop : 0;
+      window.__tallySyncScrollDirect?.(scrollPos);
       visitedPanels.current.add(toPanel);
       
       setTimeout(() => {
-        window.__tallySyncScrollDirect?.(savedPos);
         document.body.removeAttribute('data-switching');
       }, 200);
     });
@@ -39,13 +39,13 @@ export default function useSwipe(panelCount) {
 
   // Expose scroll positions and active panel so header can adjust them
   useEffect(() => {
-    window.__tallyScrollPositions = scrollPositions;
     window.__tallyActivePanel = activePanelRef;
     window.__tallyVisitedPanels = visitedPanels;
+    window.__tallyGetPanel = (idx) => swipeRef.current?.children[idx] || null;
     return () => { 
-      delete window.__tallyScrollPositions; 
       delete window.__tallyActivePanel;
       delete window.__tallyVisitedPanels;
+      delete window.__tallyGetPanel;
     };
   }, []);
 
