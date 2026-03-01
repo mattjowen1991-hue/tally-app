@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import * as Icons from './Icons';
-import SwipeToDelete from './SwipeToDelete';
 import { tc } from '../utils/themeColors';
 
 const STATUS_FILTERS = [
@@ -184,7 +183,7 @@ export default function BillsPanel({
             </div>
           ) : (
             filteredBills.map((bill) => (
-              <SwipeToDelete key={bill.id} onDelete={() => handleDelete(bill.id)} onEdit={() => handleEditStart(bill)}>
+              <div key={bill.id}>
               <div className="mobile-bill-card" style={{
                 borderLeft: bill.paused ? `3px solid var(--warning)` : bill.paid ? `3px solid var(--success)` : bill.missed ? `3px solid var(--danger)` : undefined,
                 borderColor: bill.paused ? 'var(--warning-tint-strong)' : bill.paid ? 'var(--success-tint-strong)' : bill.missed ? 'var(--danger-tint-strong)' : undefined,
@@ -302,7 +301,7 @@ export default function BillsPanel({
                   </div>
                 )}
               </div>
-              </SwipeToDelete>
+              </div>
             ))
           )}
         </div>

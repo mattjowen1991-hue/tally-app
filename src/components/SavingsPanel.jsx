@@ -2,7 +2,6 @@ import React from 'react';
 import * as Icons from './Icons';
 import { tc } from '../utils/themeColors';
 import { SAVINGS_CATEGORIES } from '../data/initialData';
-import SwipeToDelete from './SwipeToDelete';
 
 export default function SavingsPanel({
   savings, totalSaved, editingSavingsId, editSavingsForm, setEditSavingsForm,
@@ -53,7 +52,7 @@ export default function SavingsPanel({
             const isComplete = goal.targetAmount > 0 && goal.currentAmount >= goal.targetAmount;
             const estimate = calculateSavingsEstimate(goal);
             return (
-              <SwipeToDelete key={goal.id} onDelete={() => handleDeleteSavings(goal.id)} onEdit={() => handleSavingsEditStart(goal)}>
+              <div key={goal.id}>
               <div className="glass-card animate-in" style={{ padding: '20px', borderLeft: isComplete ? '3px solid var(--success)' : '3px solid var(--accent-primary)' }}>
                 {editingSavingsId === goal.id ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -86,7 +85,7 @@ export default function SavingsPanel({
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <div style={{ fontWeight: '600', fontSize: '16px', marginBottom: '2px' }}>{goal.name}</div>
-                          <button onClick={() => handleSavingsEditStart(goal)} style={{ width: '24px', height: '24px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', opacity: 0.5, transition: 'opacity 0.2s' }}><Icons.Edit size={14} /></button>
+                          <button onClick={() => handleSavingsEditStart(goal)} style={{ width: '24px', height: '24px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', transition: 'opacity 0.2s' }}><Icons.Edit size={14} /></button>
                         </div>
                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{goal.category}</div>
                       </div>
@@ -149,7 +148,7 @@ export default function SavingsPanel({
                   </div>
                 )}
               </div>
-              </SwipeToDelete>
+              </div>
             );
           })}
 

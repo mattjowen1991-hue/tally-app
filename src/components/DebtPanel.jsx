@@ -2,7 +2,6 @@ import React from 'react';
 import * as Icons from './Icons';
 import { tc } from '../utils/themeColors';
 import { DEBT_TYPES } from '../data/initialData';
-import SwipeToDelete from './SwipeToDelete';
 
 const PAYMENT_MODES = [
   { key: 'recurring', label: '↻ Recurring', color: tc.info },
@@ -228,7 +227,7 @@ export default function DebtPanel({
             const progress = debt.originalAmount > 0 ? Math.min(((debt.originalAmount - debt.totalAmount) / debt.originalAmount * 100), 100) : 0;
             const mode = debt.paymentMode || 'recurring';
             return (
-              <SwipeToDelete key={debt.id} onDelete={() => handleDeleteDebt(debt.id)} onEdit={() => handleDebtEditStart(debt)}>
+              <div key={debt.id}>
               <div className="glass-card animate-in" style={{ padding: '20px', borderLeft: debt.totalAmount === 0 ? '3px solid var(--success)' : '3px solid var(--danger)' }}>
                 {editingDebtId === debt.id ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -328,7 +327,7 @@ export default function DebtPanel({
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <div style={{ fontWeight: '600', fontSize: '16px', marginBottom: '2px' }}>{debt.name}</div>
-                          <button onClick={() => handleDebtEditStart(debt)} style={{ width: '24px', height: '24px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', opacity: 0.5, transition: 'opacity 0.2s' }}><Icons.Edit size={14} /></button>
+                          <button onClick={() => handleDebtEditStart(debt)} style={{ width: '24px', height: '24px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', transition: 'opacity 0.2s' }}><Icons.Edit size={14} /></button>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
                           <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{debt.type}</span>
@@ -453,7 +452,7 @@ export default function DebtPanel({
                   </div>
                 )}
               </div>
-              </SwipeToDelete>
+              </div>
             );
           })}
 
