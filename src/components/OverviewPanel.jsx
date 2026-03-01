@@ -61,7 +61,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
     const ctx = chartRef.current.getContext('2d');
     chartInstance.current = new Chart(ctx, {
       type: 'doughnut',
-      data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0, hoverOffset: 0 }] },
+      data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0, hoverOffset: 8 }] },
       options: {
         cutout: '65%',
         responsive: false,
@@ -452,7 +452,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
 
       {/* Expense Breakdown Chart */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginBottom: '20px' }}>
-        <div className="glass-card animate-in" style={{ padding: '32px', animationDelay: '0.5s', overflow: 'visible' }}>
+        <div className="glass-card animate-in" style={{ padding: '32px', animationDelay: '0.5s' }}>
           <h2 className="font-display" style={{ fontSize: '24px', marginBottom: '24px' }}>Expense Breakdown</h2>
           <div className="chart-container" style={{ height: '240px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'visible' }}><canvas ref={chartRef} width={200} height={200} /></div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px', maxHeight: '250px', overflowY: 'auto' }}>
