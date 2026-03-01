@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import * as Icons from './Icons';
+import haptic from '../utils/haptics';
 import { tc } from '../utils/themeColors';
 
 const STATUS_FILTERS = [
@@ -70,8 +71,65 @@ export default function BillsPanel({
   filteredBills, editingId, editForm, setEditForm, handleEditStart, handleEditSave,
   handleDelete, handleTogglePaid, handleToggleMissed, handleTogglePaused, setEditingId, categoryScrollRef,
   billSearch, setBillSearch, billSort, setBillSort,
+  onBulkDelete, onBulkTogglePaid,
 }) {
   const [showSort, setShowSort] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const longPressTimer = useRef(null);
+  const longPressMoved = useRef(false);
+
+  // Clear selection when filters change
+  React.useEffect(() => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }, [selectedCategory, statusFilter, billSearch, billSort]);
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (selectedIds.size === filteredBills.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredBills.map(b => b.id)));
+    }
+  };
+
+  const exitSelection = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const onCardLongPress = (id) => {
+    setSelectionMode(true);
+    setSelectedIds(new Set([id]));
+  };
+
+  const onCardTouchStart = (e, id) => {
+    if (e.target.closest('button, input, select, a')) return;
+    longPressMoved.current = false;
+    longPressTimer.current = setTimeout(() => {
+      if (!longPressMoved.current) {
+        onCardLongPress(id);
+        haptic.medium();
+      }
+    }, 400);
+  };
+
+  const onCardTouchMove = () => {
+    longPressMoved.current = true;
+    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+  };
+
+  const onCardTouchEnd = () => {
+    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+  };
 
   return (
     <>
@@ -166,7 +224,18 @@ export default function BillsPanel({
       {/* Bills Header + List */}
       <div className="glass-card animate-in" style={{ padding: '16px', overflow: 'hidden', animationDelay: '0.8s' }}>
         <div style={{ marginBottom: '16px' }}>
-          <h2 className="font-display" style={{ fontSize: '24px' }}>{selectedCategory === 'ALL' ? 'All Bills' : selectedCategory}</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 className="font-display" style={{ fontSize: '24px' }}>{selectedCategory === 'ALL' ? 'All Bills' : selectedCategory}</h2>
+            {filteredBills.length > 0 && !selectionMode && (
+              <button onClick={() => setSelectionMode(true)} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Select</button>
+            )}
+            {selectionMode && (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button onClick={selectAll} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--accent-primary)' }}>{selectedIds.size === filteredBills.length ? 'Deselect All' : 'Select All'}</button>
+                <button onClick={exitSelection} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Cancel</button>
+              </div>
+            )}
+          </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
             {filteredBills.length} {filteredBills.length === 1 ? 'bill' : 'bills'}
             {statusFilter !== 'ALL' ? ` · ${statusFilter.toLowerCase()}` : ''}
@@ -183,12 +252,24 @@ export default function BillsPanel({
             </div>
           ) : (
             filteredBills.map((bill) => (
-              <div key={bill.id}>
+              <div key={bill.id}
+                onTouchStart={(e) => !selectionMode && onCardTouchStart(e, bill.id)}
+                onTouchMove={onCardTouchMove}
+                onTouchEnd={onCardTouchEnd}
+                onClick={() => selectionMode && toggleSelect(bill.id)}
+              >
               <div className="mobile-bill-card" style={{
                 borderLeft: bill.paused ? `3px solid var(--warning)` : bill.paid ? `3px solid var(--success)` : bill.missed ? `3px solid var(--danger)` : undefined,
                 borderColor: bill.paused ? 'var(--warning-tint-strong)' : bill.paid ? 'var(--success-tint-strong)' : bill.missed ? 'var(--danger-tint-strong)' : undefined,
                 position: 'relative',
+                outline: selectionMode && selectedIds.has(bill.id) ? '2px solid var(--accent-primary)' : 'none',
+                outlineOffset: '-2px',
               }}>
+                {selectionMode && (
+                  <div style={{ position: 'absolute', top: '12px', left: '12px', width: '24px', height: '24px', borderRadius: '6px', border: selectedIds.has(bill.id) ? 'none' : '2px solid var(--border)', background: selectedIds.has(bill.id) ? 'var(--accent-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5, transition: 'all 0.15s' }}>
+                    {selectedIds.has(bill.id) && <Icons.Check size={14} style={{ color: '#fff' }} />}
+                  </div>
+                )}
                 {editingId !== bill.id && bill.paid && !bill.missed && (
                   <div style={{ position: 'absolute', top: '12px', right: '12px', fontSize: '11px', color: tc.success, display: 'inline-flex', alignItems: 'center', gap: '4px', background: tc.successTint, padding: '3px 10px', borderRadius: '6px', border: `1px solid var(--success-tint-strong)`, fontWeight: '600' }}>✓ Paid</div>
                 )}
@@ -306,6 +387,23 @@ export default function BillsPanel({
           )}
         </div>
       </div>
+      {/* Bulk Action Bar */}
+      {selectionMode && selectedIds.size > 0 && (
+        <div style={{
+          position: 'fixed', bottom: '20px', left: '16px', right: '16px',
+          padding: '14px 18px', borderRadius: '16px',
+          background: 'var(--bg-card, #141833)', border: '1px solid var(--border)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          zIndex: 200, animation: 'slideInUp 0.2s',
+        }}>
+          <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{selectedIds.size} selected</span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={() => { onBulkTogglePaid([...selectedIds]); exitSelection(); }} style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--success), #059669)', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>✓ Paid</button>
+            <button onClick={() => { if (confirm(`Delete ${selectedIds.size} bill${selectedIds.size > 1 ? 's' : ''}?`)) { onBulkDelete([...selectedIds]); exitSelection(); } }} style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--danger), #dc2626)', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>🗑 Delete</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
