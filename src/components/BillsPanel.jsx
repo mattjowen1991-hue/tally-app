@@ -72,7 +72,7 @@ export default function BillsPanel({
   filteredBills, editingId, editForm, setEditForm, handleEditStart, handleEditSave,
   handleDelete, handleTogglePaid, handleToggleMissed, handleTogglePaused, setEditingId, categoryScrollRef,
   billSearch, setBillSearch, billSort, setBillSort,
-  onBulkDelete, onBulkTogglePaid, onBulkToggleMissed, onBulkTogglePaused,
+  onBulkDelete, onBulkTogglePaid, onBulkToggleMissed, onBulkTogglePaused, activePanel,
 }) {
   const [showSort, setShowSort] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -334,14 +334,14 @@ export default function BillsPanel({
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <button onClick={() => handleTogglePaid(bill.id)} style={{ width: '28px', height: '28px', minWidth: '28px', borderRadius: '8px', border: bill.paid ? 'none' : '2px solid var(--border)', background: bill.paid ? 'linear-gradient(135deg, var(--success), #059669)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                            <button onClick={() => !selectionMode && handleTogglePaid(bill.id)} disabled={selectionMode} style={{ width: '28px', height: '28px', minWidth: '28px', borderRadius: '8px', border: bill.paid ? 'none' : '2px solid var(--border)', background: bill.paid ? 'linear-gradient(135deg, var(--success), #059669)' : 'transparent', cursor: selectionMode ? 'default' : 'pointer', opacity: selectionMode ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
                               {bill.paid && <Icons.Check size={16} style={{ color: '#fff' }} />}
                             </button>
-                            <button onClick={() => handleToggleMissed(bill.id)} style={{ width: '28px', height: '28px', minWidth: '28px', borderRadius: '8px', border: bill.missed ? 'none' : '2px solid var(--border)', background: bill.missed ? 'linear-gradient(135deg, var(--danger), #dc2626)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                            <button onClick={() => !selectionMode && handleToggleMissed(bill.id)} disabled={selectionMode} style={{ width: '28px', height: '28px', minWidth: '28px', borderRadius: '8px', border: bill.missed ? 'none' : '2px solid var(--border)', background: bill.missed ? 'linear-gradient(135deg, var(--danger), #dc2626)' : 'transparent', cursor: selectionMode ? 'default' : 'pointer', opacity: selectionMode ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
                               {bill.missed && <Icons.X size={16} style={{ color: '#fff' }} />}
                             </button>
                             {bill.recurring && (
-                              <button onClick={() => handleTogglePaused(bill.id)} style={{ width: '28px', height: '28px', minWidth: '28px', borderRadius: '8px', border: bill.paused ? 'none' : '2px solid var(--border)', background: bill.paused ? 'linear-gradient(135deg, var(--warning), #d97706)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                              <button onClick={() => !selectionMode && handleTogglePaused(bill.id)} disabled={selectionMode} style={{ width: '28px', height: '28px', minWidth: '28px', borderRadius: '8px', border: bill.paused ? 'none' : '2px solid var(--border)', background: bill.paused ? 'linear-gradient(135deg, var(--warning), #d97706)' : 'transparent', cursor: selectionMode ? 'default' : 'pointer', opacity: selectionMode ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
                                 {bill.paused && <span style={{ color: '#fff', fontSize: '14px', fontWeight: '700' }}>⏸</span>}
                               </button>
                             )}
@@ -349,7 +349,7 @@ export default function BillsPanel({
                           <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <div style={{ fontWeight: '600', fontSize: '16px', marginBottom: '2px' }}>{bill.name}</div>
-                              <button onClick={() => handleEditStart(bill)} style={{ width: '24px', height: '24px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', transition: 'opacity 0.2s' }}><Icons.Edit size={14} /></button>
+                              {!selectionMode && <button onClick={() => handleEditStart(bill)} style={{ width: '24px', height: '24px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', transition: 'opacity 0.2s' }}><Icons.Edit size={14} /></button>}
                             </div>
                             <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{bill.category}</div>
                           </div>
@@ -391,12 +391,14 @@ export default function BillsPanel({
         </div>
       </div>
       {/* Bulk Action Bar - Portal to escape scroll container */}
-      {selectionMode && selectedIds.size > 0 && ReactDOM.createPortal(
+      {selectionMode && selectedIds.size > 0 && activePanel === 2 && ReactDOM.createPortal(
         <div style={{
           position: 'fixed', bottom: '20px', left: '16px', right: '16px',
           padding: '12px 16px', borderRadius: '16px',
-          background: 'var(--bg-card, #141833)', border: '1px solid var(--border)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          background: 'var(--bg-card, #141833)',
+          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid var(--border)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
           zIndex: 9999, animation: 'slideInUp 0.2s',
           display: 'flex', flexDirection: 'column', gap: '10px',
         }}>
