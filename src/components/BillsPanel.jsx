@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import * as Icons from './Icons';
 import haptic from '../utils/haptics';
 import { tc } from '../utils/themeColors';
@@ -71,7 +72,7 @@ export default function BillsPanel({
   filteredBills, editingId, editForm, setEditForm, handleEditStart, handleEditSave,
   handleDelete, handleTogglePaid, handleToggleMissed, handleTogglePaused, setEditingId, categoryScrollRef,
   billSearch, setBillSearch, billSort, setBillSort,
-  onBulkDelete, onBulkTogglePaid,
+  onBulkDelete, onBulkTogglePaid, onBulkToggleMissed, onBulkTogglePaused,
 }) {
   const [showSort, setShowSort] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -389,22 +390,30 @@ export default function BillsPanel({
           )}
         </div>
       </div>
-      {/* Bulk Action Bar */}
-      {selectionMode && selectedIds.size > 0 && (
+      {/* Bulk Action Bar - Portal to escape scroll container */}
+      {selectionMode && selectedIds.size > 0 && ReactDOM.createPortal(
         <div style={{
           position: 'fixed', bottom: '20px', left: '16px', right: '16px',
-          padding: '14px 18px', borderRadius: '16px',
+          padding: '12px 16px', borderRadius: '16px',
           background: 'var(--bg-card, #141833)', border: '1px solid var(--border)',
           boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          zIndex: 200, animation: 'slideInUp 0.2s',
+          zIndex: 9999, animation: 'slideInUp 0.2s',
+          display: 'flex', flexDirection: 'column', gap: '10px',
         }}>
-          <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{selectedIds.size} selected</span>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => { onBulkTogglePaid([...selectedIds]); exitSelection(); }} style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--success), #059669)', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>✓ Paid</button>
-            <button onClick={() => { if (confirm(`Delete ${selectedIds.size} bill${selectedIds.size > 1 ? 's' : ''}?`)) { onBulkDelete([...selectedIds]); exitSelection(); } }} style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--danger), #dc2626)', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>🗑 Delete</button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{selectedIds.size} selected</span>
+            <button onClick={exitSelection} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>✕ Cancel</button>
           </div>
-        </div>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            <button onClick={() => { onBulkTogglePaid([...selectedIds]); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--success), #059669)', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: '600', minWidth: '0' }}>✓ Paid</button>
+            <button onClick={() => { onBulkToggleMissed([...selectedIds]); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--danger), #dc2626)', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: '600', minWidth: '0' }}>✗ Missed</button>
+            {filteredBills.some(b => selectedIds.has(b.id) && b.recurring) && (
+              <button onClick={() => { onBulkTogglePaused([...selectedIds]); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--warning), #d97706)', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: '600', minWidth: '0' }}>⏸ Pause</button>
+            )}
+            <button onClick={() => { if (confirm(`Delete ${selectedIds.size} bill${selectedIds.size > 1 ? 's' : ''}?`)) { onBulkDelete([...selectedIds]); exitSelection(); } }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', minWidth: '0' }}>🗑 Delete</button>
+          </div>
+        </div>,
+        document.body
       )}
     </>
   );
