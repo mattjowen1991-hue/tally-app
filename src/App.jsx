@@ -5,7 +5,6 @@ import { initialBills, DEFAULT_CATEGORIES } from './data/initialData';
 import useSwipe from './hooks/useSwipe';
 import haptic from './utils/haptics';
 import { ToastProvider, useToast } from './components/Toast';
-import PullToRefresh from './components/PullToRefresh';
 import { initTheme, toggleTheme } from './utils/theme';
 import { auth, cloudData } from './utils/supabase';
 import AccountModal from './components/AccountModal';
@@ -700,29 +699,19 @@ function AppContent() {
         <div className="swipe-container" onTouchStart={handleTouchStart}>
           <div className="swipe-track" ref={swipeRef} style={{ transform: `translateX(${-activePanel * 100}%)` }}>
             <div className={`swipe-panel ${activePanel === 0 ? 'panel-active' : ''}`}>
-              <PullToRefresh>
               <OverviewPanel totals={totals} incomeNum={incomeNum} categoryTotals={categoryTotals} isMobile={isMobile} monthlySnapshots={monthlySnapshots} totalDebt={totalDebt} totalSaved={totalSaved} insights={insights} bills={bills} debts={debts} savings={savings} />
-              </PullToRefresh>
             </div>
             <div className={`swipe-panel ${activePanel === 1 ? 'panel-active' : ''}`}>
-              <PullToRefresh>
               <ActionsPanel income={income} setIncome={setIncome} categoryTotals={categoryTotals} setShowAddModal={setShowAddModal} setShowDebtModal={setShowDebtModal} setShowSavingsModal={setShowSavingsModal} setShowCategoryModal={setShowCategoryModal} generateTestSnapshot={generateTestSnapshot} clearTestSnapshots={clearTestSnapshots} snapshotCount={monthlySnapshots.length} />
-              </PullToRefresh>
             </div>
             <div className={`swipe-panel ${activePanel === 2 ? 'panel-active' : ''}`}>
-              <PullToRefresh>
               <BillsPanel categories={['ALL', ...categories]} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} statusFilter={statusFilter} setStatusFilter={setStatusFilter} filteredBills={filteredBills} editingId={editingId} editForm={editForm} setEditForm={setEditForm} handleEditStart={handleEditStart} handleEditSave={handleEditSave} handleDelete={handleDelete} handleTogglePaid={handleTogglePaid} handleToggleMissed={handleToggleMissed} handleTogglePaused={handleTogglePaused} setEditingId={setEditingId} categoryScrollRef={categoryScrollRef} billSearch={billSearch} setBillSearch={setBillSearch} billSort={billSort} setBillSort={setBillSort} />
-              </PullToRefresh>
             </div>
             <div className={`swipe-panel ${activePanel === 3 ? 'panel-active' : ''}`}>
-              <PullToRefresh>
               <DebtPanel debts={debts} totalDebt={totalDebt} calculatePayoff={calculatePayoff} editingDebtId={editingDebtId} editDebtForm={editDebtForm} setEditDebtForm={setEditDebtForm} handleDebtEditStart={handleDebtEditStart} handleDebtEditSave={handleDebtEditSave} handleDeleteDebt={handleDeleteDebt} handleMakePayment={handleMakePayment} debtPaymentAmounts={debtPaymentAmounts} setDebtPaymentAmounts={setDebtPaymentAmounts} showDebtHistory={showDebtHistory} setShowDebtHistory={setShowDebtHistory} setEditingDebtId={setEditingDebtId} setShowDebtModal={setShowDebtModal} handleArchiveDebt={handleArchiveDebt} handleUnarchiveDebt={handleUnarchiveDebt} />
-              </PullToRefresh>
             </div>
             <div className={`swipe-panel ${activePanel === 4 ? 'panel-active' : ''}`}>
-              <PullToRefresh>
               <SavingsPanel savings={savings} totalSaved={totalSaved} editingSavingsId={editingSavingsId} editSavingsForm={editSavingsForm} setEditSavingsForm={setEditSavingsForm} handleSavingsEditStart={handleSavingsEditStart} handleSavingsEditSave={handleSavingsEditSave} handleDeleteSavings={handleDeleteSavings} handleSavingsDeposit={handleSavingsDeposit} handleSavingsWithdraw={handleSavingsWithdraw} savingsTransactionAmounts={savingsTransactionAmounts} setSavingsTransactionAmounts={setSavingsTransactionAmounts} showSavingsHistory={showSavingsHistory} setShowSavingsHistory={setShowSavingsHistory} calculateSavingsEstimate={calculateSavingsEstimate} setEditingSavingsId={setEditingSavingsId} setShowSavingsModal={setShowSavingsModal} handleArchiveSavings={handleArchiveSavings} handleUnarchiveSavings={handleUnarchiveSavings} />
-              </PullToRefresh>
             </div>
           </div>
         </div>
