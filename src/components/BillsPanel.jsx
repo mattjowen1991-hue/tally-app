@@ -266,7 +266,7 @@ export default function BillsPanel({
                           <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <div style={{ fontWeight: '600', fontSize: '16px', marginBottom: '2px' }}>{bill.name}</div>
-                              <button onClick={() => handleEditStart(bill)} style={{ width: '24px', height: '24px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', opacity: 0.5, transition: 'opacity 0.2s' }}><Icons.Edit size={14} /></button>
+                              <button onClick={() => handleEditStart(bill)} style={{ width: '24px', height: '24px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', transition: 'opacity 0.2s' }}><Icons.Edit size={14} /></button>
                             </div>
                             <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{bill.category}</div>
                           </div>
