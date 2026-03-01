@@ -264,9 +264,11 @@ export default function BillsPanel({
                 position: 'relative',
                 outline: selectionMode && selectedIds.has(bill.id) ? '2px solid var(--accent-primary)' : 'none',
                 outlineOffset: '-2px',
+                paddingLeft: selectionMode ? '44px' : undefined,
+                transition: 'padding 0.15s ease',
               }}>
                 {selectionMode && (
-                  <div style={{ position: 'absolute', top: '12px', left: '12px', width: '24px', height: '24px', borderRadius: '6px', border: selectedIds.has(bill.id) ? 'none' : '2px solid var(--border)', background: selectedIds.has(bill.id) ? 'var(--accent-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5, transition: 'all 0.15s' }}>
+                  <div style={{ position: 'absolute', top: '50%', left: '12px', transform: 'translateY(-50%)', width: '24px', height: '24px', borderRadius: '6px', border: selectedIds.has(bill.id) ? 'none' : '2px solid var(--border)', background: selectedIds.has(bill.id) ? 'var(--accent-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5, transition: 'all 0.15s' }}>
                     {selectedIds.has(bill.id) && <Icons.Check size={14} style={{ color: '#fff' }} />}
                   </div>
                 )}
