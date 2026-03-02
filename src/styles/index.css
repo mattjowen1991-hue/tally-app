@@ -439,7 +439,7 @@ body.modal-open {
   position: relative;
   touch-action: pan-y;
   flex: 1;
-  height: calc(100dvh - var(--header-height, 120px));
+  height: calc(100vh - var(--header-height, 120px));
 }
 
 .swipe-track {
@@ -459,7 +459,6 @@ body.modal-open {
   width: 100%;
   flex-shrink: 0;
   padding: 0 4px;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
   height: 100%;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
