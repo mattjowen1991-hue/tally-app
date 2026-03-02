@@ -67,6 +67,7 @@ function AppContent() {
   const [lastSynced, setLastSynced] = useState(null);
   const syncTimeoutRef = useRef(null);
   const userRef = useRef(null);
+  const deletingAccountRef = useRef(false);
 
   // ── Debt state ──
   const [debts, setDebts] = useState([]);
@@ -236,7 +237,7 @@ function AppContent() {
 
   // Auto-save to cloud when data changes (debounced)
   useEffect(() => {
-    if (!user || bills.length === 0) return;
+    if (!user || bills.length === 0 || deletingAccountRef.current) return;
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     syncTimeoutRef.current = setTimeout(() => {
       saveToCloud();
@@ -293,6 +294,11 @@ function AppContent() {
   };
 
   const handleDeleteAccount = async () => {
+    deletingAccountRef.current = true;
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
+    }
     await cloudData.delete();
     await auth.signOut();
     setBills([]);
@@ -307,7 +313,8 @@ function AppContent() {
     setSyncStatus('idle');
     setShowAccountModal(false);
     toast('Account & data deleted', 'error');
-  };
+    deletingAccountRef.current = false;
+};
 
   const handleClearLocalData = async () => {
     if (!confirm('Remove all Tally data from this device?\n\nYour cloud backup is not affected — sign back in to restore.')) return;
@@ -323,7 +330,7 @@ function AppContent() {
   };
 
   // ── Collapsible header on scroll (DOM-direct for performance) ──
-  useEffect(() => {
+    useEffect(() => {
     if (!isMobile) return;
     let ticking = false;
 
