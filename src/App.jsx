@@ -1,3 +1,4 @@
+import { scheduleNotifications, loadNotificationSettings, saveNotificationSettings } from './utils/notifications';
 import React, { useState, useEffect, useRef } from 'react';
 import * as Icons from './components/Icons';
 import { shouldAutoPay } from './utils/billHelpers';
@@ -68,6 +69,7 @@ function AppContent() {
   const syncTimeoutRef = useRef(null);
   const userRef = useRef(null);
   const deletingAccountRef = useRef(false);
+  const [notificationSettings, setNotificationSettings] = useState({ enabled: true, reminderHour: 9, reminderMinute: 0 });
 
   // ── Debt state ──
   const [debts, setDebts] = useState([]);
@@ -250,6 +252,20 @@ function AppContent() {
     window.storage.get('last-synced').then(result => {
       if (result?.value) setLastSynced(result.value);
     }).catch(() => {});
+  }, []);
+
+  // ── Schedule notifications when bills change ──
+  useEffect(() => {
+    if (bills.length === 0) return;
+    const timer = setTimeout(() => {
+      scheduleNotifications(bills, notificationSettings);
+    }, 5000); // 5 second debounce (after auto-save)
+    return () => clearTimeout(timer);
+  }, [bills, notificationSettings]);
+
+  // Load notification settings on mount
+  useEffect(() => {
+    loadNotificationSettings().then(setNotificationSettings);
   }, []);
 
   // Auth handlers for modal
@@ -733,7 +749,8 @@ function AppContent() {
       <ManageCategoriesModal show={showCategoryModal} onClose={() => setShowCategoryModal(false)} bills={bills} customCategories={customCategories} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} handleDeleteCategory={handleDeleteCategory} />
       <AddDebtModal show={showDebtModal} onClose={() => setShowDebtModal(false)} newDebt={newDebt} setNewDebt={setNewDebt} handleAddDebt={handleAddDebt} emptyDebt={emptyDebt} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
       <AddSavingsModal show={showSavingsModal} onClose={() => setShowSavingsModal(false)} newSavingsGoal={newSavingsGoal} setNewSavingsGoal={setNewSavingsGoal} handleAddSavings={handleAddSavings} emptySavings={emptySavings} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
-        <AccountModal show={showAccountModal} onClose={() => setShowAccountModal(false)} user={user} onSignIn={handleSignIn} onSignUp={handleSignUp} onSignOut={handleSignOut} onResetPassword={handleResetPassword} onGoogleSignIn={handleGoogleSignIn} syncStatus={syncStatus} onSyncNow={saveToCloud} onDeleteAccount={handleDeleteAccount} onClearLocalData={handleClearLocalData} lastSynced={lastSynced} />
+        <AccountModal show={showAccountModal} onClose={() => setShowAccountModal(false)} user={user} onSignIn={handleSignIn} onSignUp={handleSignUp} onSignOut={handleSignOut} onResetPassword={handleResetPassword} onGoogleSignIn={handleGoogleSignIn} syncStatus={syncStatus} onSyncNow={saveToCloud} onDeleteAccount={handleDeleteAccount} onClearLocalData={handleClearLocalData} lastSynced={lastSynced} notificationSettings={notificationSettings} onNotificationSettingsChange={setNotificationSettings} />
+
     </div>
   );
 }
