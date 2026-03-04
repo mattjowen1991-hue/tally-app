@@ -69,7 +69,7 @@ function getOrdinal(n) {
 }
 
 export default function BillsPanel({
-  categories, selectedCategory, setSelectedCategory,
+  categories, selectedCategory, setSelectedCategory, statusFilter, setStatusFilter,
   filteredBills, editingId, editForm, setEditForm, handleEditStart, handleEditSave,
   handleDelete, handleTogglePaid, handleToggleMissed, handleTogglePaused, setEditingId, categoryScrollRef,
   billSearch, setBillSearch, billSort, setBillSort,
