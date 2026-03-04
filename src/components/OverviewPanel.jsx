@@ -456,7 +456,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginBottom: '20px' }}>
         <div className="glass-card animate-in" style={{ padding: '32px', animationDelay: '0.5s' }}>
           <h2 className="font-display" style={{ fontSize: '24px', marginBottom: '24px' }}>Expense Breakdown</h2>
-          <div className="chart-container" style={{ height: '240px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'visible' }}><canvas ref={chartRef} width={200} height={200} /></div>
+          <div className="chart-container" style={{ height: '240px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'visible' }}><canvas ref={chartRef} width={400} height={400} style={{ width: '200px', height: '200px' }} /></div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px', maxHeight: '250px', overflowY: 'auto' }}>
             {categoryTotals.map((cat, i) => {
               const pct = totals.actualExpenses > 0 ? ((cat.total / totals.actualExpenses) * 100).toFixed(1) : '0.0';
