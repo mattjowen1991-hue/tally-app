@@ -467,6 +467,8 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
       setShowCategoryModal(false);
       setShowDebtModal(false);
       setShowSavingsModal(false);
+      setShowAccountModal(false);
+      setShowSettingsModal(false);
       setValidationErrors({});
     };
     window.addEventListener('popstate', handlePopState);
