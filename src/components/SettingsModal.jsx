@@ -67,7 +67,7 @@ export default function SettingsModal({ show, onClose, theme, onToggleTheme, not
           border: '1px solid var(--border)', marginBottom: '16px',
         }}>
           {/* Master toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: notificationSettings?.enabled ? '12px' : '0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>🔔 Notifications</span>
             <button
               onClick={() => updateSetting('enabled', !notificationSettings?.enabled)}
@@ -87,8 +87,8 @@ export default function SettingsModal({ show, onClose, theme, onToggleTheme, not
             </button>
           </div>
 
-          {notificationSettings?.enabled && (
-            <>
+          <>
+              <div style={{ opacity: notificationSettings?.enabled ? 1 : 0.4, pointerEvents: notificationSettings?.enabled ? 'auto' : 'none', transition: 'opacity 0.2s ease' }}>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 16px' }}>
                 Choose which notifications you'd like to receive
               </p>
@@ -219,8 +219,8 @@ export default function SettingsModal({ show, onClose, theme, onToggleTheme, not
                   </button>
                 ))}
               </div>
+              </div>
             </>
-          )}
         </div>
 
         {/* App info */}
