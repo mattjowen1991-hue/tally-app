@@ -10,6 +10,8 @@ import { initTheme, toggleTheme } from './utils/theme';
 import { auth, cloudData } from './utils/supabase';
 import AccountModal from './components/AccountModal';
 import SettingsModal from './components/SettingsModal';
+import { CurrencyProvider } from './components/CurrencyContext';
+import { getSymbol, loadCurrencyPreference, saveCurrencyPreference, CURRENCIES } from './utils/currency';
 
 // Panel components
 import OverviewPanel from './components/OverviewPanel';
@@ -72,6 +74,8 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const userRef = useRef(null);
   const deletingAccountRef = useRef(false);
   const [notificationSettings, setNotificationSettings] = useState({ enabled: true, reminderHour: 9, reminderMinute: 0 });
+  const [currencyCode, setCurrencyCode] = useState('GBP');
+  const [showCurrencyPrompt, setShowCurrencyPrompt] = useState(false);
 
   // ── Debt state ──
   const [debts, setDebts] = useState([]);
@@ -268,6 +272,17 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   // Load notification settings on mount
   useEffect(() => {
     loadNotificationSettings().then(setNotificationSettings);
+  }, []);
+
+  // Load currency preference on mount
+  useEffect(() => {
+    loadCurrencyPreference().then(code => {
+      if (code) {
+        setCurrencyCode(code);
+      } else {
+        setShowCurrencyPrompt(true);
+      }
+    });
   }, []);
 
   // Auth handlers for modal
@@ -645,7 +660,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const handleUnarchiveDebt = (id) => { setDebts(debts.map((d) => d.id !== id ? d : { ...d, archived: false })); haptic.medium(); toast('Debt restored', 'info'); };
   const handleDebtEditStart = (debt) => { setEditingDebtId(debt.id); setEditDebtForm({ ...debt }); };
   const handleDebtEditSave = () => { setDebts(debts.map((d) => d.id === editingDebtId ? { ...editDebtForm, totalAmount: parseFloat(editDebtForm.totalAmount) || 0, interestRate: parseFloat(editDebtForm.interestRate) || 0, minimumPayment: parseFloat(editDebtForm.minimumPayment) || 0, recurringPayment: parseFloat(editDebtForm.recurringPayment) || 0, installmentMonths: parseInt(editDebtForm.installmentMonths) || 0, bnplPromoMonths: parseInt(editDebtForm.bnplPromoMonths) || 0, bnplPostInterest: parseFloat(editDebtForm.bnplPostInterest) || 0, bnplPostPayment: parseFloat(editDebtForm.bnplPostPayment) || 0, paymentDate: editDebtForm.paymentDate ? String(Math.min(31, Math.max(1, parseInt(editDebtForm.paymentDate) || 0))) : '' } : d)); setEditingDebtId(null); setEditDebtForm({}); haptic.medium(); toast('Debt updated', 'success'); };
-  const handleMakePayment = (debtId) => { const amount = parseFloat(debtPaymentAmounts[debtId]); if (!amount || amount <= 0) return; const debt = debts.find(d => d.id === debtId); const newTotal = Math.max(0, (debt?.totalAmount || 0) - amount); setDebts(debts.map((d) => d.id !== debtId ? d : { ...d, totalAmount: newTotal, payments: [...(d.payments || []), { date: new Date().toISOString(), amount, type: 'manual' }] })); setDebtPaymentAmounts({ ...debtPaymentAmounts, [debtId]: '' }); haptic.success(); if (newTotal === 0) { toast('🎉 Debt paid off!', 'success'); setTimeout(() => { setDebts(prev => prev.map(d => d.id !== debtId ? d : { ...d, archived: true, archivedAt: new Date().toISOString() })); }, 1500); } else { toast(`£${amount.toFixed(2)} payment made`, 'success'); } };
+  const handleMakePayment = (debtId) => { const amount = parseFloat(debtPaymentAmounts[debtId]); if (!amount || amount <= 0) return; const debt = debts.find(d => d.id === debtId); const newTotal = Math.max(0, (debt?.totalAmount || 0) - amount); setDebts(debts.map((d) => d.id !== debtId ? d : { ...d, totalAmount: newTotal, payments: [...(d.payments || []), { date: new Date().toISOString(), amount, type: 'manual' }] })); setDebtPaymentAmounts({ ...debtPaymentAmounts, [debtId]: '' }); haptic.success(); if (newTotal === 0) { toast('🎉 Debt paid off!', 'success'); setTimeout(() => { setDebts(prev => prev.map(d => d.id !== debtId ? d : { ...d, archived: true, archivedAt: new Date().toISOString() })); }, 1500); } else { toast(`${getSymbol(currencyCode)}${amount.toFixed(2)} payment made`, 'success'); } };
   const calculatePayoff = (debt, monthlyPayment) => { if (!monthlyPayment || monthlyPayment <= 0 || debt.totalAmount <= 0) return null; const r = (debt.interestRate || 0) / 100 / 12; let bal = debt.totalAmount, m = 0, ti = 0; while (bal > 0 && m < 600) { const i = bal * r; ti += i; bal = bal + i - monthlyPayment; m++; if (monthlyPayment <= i) return { months: Infinity, totalInterest: Infinity }; } return { months: m, totalInterest: ti, totalPaid: debt.totalAmount + ti }; };
 
   // ── Savings handlers ──
@@ -657,13 +672,14 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const handleSavingsEditSave = () => { setSavings(savings.map((s) => s.id === editingSavingsId ? { ...editSavingsForm, targetAmount: parseFloat(editSavingsForm.targetAmount) || 0, monthlyContribution: parseFloat(editSavingsForm.monthlyContribution) || 0, currentAmount: parseFloat(editSavingsForm.currentAmount) || 0 } : s)); setEditingSavingsId(null); setEditSavingsForm({}); haptic.medium(); toast('Goal updated', 'success'); };
   const handleSavingsDeposit = (goalId) => { const a = parseFloat(savingsTransactionAmounts[goalId]); if (!a || a === 0) return; doSavingsTransaction(goalId, Math.abs(a), 'deposit'); };
   const handleSavingsWithdraw = (goalId) => { const a = parseFloat(savingsTransactionAmounts[goalId]); if (!a || a === 0) return; doSavingsTransaction(goalId, -Math.abs(a), 'withdrawal'); };
-  const doSavingsTransaction = (goalId, amount, type) => { const goal = savings.find(s => s.id === goalId); const newAmount = Math.max(0, (goal?.currentAmount || 0) + amount); const hitTarget = goal?.targetAmount > 0 && newAmount >= goal.targetAmount && (goal.currentAmount || 0) < goal.targetAmount; setSavings(savings.map((s) => s.id !== goalId ? s : { ...s, currentAmount: newAmount, transactions: [...(s.transactions || []), { date: new Date().toISOString(), amount, type }] })); setSavingsTransactionAmounts({ ...savingsTransactionAmounts, [goalId]: '' }); if (hitTarget) { haptic.success(); toast('🎉 Goal reached!', 'success'); setTimeout(() => { setSavings(prev => prev.map(s => s.id !== goalId ? s : { ...s, archived: true, archivedAt: new Date().toISOString() })); }, 1500); } else { haptic.medium(); toast(type === 'deposit' ? `£${Math.abs(amount).toFixed(2)} deposited` : `£${Math.abs(amount).toFixed(2)} withdrawn`, type === 'deposit' ? 'success' : 'warning'); } };
+  const doSavingsTransaction = (goalId, amount, type) => { const goal = savings.find(s => s.id === goalId); const newAmount = Math.max(0, (goal?.currentAmount || 0) + amount); const hitTarget = goal?.targetAmount > 0 && newAmount >= goal.targetAmount && (goal.currentAmount || 0) < goal.targetAmount; setSavings(savings.map((s) => s.id !== goalId ? s : { ...s, currentAmount: newAmount, transactions: [...(s.transactions || []), { date: new Date().toISOString(), amount, type }] })); setSavingsTransactionAmounts({ ...savingsTransactionAmounts, [goalId]: '' }); if (hitTarget) { haptic.success(); toast('🎉 Goal reached!', 'success'); setTimeout(() => { setSavings(prev => prev.map(s => s.id !== goalId ? s : { ...s, archived: true, archivedAt: new Date().toISOString() })); }, 1500); } else { haptic.medium(); toast(type === 'deposit' ? `${getSymbol(currencyCode)}${Math.abs(amount).toFixed(2)} deposited` : `${getSymbol(currencyCode)}${Math.abs(amount).toFixed(2)} withdrawn`, type === 'deposit' ? 'success' : 'warning'); } };
   const calculateSavingsEstimate = (goal) => { if (!goal.monthlyContribution || goal.monthlyContribution <= 0 || !goal.targetAmount || goal.targetAmount <= 0) return null; const rem = goal.targetAmount - (goal.currentAmount || 0); return rem <= 0 ? { months: 0 } : { months: Math.ceil(rem / goal.monthlyContribution) }; };
 
   // ════════════════════════════════════
   // RENDER
   // ════════════════════════════════════
   return (
+    <CurrencyProvider currencySymbol={getSymbol(currencyCode)}>
     <div style={{ padding: isMobile ? '12px' : '20px', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Sticky Collapsible Header */}
       {isMobile && (
@@ -754,8 +770,9 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
       <AddDebtModal show={showDebtModal} onClose={() => setShowDebtModal(false)} newDebt={newDebt} setNewDebt={setNewDebt} handleAddDebt={handleAddDebt} emptyDebt={emptyDebt} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
       <AddSavingsModal show={showSavingsModal} onClose={() => setShowSavingsModal(false)} newSavingsGoal={newSavingsGoal} setNewSavingsGoal={setNewSavingsGoal} handleAddSavings={handleAddSavings} emptySavings={emptySavings} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
         <AccountModal show={showAccountModal} onClose={() => setShowAccountModal(false)} user={user} onSignIn={handleSignIn} onSignUp={handleSignUp} onSignOut={handleSignOut} onResetPassword={handleResetPassword} onGoogleSignIn={handleGoogleSignIn} syncStatus={syncStatus} onSyncNow={saveToCloud} onDeleteAccount={handleDeleteAccount} onClearLocalData={handleClearLocalData} lastSynced={lastSynced} />
-        <SettingsModal show={showSettingsModal} onClose={() => setShowSettingsModal(false)} theme={theme} onToggleTheme={handleToggleTheme} notificationSettings={notificationSettings} onNotificationSettingsChange={setNotificationSettings} />
+        <SettingsModal show={showSettingsModal} onClose={() => setShowSettingsModal(false)} theme={theme} onToggleTheme={handleToggleTheme} notificationSettings={notificationSettings} onNotificationSettingsChange={setNotificationSettings} currencyCode={currencyCode} onCurrencyChange={(code) => { setCurrencyCode(code); saveCurrencyPreference(code); }} />
 
     </div>
+    </CurrencyProvider>
   );
 }

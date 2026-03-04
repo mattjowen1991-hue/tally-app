@@ -1,9 +1,11 @@
+import { useCurrency } from './CurrencyContext';
 import React from 'react';
 import * as Icons from './Icons';
 import { tc } from '../utils/themeColors';
 import { SAVINGS_CATEGORIES } from '../data/initialData';
 
 export default function SavingsPanel({
+  const cs = useCurrency();
   savings, totalSaved, editingSavingsId, editSavingsForm, setEditSavingsForm,
   handleSavingsEditStart, handleSavingsEditSave, handleDeleteSavings,
   handleSavingsDeposit, handleSavingsWithdraw, savingsTransactionAmounts,
@@ -26,7 +28,7 @@ export default function SavingsPanel({
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div style={{ padding: '16px', background: 'var(--glass)', borderRadius: '12px', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Total Saved</div>
-            <div className="font-mono" style={{ fontSize: '22px', fontWeight: '700', color: tc.success }}>£{totalSaved.toFixed(2)}</div>
+            <div className="font-mono" style={{ fontSize: '22px', fontWeight: '700', color: tc.success }}>{cs}{totalSaved.toFixed(2)}</div>
           </div>
           <div style={{ padding: '16px', background: 'var(--glass)', borderRadius: '12px', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Active Goals</div>
@@ -90,11 +92,11 @@ export default function SavingsPanel({
                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{goal.category}</div>
                       </div>
                     </div>
-                    <div className="font-mono" style={{ fontSize: '24px', fontWeight: '700', color: tc.success, marginBottom: '4px' }}>£{(goal.currentAmount || 0).toFixed(2)}</div>
+                    <div className="font-mono" style={{ fontSize: '24px', fontWeight: '700', color: tc.success, marginBottom: '4px' }}>{cs}{(goal.currentAmount || 0).toFixed(2)}</div>
                     {goal.targetAmount > 0 && (
                       <div style={{ marginBottom: '12px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                          <span>of £{goal.targetAmount.toFixed(2)}</span><span>{Math.min(progress, 100).toFixed(1)}%</span>
+                          <span>of {cs}{goal.targetAmount.toFixed(2)}</span><span>{Math.min(progress, 100).toFixed(1)}%</span>
                         </div>
                         <div style={{ height: '6px', background: 'var(--glass)', borderRadius: '3px', overflow: 'hidden' }}>
                           <div style={{ width: `${Math.min(progress, 100)}%`, height: '100%', background: 'linear-gradient(90deg, var(--success), var(--accent-primary))', borderRadius: '3px', transition: 'width 0.5s' }} />
@@ -102,7 +104,7 @@ export default function SavingsPanel({
                       </div>
                     )}
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                      {goal.monthlyContribution > 0 && <div style={{ fontSize: '12px', color: tc.info, padding: '4px 10px', background: tc.infoTint, borderRadius: '8px', border: '1px solid rgba(0,212,255,0.3)' }}>Auto: £{goal.monthlyContribution.toFixed(2)}/mo</div>}
+                      {goal.monthlyContribution > 0 && <div style={{ fontSize: '12px', color: tc.info, padding: '4px 10px', background: tc.infoTint, borderRadius: '8px', border: '1px solid rgba(0,212,255,0.3)' }}>Auto: {cs}{goal.monthlyContribution.toFixed(2)}/mo</div>}
                       {estimate && estimate.months > 0 && <div style={{ fontSize: '12px', color: 'var(--text-secondary)', padding: '4px 10px', background: 'var(--glass)', borderRadius: '8px', border: '1px solid var(--border)' }}>~{estimate.months} month{estimate.months !== 1 ? 's' : ''} to go</div>}
                       {goal.transactions && goal.transactions.length > 0 && <div style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '4px 10px', background: 'var(--glass)', borderRadius: '8px', border: '1px solid var(--border)' }}>{goal.transactions.length} transaction{goal.transactions.length !== 1 ? 's' : ''}</div>}
                     </div>
@@ -138,7 +140,7 @@ export default function SavingsPanel({
                                   <div style={{ fontSize: '13px', fontWeight: '500', color: tx.amount > 0 ? tc.success : tc.danger }}>{tx.type === 'auto' ? '↻ Auto-save' : tx.amount > 0 ? '↑ Deposit' : '↓ Withdrawal'}</div>
                                   <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{new Date(tx.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                                 </div>
-                                <div className="font-mono" style={{ fontSize: '14px', fontWeight: '600', color: tx.amount > 0 ? tc.success : tc.danger }}>{tx.amount > 0 ? '+' : ''}£{Math.abs(tx.amount).toFixed(2)}</div>
+                                <div className="font-mono" style={{ fontSize: '14px', fontWeight: '600', color: tx.amount > 0 ? tc.success : tc.danger }}>{tx.amount > 0 ? '+' : ''}{cs}{Math.abs(tx.amount).toFixed(2)}</div>
                               </div>
                             ))}
                           </div>
@@ -177,11 +179,11 @@ export default function SavingsPanel({
                             {goal.category || 'Savings'} • Reached {goal.archivedAt ? new Date(goal.archivedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
                           </div>
                         </div>
-                        <div className="font-mono" style={{ fontSize: '13px', color: tc.success, fontWeight: '600', flexShrink: 0 }}>£{(goal.currentAmount || 0).toFixed(2)}</div>
+                        <div className="font-mono" style={{ fontSize: '13px', color: tc.success, fontWeight: '600', flexShrink: 0 }}>{cs}{(goal.currentAmount || 0).toFixed(2)}</div>
                       </div>
                       {goal.transactions && goal.transactions.length > 0 && (
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                          {goal.transactions.length} transaction{goal.transactions.length !== 1 ? 's' : ''} • Target: £{(goal.targetAmount || 0).toFixed(2)}
+                          {goal.transactions.length} transaction{goal.transactions.length !== 1 ? 's' : ''} • Target: {cs}{(goal.targetAmount || 0).toFixed(2)}
                         </div>
                       )}
                       <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>

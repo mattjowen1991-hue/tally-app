@@ -1,3 +1,4 @@
+import { useCurrency } from './CurrencyContext';
 import React, { useState, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import * as Icons from './Icons';
@@ -68,6 +69,7 @@ function getOrdinal(n) {
 }
 
 export default function BillsPanel({
+  const cs = useCurrency();
   categories, selectedCategory, setSelectedCategory, statusFilter, setStatusFilter,
   filteredBills, editingId, editForm, setEditForm, handleEditStart, handleEditSave,
   handleDelete, handleTogglePaid, handleToggleMissed, handleTogglePaused, setEditingId, categoryScrollRef,
@@ -369,13 +371,13 @@ export default function BillsPanel({
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '12px', background: 'var(--glass)', borderRadius: '12px', border: '1px solid var(--border)' }}>
                       <div>
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Projected</div>
-                        <div className="font-mono" style={{ fontSize: '16px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>£{bill.projected.toFixed(2)}</div>
+                        <div className="font-mono" style={{ fontSize: '16px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cs}{bill.projected.toFixed(2)}</div>
                       </div>
                       <div>
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actual</div>
-                        <div className="font-mono" style={{ fontSize: '16px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>£{bill.actual.toFixed(2)}</div>
+                        <div className="font-mono" style={{ fontSize: '16px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cs}{bill.actual.toFixed(2)}</div>
                         {bill.actual !== bill.projected && (
-                          <div style={{ fontSize: '11px', color: bill.actual > bill.projected ? tc.danger : tc.success, marginTop: '2px' }}>{bill.actual > bill.projected ? '+' : ''}£{(bill.actual - bill.projected).toFixed(2)}</div>
+                          <div style={{ fontSize: '11px', color: bill.actual > bill.projected ? tc.danger : tc.success, marginTop: '2px' }}>{bill.actual > bill.projected ? '+' : ''}{cs}{(bill.actual - bill.projected).toFixed(2)}</div>
                         )}
                       </div>
                     </div>

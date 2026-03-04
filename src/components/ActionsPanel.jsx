@@ -1,8 +1,10 @@
+import { useCurrency } from './CurrencyContext';
 import React from 'react';
 import * as Icons from './Icons';
 import { tc } from '../utils/themeColors';
 
 export default function ActionsPanel({ income, setIncome, categoryTotals, setShowAddModal, setShowDebtModal, setShowSavingsModal, setShowCategoryModal, generateTestSnapshot, clearTestSnapshots, snapshotCount }) {
+  const cs = useCurrency();
   return (
     <div className="glass-card animate-in" style={{ padding: '32px', animationDelay: '0.6s' }}>
       <h2 className="font-display" style={{ fontSize: '24px', marginBottom: '24px' }}>Quick Actions</h2>
@@ -20,7 +22,7 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
           {categoryTotals.map((cat) => (
             <div key={cat.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
               <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{cat.name}</span>
-              <span className="font-mono" style={{ fontSize: '14px', fontWeight: '600' }}>£{cat.total.toFixed(2)}</span>
+              <span className="font-mono" style={{ fontSize: '14px', fontWeight: '600' }}>{cs}{cat.total.toFixed(2)}</span>
             </div>
           ))}
         </div>

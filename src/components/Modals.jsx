@@ -1,3 +1,4 @@
+import { useCurrency } from './CurrencyContext';
 import React from 'react';
 import * as Icons from './Icons';
 import { tc } from '../utils/themeColors';
@@ -164,6 +165,7 @@ export function ManageCategoriesModal({ show, onClose, bills, customCategories, 
 // Add Debt Modal
 // ══════════════════════════════════════
 export function AddDebtModal({ show, onClose, newDebt, setNewDebt, handleAddDebt, emptyDebt, validationErrors, setValidationErrors }) {
+  const cs = useCurrency();
   if (!show) return null;
   const mode = newDebt.paymentMode || 'recurring';
   const total = parseFloat(newDebt.totalAmount) || 0;
@@ -285,7 +287,7 @@ export function AddDebtModal({ show, onClose, newDebt, setNewDebt, handleAddDebt
                 </div>
                 {installmentMonthly > 0 && (
                   <div style={{ padding: '10px 14px', background: tc.purpleTint, borderRadius: '10px', border: '1px solid rgba(167,139,250,0.2)', fontSize: '13px', color: tc.purple }}>
-                    Monthly payment: <strong>£{installmentMonthly.toFixed(2)}</strong> × {installMonths} months
+                    Monthly payment: <strong>{cs}{installmentMonthly.toFixed(2)}</strong> × {installMonths} months
                     {newDebt.installmentStartDate && (() => {
                       const start = new Date(newDebt.installmentStartDate);
                       const now = new Date();
@@ -314,7 +316,7 @@ export function AddDebtModal({ show, onClose, newDebt, setNewDebt, handleAddDebt
                 </div>
                 {bnplMonthly > 0 && (
                   <div style={{ padding: '10px 14px', background: tc.successTint, borderRadius: '10px', border: '1px solid rgba(16,185,129,0.2)', fontSize: '13px', color: tc.success }}>
-                    Pay <strong>£{bnplMonthly.toFixed(2)}/mo</strong> to clear within {bnplMonths} months interest-free
+                    Pay <strong>{cs}{bnplMonthly.toFixed(2)}/mo</strong> to clear within {bnplMonths} months interest-free
                   </div>
                 )}
                 {bnplMonths > 0 && newDebt.bnplStartDate && (() => {

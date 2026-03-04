@@ -1,9 +1,11 @@
+import { useCurrency } from './CurrencyContext';
 import { tc } from '../utils/themeColors';
 import React from 'react';
 import haptic from '../utils/haptics';
 import { saveNotificationSettings } from '../utils/notifications';
 
-export default function SettingsModal({ show, onClose, theme, onToggleTheme, notificationSettings, onNotificationSettingsChange }) {
+export default function SettingsModal({ show, onClose, theme, onToggleTheme, notificationSettings, onNotificationSettingsChange, currencyCode, onCurrencyChange }) {
+  const cs = useCurrency();
   if (!show) return null;
 
   const updateSetting = (key, value) => {
@@ -58,6 +60,43 @@ export default function SettingsModal({ show, onClose, theme, onToggleTheme, not
                 {theme === 'dark' ? '🌙' : '☀️'}
               </div>
             </button>
+          </div>
+        </div>
+
+        {/* ── Currency ── */}
+        <div style={{
+          padding: '16px', borderRadius: '12px', background: 'var(--glass)',
+          border: '1px solid var(--border)', marginBottom: '16px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>💰 Currency</span>
+            <select
+              value={currencyCode || 'GBP'}
+              onChange={(e) => { onCurrencyChange(e.target.value); haptic.light(); }}
+              style={{
+                padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)',
+                background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px',
+                fontWeight: '600', cursor: 'pointer', appearance: 'none', textAlign: 'center',
+                minWidth: '120px',
+              }}
+            >
+              {[
+                { code: 'GBP', symbol: '£', name: 'GBP (£)' },
+                { code: 'USD', symbol: '$', name: 'USD ($)' },
+                { code: 'EUR', symbol: '€', name: 'EUR (€)' },
+                { code: 'AUD', symbol: 'A$', name: 'AUD (A$)' },
+                { code: 'CAD', symbol: 'C$', name: 'CAD (C$)' },
+                { code: 'NZD', symbol: 'NZ$', name: 'NZD (NZ$)' },
+                { code: 'SEK', symbol: 'kr', name: 'SEK (kr)' },
+                { code: 'NOK', symbol: 'kr', name: 'NOK (kr)' },
+                { code: 'DKK', symbol: 'kr', name: 'DKK (kr)' },
+                { code: 'CHF', symbol: 'CHF', name: 'CHF' },
+                { code: 'JPY', symbol: '¥', name: 'JPY (¥)' },
+                { code: 'INR', symbol: '₹', name: 'INR (₹)' },
+              ].map(c => (
+                <option key={c.code} value={c.code}>{c.name}</option>
+              ))}
+            </select>
           </div>
         </div>
 

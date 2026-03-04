@@ -1,3 +1,4 @@
+import { useCurrency } from './CurrencyContext';
 import React from 'react';
 import * as Icons from './Icons';
 import { tc } from '../utils/themeColors';
@@ -95,6 +96,7 @@ const getDebtFreeDate = (debt, calculatePayoff) => {
 };
 
 function DebtInfoBanner({ debt, calculatePayoff }) {
+  const cs = useCurrency();
   const mode = debt.paymentMode || 'recurring';
 
   if (mode === 'one-off' && debt.dueDate) {
@@ -118,7 +120,7 @@ function DebtInfoBanner({ debt, calculatePayoff }) {
     if (!info) return null;
     return (
       <div style={{ fontSize: '13px', padding: '8px 12px', borderRadius: '8px', marginBottom: '12px', color: tc.purple, background: tc.purpleTint, border: '1px solid rgba(124,58,237,0.15)' }}>
-        <div>£{info.monthlyPayment.toFixed(2)}/mo · {info.paymentsMade} of {info.totalMonths} payments made</div>
+        <div>{cs}{info.monthlyPayment.toFixed(2)}/mo · {info.paymentsMade} of {info.totalMonths} payments made</div>
         {info.endDate && <div style={{ fontSize: '11px', marginTop: '2px', opacity: 0.8 }}>Ends {info.endDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} · {info.paymentsRemaining} left</div>}
       </div>
     );
@@ -138,15 +140,15 @@ function DebtInfoBanner({ debt, calculatePayoff }) {
           ) : (
             <>
               <div>🟢 Interest-free · {info.monthsRemaining} of {info.promoMonths} months left</div>
-              {info.monthlyToClear > 0 && <div style={{ fontSize: '11px', marginTop: '2px', opacity: 0.8 }}>Pay £{info.monthlyToClear.toFixed(2)}/mo to clear in time</div>}
+              {info.monthlyToClear > 0 && <div style={{ fontSize: '11px', marginTop: '2px', opacity: 0.8 }}>Pay {cs}{info.monthlyToClear.toFixed(2)}/mo to clear in time</div>}
             </>
           )}
         </div>
         {info.postPromoInfo && debt.totalAmount > 0 && (
           <div style={{ fontSize: '12px', padding: '8px 12px', borderRadius: '8px', color: 'var(--text-muted)', background: 'var(--glass)', border: '1px solid var(--border)' }}>
-            {info.isExpired ? 'Now paying' : 'If not cleared by end date'}: £{info.postPromoInfo.monthlyPayment.toFixed(2)}/mo at {debt.bnplPostInterest}% APR
+            {info.isExpired ? 'Now paying' : 'If not cleared by end date'}: {cs}{info.postPromoInfo.monthlyPayment.toFixed(2)}/mo at {debt.bnplPostInterest}% APR
             {info.postPromoInfo.months !== Infinity && ` (${formatMonths(info.postPromoInfo.months)})`}
-            {info.postPromoInfo.months !== Infinity && ` · £${info.postPromoInfo.totalInterest.toFixed(2)} interest`}
+            {info.postPromoInfo.months !== Infinity && ` · ${cs}${info.postPromoInfo.totalInterest.toFixed(2)} interest`}
           </div>
         )}
       </div>
@@ -184,6 +186,7 @@ export default function DebtPanel({
   showDebtHistory, setShowDebtHistory, setEditingDebtId, setShowDebtModal,
   handleArchiveDebt, handleUnarchiveDebt,
 }) {
+  const cs = useCurrency();
   const [showWhatIf, setShowWhatIf] = React.useState({});
   const [whatIfAmounts, setWhatIfAmounts] = React.useState({});
   const [showArchived, setShowArchived] = React.useState(false);
@@ -202,7 +205,7 @@ export default function DebtPanel({
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div style={{ padding: '16px', background: 'var(--glass)', borderRadius: '12px', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Total Debt</div>
-            <div className="font-mono" style={{ fontSize: '22px', fontWeight: '700', color: totalDebt > 0 ? tc.danger : tc.success }}>£{totalDebt.toFixed(2)}</div>
+            <div className="font-mono" style={{ fontSize: '22px', fontWeight: '700', color: totalDebt > 0 ? tc.danger : tc.success }}>{cs}{totalDebt.toFixed(2)}</div>
           </div>
           <div style={{ padding: '16px', background: 'var(--glass)', borderRadius: '12px', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Active Debts</div>
@@ -337,7 +340,7 @@ export default function DebtPanel({
                         </div>
                       </div>
                     </div>
-                    <div className="font-mono" style={{ fontSize: '24px', fontWeight: '700', color: debt.totalAmount === 0 ? tc.success : tc.danger, marginBottom: '8px' }}>£{debt.totalAmount.toFixed(2)}</div>
+                    <div className="font-mono" style={{ fontSize: '24px', fontWeight: '700', color: debt.totalAmount === 0 ? tc.success : tc.danger, marginBottom: '8px' }}>{cs}{debt.totalAmount.toFixed(2)}</div>
                     {debt.originalAmount > 0 && (
                       <div style={{ marginBottom: '12px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
@@ -350,9 +353,9 @@ export default function DebtPanel({
                     )}
                     <DebtInfoBanner debt={debt} calculatePayoff={calculatePayoff} />
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                      {debt.minimumPayment > 0 && mode === 'recurring' && <div style={{ fontSize: '12px', color: 'var(--text-secondary)', padding: '4px 10px', background: 'var(--glass)', borderRadius: '8px', border: '1px solid var(--border)' }}>Min: £{debt.minimumPayment.toFixed(2)}</div>}
-                      {debt.recurringPayment > 0 && (mode === 'recurring' || mode === 'installment') && <div style={{ fontSize: '12px', color: tc.info, padding: '4px 10px', background: tc.infoTint, borderRadius: '8px', border: '1px solid rgba(0,212,255,0.3)' }}>{mode === 'installment' ? 'Payment' : 'Auto'}: £{debt.recurringPayment.toFixed(2)}/mo</div>}
-                      {debt.bnplPostPayment > 0 && mode === 'bnpl' && <div style={{ fontSize: '12px', color: 'var(--text-secondary)', padding: '4px 10px', background: 'var(--glass)', borderRadius: '8px', border: '1px solid var(--border)' }}>After end date: £{debt.bnplPostPayment.toFixed(2)}/mo</div>}
+                      {debt.minimumPayment > 0 && mode === 'recurring' && <div style={{ fontSize: '12px', color: 'var(--text-secondary)', padding: '4px 10px', background: 'var(--glass)', borderRadius: '8px', border: '1px solid var(--border)' }}>Min: {cs}{debt.minimumPayment.toFixed(2)}</div>}
+                      {debt.recurringPayment > 0 && (mode === 'recurring' || mode === 'installment') && <div style={{ fontSize: '12px', color: tc.info, padding: '4px 10px', background: tc.infoTint, borderRadius: '8px', border: '1px solid rgba(0,212,255,0.3)' }}>{mode === 'installment' ? 'Payment' : 'Auto'}: {cs}{debt.recurringPayment.toFixed(2)}/mo</div>}
+                      {debt.bnplPostPayment > 0 && mode === 'bnpl' && <div style={{ fontSize: '12px', color: 'var(--text-secondary)', padding: '4px 10px', background: 'var(--glass)', borderRadius: '8px', border: '1px solid var(--border)' }}>After end date: {cs}{debt.bnplPostPayment.toFixed(2)}/mo</div>}
                       {debt.payments && debt.payments.length > 0 && <div style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '4px 10px', background: 'var(--glass)', borderRadius: '8px', border: '1px solid var(--border)' }}>{debt.payments.length} payment{debt.payments.length !== 1 ? 's' : ''}</div>}
                     </div>
                     {debt.totalAmount > 0 && (
@@ -371,7 +374,7 @@ export default function DebtPanel({
                             {showWhatIf[debt.id] && (
                               <div style={{ marginTop: '8px', padding: '12px', background: 'var(--glass)', borderRadius: '10px', border: '1px solid var(--border)' }}>
                                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                                  <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>£</span>
+                                  <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{cs}</span>
                                   <input type="number" className="input" placeholder="e.g., 200" value={whatIfAmounts[debt.id] || ''} onChange={(e) => setWhatIfAmounts({ ...whatIfAmounts, [debt.id]: e.target.value })} style={{ flex: 1 }} />
                                   <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>/mo</span>
                                 </div>
@@ -385,7 +388,7 @@ export default function DebtPanel({
                                   const result = calculatePayoff(calcDebt, amt);
                                   if (!result) return null;
                                   if (result.months === Infinity) {
-                                    return <div style={{ fontSize: '13px', color: tc.danger }}>⚠️ £{amt.toFixed(2)}/mo won't cover the {effectiveRate}% APR interest (£{(debt.totalAmount * effectiveRate / 100 / 12).toFixed(2)}/mo)</div>;
+                                    return <div style={{ fontSize: '13px', color: tc.danger }}>⚠️ {cs}{amt.toFixed(2)}/mo won't cover the {effectiveRate}% APR interest ({cs}{(debt.totalAmount * effectiveRate / 100 / 12).toFixed(2)}/mo)</div>;
                                   }
                                   const currentPayment = debt.recurringPayment || debt.bnplPostPayment || 0;
                                   const currentResult = currentPayment > 0 ? calculatePayoff(calcDebt, currentPayment) : null;
@@ -399,12 +402,12 @@ export default function DebtPanel({
                                         Paid off in {formatMonths(result.months)} <span style={{ fontSize: '12px', fontWeight: '400', color: 'var(--text-muted)' }}>({payoffDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })})</span>
                                       </div>
                                       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                        {result.totalInterest > 0 && <span>Interest: £{result.totalInterest.toFixed(2)}</span>}
-                                        <span>Total cost: £{result.totalPaid.toFixed(2)}</span>
+                                        {result.totalInterest > 0 && <span>Interest: {cs}{result.totalInterest.toFixed(2)}</span>}
+                                        <span>Total cost: {cs}{result.totalPaid.toFixed(2)}</span>
                                       </div>
                                       {savedMonths > 0 && currentPayment > 0 && currentResult && (
                                         <div style={{ fontSize: '12px', color: tc.success, padding: '6px 10px', background: tc.successTintLight, borderRadius: '8px', border: '1px solid rgba(16,185,129,0.12)' }}>
-                                          💡 At £{currentPayment.toFixed(2)}/mo it would take {formatMonths(currentResult.months)}{savedInterest > 0 ? ` — you'd save £${savedInterest.toFixed(2)} in interest` : ''}
+                                          💡 At {cs}{currentPayment.toFixed(2)}/mo it would take {formatMonths(currentResult.months)}{savedInterest > 0 ? ` — you'd save ${cs}${savedInterest.toFixed(2)} in interest` : ''}
                                         </div>
                                       )}
                                     </div>
@@ -442,7 +445,7 @@ export default function DebtPanel({
                                   <div style={{ fontSize: '13px', fontWeight: '500', color: tc.success }}>{tx.type === 'recurring' ? '↻ Auto-payment' : '↓ Manual payment'}</div>
                                   <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{new Date(tx.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                                 </div>
-                                <div className="font-mono" style={{ fontSize: '14px', fontWeight: '600', color: tc.success }}>-£{Math.abs(tx.amount).toFixed(2)}</div>
+                                <div className="font-mono" style={{ fontSize: '14px', fontWeight: '600', color: tc.success }}>-{cs}{Math.abs(tx.amount).toFixed(2)}</div>
                               </div>
                             ))}
                           </div>
@@ -483,13 +486,13 @@ export default function DebtPanel({
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                           {debt.originalAmount > 0 && (
-                            <div className="font-mono" style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'line-through' }}>£{debt.originalAmount.toFixed(2)}</div>
+                            <div className="font-mono" style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'line-through' }}>{cs}{debt.originalAmount.toFixed(2)}</div>
                           )}
                         </div>
                       </div>
                       {debt.payments && debt.payments.length > 0 && (
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                          {debt.payments.length} payment{debt.payments.length !== 1 ? 's' : ''} made • Total: £{debt.payments.reduce((s, p) => s + (p.amount || 0), 0).toFixed(2)}
+                          {debt.payments.length} payment{debt.payments.length !== 1 ? 's' : ''} made • Total: {cs}{debt.payments.reduce((s, p) => s + (p.amount || 0), 0).toFixed(2)}
                         </div>
                       )}
                       <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>

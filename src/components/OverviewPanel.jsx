@@ -1,3 +1,4 @@
+import { useCurrency } from './CurrencyContext';
 import React, { useRef, useEffect, useState } from 'react';
 import { Chart, DoughnutController, ArcElement, Tooltip } from 'chart.js';
 import * as Icons from './Icons';
@@ -50,6 +51,7 @@ function ChevronDown({ expanded, color = 'var(--text-muted)' }) {
 }
 
 export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMobile, insights = {}, bills = [], totalDebt = 0, totalSaved = 0, debts = [], savings = [] }) {
+  const cs = useCurrency();
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
 
@@ -61,7 +63,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
     const ctx = chartRef.current.getContext('2d');
     chartInstance.current = new Chart(ctx, {
       type: 'doughnut',
-      data: { labels: [], datasets: [{ data: [], backgroundColor: [], hoverBackgroundColor: [], borderWidth: 0, hoverOffset: 0 }] },
+      data: { labels: [], datasets: [{ data: [], backgroundColor: [], hoverBackgroundColor: [], borderWidth: 0, hoverOffset: 0, hoverBorderWidth: 3, hoverBorderColor: '#fff' }] },
       options: {
         cutout: '65%',
         devicePixelRatio: 3,
@@ -77,7 +79,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
             cornerRadius: 12,
             borderColor: 'var(--border)',
             borderWidth: 1,
-            callbacks: { label: (ctx) => ` £${ctx.parsed.toFixed(2)}` },
+            callbacks: { label: (ctx) => ` ${cs}${ctx.parsed.toFixed(2)}` },
           },
         },
       },
@@ -127,10 +129,10 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
     <>
       {/* Stats Grid */}
       <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: isMobile ? '12px' : '20px', marginBottom: isMobile ? '20px' : '40px' }}>
-        <StatCard label="Income" value={`£${incomeNum.toFixed(2)}`} subtitle="Monthly income" icon={<Icons.DollarSign size={20} />} color="var(--success)" delay="0.1s" isMobile={isMobile} />
-        <StatCard label="Expenses" value={`£${totals.actualExpenses.toFixed(2)}`} subtitle={`${totals.paidBills} of ${totals.totalBills} bills paid`} icon={<Icons.TrendingUp size={20} />} color="var(--danger)" delay="0.2s" isMobile={isMobile} />
-        <StatCard label="Balance" value={`£${totals.actualBalance.toFixed(2)}`} subtitle="Remaining this month" icon={totals.actualBalance >= 0 ? <Icons.TrendingUp size={20} /> : <Icons.TrendingDown size={20} />} color={totals.actualBalance >= 0 ? 'var(--accent-primary)' : 'var(--danger)'} valueColor={totals.actualBalance >= 0 ? tc.success : tc.danger} delay="0.3s" isMobile={isMobile} />
-        <StatCard label="Variance" value={`${totals.difference > 0 ? '+' : ''}£${totals.difference.toFixed(2)}`} subtitle="vs projected budget" icon={<Icons.PieChart size={20} />} color={Math.abs(totals.difference) < 10 ? 'var(--warning)' : 'var(--accent-secondary)'} valueColor={totals.difference === 0 ? tc.success : totals.difference > 0 ? tc.danger : tc.info} delay="0.4s" isMobile={isMobile} />
+        <StatCard label="Income" value={`${cs}${incomeNum.toFixed(2)}`} subtitle="Monthly income" icon={<Icons.DollarSign size={20} />} color="var(--success)" delay="0.1s" isMobile={isMobile} />
+        <StatCard label="Expenses" value={`${cs}${totals.actualExpenses.toFixed(2)}`} subtitle={`${totals.paidBills} of ${totals.totalBills} bills paid`} icon={<Icons.TrendingUp size={20} />} color="var(--danger)" delay="0.2s" isMobile={isMobile} />
+        <StatCard label="Balance" value={`${cs}${totals.actualBalance.toFixed(2)}`} subtitle="Remaining this month" icon={totals.actualBalance >= 0 ? <Icons.TrendingUp size={20} /> : <Icons.TrendingDown size={20} />} color={totals.actualBalance >= 0 ? 'var(--accent-primary)' : 'var(--danger)'} valueColor={totals.actualBalance >= 0 ? tc.success : tc.danger} delay="0.3s" isMobile={isMobile} />
+        <StatCard label="Variance" value={`${totals.difference > 0 ? '+' : ''}${cs}${totals.difference.toFixed(2)}`} subtitle="vs projected budget" icon={<Icons.PieChart size={20} />} color={Math.abs(totals.difference) < 10 ? 'var(--warning)' : 'var(--accent-secondary)'} valueColor={totals.difference === 0 ? tc.success : totals.difference > 0 ? tc.danger : tc.info} delay="0.4s" isMobile={isMobile} />
       </div>
 
       {/* ── Smart Insights ── */}
@@ -151,7 +153,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
               <div>
                 <div style={{ fontSize: '12px', color: tc.muted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Upcoming Bills</div>
                 <div className="font-mono" style={{ fontSize: '28px', fontWeight: '700', color: upcomingCount > 0 ? tc.warning : tc.success, lineHeight: 1.1 }}>
-                  {upcomingCount > 0 ? `£${upcomingTotal.toFixed(2)}` : 'All clear'}
+                  {upcomingCount > 0 ? `${cs}${upcomingTotal.toFixed(2)}` : 'All clear'}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -180,7 +182,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
                       <div style={{ fontSize: '13px', fontWeight: '500', color: tc.primary }}>{bill.name}</div>
                       {formatDueDate(bill) && <div style={{ fontSize: '11px', color: tc.muted, marginTop: '2px' }}>Due: {formatDueDate(bill)}</div>}
                     </div>
-                    <div className="font-mono" style={{ fontSize: '14px', fontWeight: '600', color: tc.warning }}>£{(bill.actual || 0).toFixed(2)}</div>
+                    <div className="font-mono" style={{ fontSize: '14px', fontWeight: '600', color: tc.warning }}>{cs}{(bill.actual || 0).toFixed(2)}</div>
                   </div>
                 ))}
               </div>
@@ -200,7 +202,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
                   <div style={{ fontSize: '12px', color: tc.muted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>vs {formatMonth(lastSnapshot.month)}</div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
                     <div className="font-mono" style={{ fontSize: '22px', fontWeight: '700', color: spendingDiff <= 0 ? tc.success : tc.danger }}>
-                      {spendingDiff <= 0 ? '↓' : '↑'} £{Math.abs(spendingDiff).toFixed(2)}
+                      {spendingDiff <= 0 ? '↓' : '↑'} {cs}{Math.abs(spendingDiff).toFixed(2)}
                     </div>
                     {spendingPct !== null && (
                       <div style={{
@@ -237,9 +239,9 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
                     <div key={change.category} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderRadius: '8px', background: tc.cardDetail }}>
                       <div style={{ fontSize: '13px', fontWeight: '500', color: tc.primary }}>{change.category}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '11px', color: tc.muted }}>£{change.prev.toFixed(0)} → £{change.curr.toFixed(0)}</span>
+                        <span style={{ fontSize: '11px', color: tc.muted }}>{cs}{change.prev.toFixed(0)} → {cs}{change.curr.toFixed(0)}</span>
                         <span className="font-mono" style={{ fontSize: '13px', fontWeight: '600', color: change.diff > 0 ? tc.danger : tc.success }}>
-                          {change.diff > 0 ? '+' : ''}£{change.diff.toFixed(0)}
+                          {change.diff > 0 ? '+' : ''}{cs}{change.diff.toFixed(0)}
                         </span>
                       </div>
                     </div>
@@ -272,7 +274,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
                   <div style={{ fontSize: '12px', color: tc.muted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Biggest change</div>
                   <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>{biggestChange.category}</div>
                   <div className="font-mono" style={{ fontSize: '18px', fontWeight: '700', color: biggestChange.diff > 0 ? tc.warning : tc.success }}>
-                    {biggestChange.diff > 0 ? '+' : '-'}£{Math.abs(biggestChange.diff).toFixed(2)}
+                    {biggestChange.diff > 0 ? '+' : '-'}{cs}{Math.abs(biggestChange.diff).toFixed(2)}
                   </div>
                 </div>
                 <div style={{
@@ -286,8 +288,8 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
               </div>
               <div style={{ fontSize: '13px', color: tc.secondary, marginTop: '8px' }}>
                 {biggestChange.diff > 0
-                  ? `Up from £${biggestChange.prev.toFixed(2)} last month`
-                  : `Down from £${biggestChange.prev.toFixed(2)} last month`
+                  ? `Up from ${cs}${biggestChange.prev.toFixed(2)} last month`
+                  : `Down from ${cs}${biggestChange.prev.toFixed(2)} last month`
                 }
               </div>
             </div>
@@ -328,7 +330,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
                 </div>
               </div>
               <div className="font-mono" style={{ fontSize: '22px', fontWeight: '700', color: totalDebt > 0 ? tc.danger : tc.success, lineHeight: 1.1 }}>
-                {totalDebt > 0 ? `£${totalDebt.toFixed(2)}` : 'Debt free'}
+                {totalDebt > 0 ? `${cs}${totalDebt.toFixed(2)}` : 'Debt free'}
               </div>
               <div style={{ fontSize: '12px', color: tc.muted, marginTop: '6px' }}>
                 {totalDebt > 0 ? 'Total outstanding' : 'No debts'}
@@ -357,7 +359,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
                 </div>
               </div>
               <div className="font-mono" style={{ fontSize: '22px', fontWeight: '700', color: tc.success, lineHeight: 1.1 }}>
-                £{totalSaved.toFixed(2)}
+                {cs}{totalSaved.toFixed(2)}
               </div>
               <div style={{ fontSize: '12px', color: tc.muted, marginTop: '6px' }}>
                 Total savings
@@ -376,12 +378,12 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                       <div style={{ fontSize: '13px', fontWeight: '500', color: tc.primary }}>{debt.name}</div>
                       <div className="font-mono" style={{ fontSize: '12px', color: tc.muted }}>
-                        £{paid.toFixed(0)} / £{original.toFixed(0)}
+                        {cs}{paid.toFixed(0)} / {cs}{original.toFixed(0)}
                       </div>
                     </div>
                     <MiniProgress current={paid} total={original} color={tc.danger} />
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                      <span style={{ fontSize: '11px', color: tc.muted }}>£{debt.totalAmount.toFixed(2)} remaining</span>
+                      <span style={{ fontSize: '11px', color: tc.muted }}>{cs}{debt.totalAmount.toFixed(2)} remaining</span>
                       <span style={{ fontSize: '11px', color: tc.muted }}>{original > 0 ? Math.round((paid / original) * 100) : 0}% paid</span>
                     </div>
                   </div>
@@ -401,13 +403,13 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                       <div style={{ fontSize: '13px', fontWeight: '500', color: tc.primary }}>{goal.name}</div>
                       <div className="font-mono" style={{ fontSize: '12px', color: tc.muted }}>
-                        £{current.toFixed(0)}{target > 0 ? ` / £${target.toFixed(0)}` : ''}
+                        {cs}{current.toFixed(0)}{target > 0 ? ` / ${cs}${target.toFixed(0)}` : ''}
                       </div>
                     </div>
                     {target > 0 && <MiniProgress current={current} total={target} color={tc.success} />}
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
                       <span style={{ fontSize: '11px', color: tc.muted }}>
-                        {target > 0 ? `£${Math.max(0, target - current).toFixed(2)} to go` : 'No target set'}
+                        {target > 0 ? `${cs}${Math.max(0, target - current).toFixed(2)} to go` : 'No target set'}
                       </span>
                       {target > 0 && <span style={{ fontSize: '11px', color: tc.muted }}>{Math.min(100, Math.round((current / target) * 100))}% saved</span>}
                     </div>
@@ -429,7 +431,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
               <div>
                 <div style={{ fontSize: '12px', color: tc.muted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Net Worth</div>
                 <div className="font-mono" style={{ fontSize: '28px', fontWeight: '700', color: netWorth >= 0 ? tc.info : tc.danger, lineHeight: 1.1 }}>
-                  {netWorth < 0 ? '-' : ''}£{Math.abs(netWorth).toFixed(2)}
+                  {netWorth < 0 ? '-' : ''}{cs}{Math.abs(netWorth).toFixed(2)}
                 </div>
               </div>
               <div style={{
@@ -444,7 +446,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
             <div style={{ fontSize: '13px', color: tc.secondary, marginTop: '8px' }}>
               {netWorth >= 0
                 ? 'Savings exceed debt'
-                : `£${Math.abs(netWorth).toFixed(2)} more debt than savings`
+                : `${cs}${Math.abs(netWorth).toFixed(2)} more debt than savings`
               }
             </div>
           </div>
@@ -467,7 +469,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
                     <span style={{ fontSize: '13px', color: tc.secondary }}>{cat.name}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span className="font-mono" style={{ fontSize: '14px', fontWeight: '600' }}>£{cat.total.toFixed(2)}</span>
+                    <span className="font-mono" style={{ fontSize: '14px', fontWeight: '600' }}>{cs}{cat.total.toFixed(2)}</span>
                     <span style={{ fontSize: '12px', color: tc.muted, minWidth: '45px', textAlign: 'right' }}>{pct}%</span>
                   </div>
                 </div>
