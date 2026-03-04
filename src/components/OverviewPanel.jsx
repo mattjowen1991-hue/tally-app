@@ -61,7 +61,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
     const ctx = chartRef.current.getContext('2d');
     chartInstance.current = new Chart(ctx, {
       type: 'doughnut',
-      data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0, hoverOffset: 0 }] },
+      data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0, hoverOffset: 4 }] },
       options: {
         cutout: '65%',
         devicePixelRatio: 3,
