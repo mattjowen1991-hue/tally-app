@@ -61,7 +61,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
     const ctx = chartRef.current.getContext('2d');
     chartInstance.current = new Chart(ctx, {
       type: 'doughnut',
-      data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0, hoverOffset: 8, borderRadius: { outerStart: 6, outerEnd: 6, innerStart: 6, innerEnd: 6 }, spacing: 2 }] },
+      data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0, hoverOffset: 8 }] },
       options: {
         cutout: '65%',
         devicePixelRatio: 3,
@@ -90,8 +90,6 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
     chartInstance.current.data.labels = categoryTotals.map((c) => c.name);
     chartInstance.current.data.datasets[0].data = categoryTotals.map((c) => c.total);
     chartInstance.current.data.datasets[0].backgroundColor = CHART_COLORS.slice(0, categoryTotals.length);
-    chartInstance.current.data.datasets[0].borderRadius = { outerStart: 6, outerEnd: 6, innerStart: 6, innerEnd: 6 };
-    chartInstance.current.data.datasets[0].spacing = 2;
     chartInstance.current.update();
   }, [categoryTotals]);
 
