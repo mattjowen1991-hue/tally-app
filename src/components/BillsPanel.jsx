@@ -69,13 +69,13 @@ function getOrdinal(n) {
 }
 
 export default function BillsPanel({
-  const cs = useCurrency();
-  categories, selectedCategory, setSelectedCategory, statusFilter, setStatusFilter,
+  categories, selectedCategory, setSelectedCategory,
   filteredBills, editingId, editForm, setEditForm, handleEditStart, handleEditSave,
   handleDelete, handleTogglePaid, handleToggleMissed, handleTogglePaused, setEditingId, categoryScrollRef,
   billSearch, setBillSearch, billSort, setBillSort,
   onBulkDelete, onBulkTogglePaid, onBulkToggleMissed, onBulkTogglePaused, activePanel,
 }) {
+  const cs = useCurrency();
   const [showSort, setShowSort] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());

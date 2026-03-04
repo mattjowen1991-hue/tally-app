@@ -5,14 +5,14 @@ import { tc } from '../utils/themeColors';
 import { SAVINGS_CATEGORIES } from '../data/initialData';
 
 export default function SavingsPanel({
-  const cs = useCurrency();
-  savings, totalSaved, editingSavingsId, editSavingsForm, setEditSavingsForm,
+  savings, totalSaved,
   handleSavingsEditStart, handleSavingsEditSave, handleDeleteSavings,
   handleSavingsDeposit, handleSavingsWithdraw, savingsTransactionAmounts,
   setSavingsTransactionAmounts, showSavingsHistory, setShowSavingsHistory,
   calculateSavingsEstimate, setEditingSavingsId, setShowSavingsModal,
   handleArchiveSavings, handleUnarchiveSavings,
 }) {
+  const cs = useCurrency();
   const [showArchived, setShowArchived] = React.useState(false);
 
   const activeSavings = savings.filter(s => !s.archived);
