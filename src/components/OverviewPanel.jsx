@@ -61,7 +61,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
     const ctx = chartRef.current.getContext('2d');
     chartInstance.current = new Chart(ctx, {
       type: 'doughnut',
-      data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0, hoverOffset: 4 }] },
+      data: { labels: [], datasets: [{ data: [], backgroundColor: [], hoverBackgroundColor: [], borderWidth: 0, hoverOffset: 0 }] },
       options: {
         cutout: '65%',
         devicePixelRatio: 3,
@@ -90,6 +90,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
     chartInstance.current.data.labels = categoryTotals.map((c) => c.name);
     chartInstance.current.data.datasets[0].data = categoryTotals.map((c) => c.total);
     chartInstance.current.data.datasets[0].backgroundColor = CHART_COLORS.slice(0, categoryTotals.length);
+    chartInstance.current.data.datasets[0].hoverBackgroundColor = CHART_COLORS.slice(0, categoryTotals.length).map(c => c.replace('0.8)', '1)'));
     chartInstance.current.update();
   }, [categoryTotals]);
 
