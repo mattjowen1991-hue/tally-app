@@ -9,6 +9,7 @@ import { ToastProvider, useToast } from './components/Toast';
 import { initTheme, toggleTheme } from './utils/theme';
 import { auth, cloudData } from './utils/supabase';
 import AccountModal from './components/AccountModal';
+import SettingsModal from './components/SettingsModal';
 
 // Panel components
 import OverviewPanel from './components/OverviewPanel';
@@ -64,6 +65,7 @@ function AppContent() {
   // ── Auth & Sync state ──
   const [user, setUser] = useState(null);
   const [showAccountModal, setShowAccountModal] = useState(false);
+const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, synced, error
   const [lastSynced, setLastSynced] = useState(null);
   const syncTimeoutRef = useRef(null);
@@ -450,7 +452,7 @@ function AppContent() {
   }, [isMobile]);
 
   // ── Modal scroll lock + Android back gesture ──
-  const anyModalOpen = showAddModal || showCategoryModal || showDebtModal || showSavingsModal || showAccountModal;
+  const anyModalOpen = showAddModal || showCategoryModal || showDebtModal || showSavingsModal || showAccountModal || showSettingsModal;
 
   useEffect(() => {
     if (anyModalOpen) { document.body.style.overflow = 'hidden'; document.body.style.position = 'fixed'; document.body.style.width = '100%'; }
@@ -702,14 +704,14 @@ function AppContent() {
                 <span className="nav-dot-label">{name}</span>
               </div>
             ))}
-            {/* Theme toggle - right side */}
-            <button onClick={handleToggleTheme} style={{
+            {/* Settings cog - right side */}
+            <button onClick={() => { setShowSettingsModal(true); haptic.light(); }} style={{
               position: 'absolute', right: '0', top: '50%', transform: 'translateY(-50%)',
               width: '28px', height: '28px', borderRadius: '50%', border: 'none', cursor: 'pointer',
               background: 'var(--glass)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '14px', padding: 0,
+              padding: 0, color: 'var(--text-muted)',
             }}>
-              {theme === 'dark' ? '☀️' : '🌙'}
+              <Icons.Settings size={16} />
             </button>
           </div>
         </div>
@@ -749,7 +751,8 @@ function AppContent() {
       <ManageCategoriesModal show={showCategoryModal} onClose={() => setShowCategoryModal(false)} bills={bills} customCategories={customCategories} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} handleDeleteCategory={handleDeleteCategory} />
       <AddDebtModal show={showDebtModal} onClose={() => setShowDebtModal(false)} newDebt={newDebt} setNewDebt={setNewDebt} handleAddDebt={handleAddDebt} emptyDebt={emptyDebt} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
       <AddSavingsModal show={showSavingsModal} onClose={() => setShowSavingsModal(false)} newSavingsGoal={newSavingsGoal} setNewSavingsGoal={setNewSavingsGoal} handleAddSavings={handleAddSavings} emptySavings={emptySavings} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
-        <AccountModal show={showAccountModal} onClose={() => setShowAccountModal(false)} user={user} onSignIn={handleSignIn} onSignUp={handleSignUp} onSignOut={handleSignOut} onResetPassword={handleResetPassword} onGoogleSignIn={handleGoogleSignIn} syncStatus={syncStatus} onSyncNow={saveToCloud} onDeleteAccount={handleDeleteAccount} onClearLocalData={handleClearLocalData} lastSynced={lastSynced} notificationSettings={notificationSettings} onNotificationSettingsChange={setNotificationSettings} />
+        <AccountModal show={showAccountModal} onClose={() => setShowAccountModal(false)} user={user} onSignIn={handleSignIn} onSignUp={handleSignUp} onSignOut={handleSignOut} onResetPassword={handleResetPassword} onGoogleSignIn={handleGoogleSignIn} syncStatus={syncStatus} onSyncNow={saveToCloud} onDeleteAccount={handleDeleteAccount} onClearLocalData={handleClearLocalData} lastSynced={lastSynced} />
+        <SettingsModal show={showSettingsModal} onClose={() => setShowSettingsModal(false)} theme={theme} onToggleTheme={handleToggleTheme} notificationSettings={notificationSettings} onNotificationSettingsChange={setNotificationSettings} />
 
     </div>
   );

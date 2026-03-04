@@ -1,0 +1,240 @@
+import { tc } from '../utils/themeColors';
+import React from 'react';
+import haptic from '../utils/haptics';
+import { saveNotificationSettings } from '../utils/notifications';
+
+export default function SettingsModal({ show, onClose, theme, onToggleTheme, notificationSettings, onNotificationSettingsChange }) {
+  if (!show) return null;
+
+  const updateSetting = (key, value) => {
+    const updated = { ...notificationSettings, [key]: value };
+    onNotificationSettingsChange(updated);
+    saveNotificationSettings(updated);
+    haptic.light();
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ position: 'absolute', inset: 0, background: 'var(--modal-overlay)', backdropFilter: 'blur(4px)' }} />
+      <div style={{
+        position: 'relative', width: '100%', maxWidth: '500px', maxHeight: '85vh', overflowY: 'auto',
+        background: 'var(--bg-secondary)', borderRadius: '20px 20px 0 0', padding: '24px 20px',
+        animation: 'slideUp 0.3s ease',
+      }} onClick={e => e.stopPropagation()}>
+        {/* Handle */}
+        <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: 'var(--border)', margin: '0 auto 20px' }} />
+
+        <h2 style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 20px', color: 'var(--text-primary)', textAlign: 'center' }}>Settings</h2>
+
+        {/* ── Appearance ── */}
+        <div style={{
+          padding: '16px', borderRadius: '12px', background: 'var(--glass)',
+          border: '1px solid var(--border)', marginBottom: '16px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>🎨 Appearance</span>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
+                {theme === 'dark' ? 'Dark mode' : 'Light mode'}
+              </p>
+            </div>
+            <button
+              onClick={() => { onToggleTheme(); }}
+              style={{
+                width: '44px', height: '24px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                background: theme === 'dark' ? 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))' : 'var(--border)',
+                position: 'relative', transition: 'background 0.2s ease',
+              }}
+            >
+              <div style={{
+                width: '20px', height: '20px', borderRadius: '50%', background: '#fff',
+                position: 'absolute', top: '2px',
+                left: theme === 'dark' ? '22px' : '2px',
+                transition: 'left 0.2s ease',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '12px',
+              }}>
+                {theme === 'dark' ? '🌙' : '☀️'}
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* ── Notifications ── */}
+        <div style={{
+          padding: '16px', borderRadius: '12px', background: 'var(--glass)',
+          border: '1px solid var(--border)', marginBottom: '16px',
+        }}>
+          {/* Master toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: notificationSettings?.enabled ? '12px' : '0' }}>
+            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>🔔 Notifications</span>
+            <button
+              onClick={() => updateSetting('enabled', !notificationSettings?.enabled)}
+              style={{
+                width: '44px', height: '24px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                background: notificationSettings?.enabled ? 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))' : 'var(--border)',
+                position: 'relative', transition: 'background 0.2s ease',
+              }}
+            >
+              <div style={{
+                width: '20px', height: '20px', borderRadius: '50%', background: '#fff',
+                position: 'absolute', top: '2px',
+                left: notificationSettings?.enabled ? '22px' : '2px',
+                transition: 'left 0.2s ease',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              }} />
+            </button>
+          </div>
+
+          {notificationSettings?.enabled && (
+            <>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 16px' }}>
+                Choose which notifications you'd like to receive
+              </p>
+
+              {/* Individual notification type toggles */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+                {/* Daily bill reminder toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-primary)' }}>Daily bill reminders</span>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0' }}>Bills due within the next 3 days</p>
+                  </div>
+                  <button
+                    onClick={() => updateSetting('dailyReminder', !(notificationSettings?.dailyReminder ?? true))}
+                    style={{
+                      width: '38px', height: '22px', borderRadius: '11px', border: 'none', cursor: 'pointer',
+                      background: (notificationSettings?.dailyReminder ?? true) ? 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))' : 'var(--border)',
+                      position: 'relative', transition: 'background 0.2s ease', flexShrink: 0,
+                    }}
+                  >
+                    <div style={{
+                      width: '18px', height: '18px', borderRadius: '50%', background: '#fff',
+                      position: 'absolute', top: '2px',
+                      left: (notificationSettings?.dailyReminder ?? true) ? '18px' : '2px',
+                      transition: 'left 0.2s ease',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                    }} />
+                  </button>
+                </div>
+
+                {/* Weekly summary toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-primary)' }}>Weekly summary</span>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0' }}>Monday overview of unpaid bills</p>
+                  </div>
+                  <button
+                    onClick={() => updateSetting('weeklySummary', !(notificationSettings?.weeklySummary ?? true))}
+                    style={{
+                      width: '38px', height: '22px', borderRadius: '11px', border: 'none', cursor: 'pointer',
+                      background: (notificationSettings?.weeklySummary ?? true) ? 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))' : 'var(--border)',
+                      position: 'relative', transition: 'background 0.2s ease', flexShrink: 0,
+                    }}
+                  >
+                    <div style={{
+                      width: '18px', height: '18px', borderRadius: '50%', background: '#fff',
+                      position: 'absolute', top: '2px',
+                      left: (notificationSettings?.weeklySummary ?? true) ? '18px' : '2px',
+                      transition: 'left 0.2s ease',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                    }} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div style={{ height: '1px', background: 'var(--border)', margin: '0 0 16px' }} />
+
+              {/* Reminder time picker */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Reminder time:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <select
+                    value={notificationSettings?.reminderHour ?? 9}
+                    onChange={(e) => updateSetting('reminderHour', parseInt(e.target.value))}
+                    style={{
+                      padding: '8px 6px', borderRadius: '8px', border: '1px solid var(--border)',
+                      background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px',
+                      fontWeight: '600', cursor: 'pointer', appearance: 'none', textAlign: 'center',
+                      width: '52px',
+                    }}
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i}>
+                        {i === 0 ? '12' : i > 12 ? i - 12 : i}
+                      </option>
+                    ))}
+                  </select>
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>:</span>
+                  <select
+                    value={notificationSettings?.reminderMinute ?? 0}
+                    onChange={(e) => updateSetting('reminderMinute', parseInt(e.target.value))}
+                    style={{
+                      padding: '8px 6px', borderRadius: '8px', border: '1px solid var(--border)',
+                      background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px',
+                      fontWeight: '600', cursor: 'pointer', appearance: 'none', textAlign: 'center',
+                      width: '52px',
+                    }}
+                  >
+                    {[0, 15, 30, 45].map(m => (
+                      <option key={m} value={m}>{String(m).padStart(2, '0')}</option>
+                    ))}
+                  </select>
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)', marginLeft: '4px' }}>
+                    {(notificationSettings?.reminderHour ?? 9) < 12 ? 'AM' : 'PM'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Dev test buttons */}
+              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🧪 Test Notifications</p>
+                {[
+                  { label: 'Single bill reminder', title: 'Tally', body: 'Rent is due tomorrow — £850.00', id: 99991 },
+                  { label: 'Grouped bill reminder', title: 'Tally — 4 bills due soon', body: 'Tomorrow: Rent (£850), Netflix (£15.99)\nToday: Electricity (£120), Water (£35)', id: 99992 },
+                  { label: 'Weekly summary', title: 'Tally — Weekly Summary', body: 'You have 3 unpaid bills this week totalling £245.00', id: 99993 },
+                ].map(n => (
+                  <button
+                    key={n.id}
+                    onClick={async () => {
+                      try {
+                        const { LocalNotifications } = await import('@capacitor/local-notifications');
+                        const perm = await LocalNotifications.requestPermissions();
+                        if (perm.display !== 'granted') { alert('Notification permission denied'); return; }
+                        await LocalNotifications.schedule({
+                          notifications: [{ title: n.title, body: n.body, id: n.id, schedule: { at: new Date(Date.now() + 3000) }, sound: 'default' }]
+                        });
+                        haptic.success();
+                      } catch (err) { alert('Error: ' + (err.message || err)); }
+                    }}
+                    style={{
+                      width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px dashed var(--border)',
+                      background: 'transparent', color: 'var(--text-muted)', fontSize: '12px',
+                      cursor: 'pointer', textAlign: 'left',
+                    }}
+                  >
+                    {n.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* App info */}
+        <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', margin: '8px 0 0' }}>
+          Tally v1.0.0
+        </p>
+      </div>
+
+      <style>{`
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+      `}</style>
+    </div>
+  );
+}

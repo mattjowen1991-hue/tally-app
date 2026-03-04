@@ -1,9 +1,8 @@
 import { tc } from '../utils/themeColors';
 import React, { useState } from 'react';
 import haptic from '../utils/haptics';
-import { saveNotificationSettings } from '../utils/notifications';
 
-export default function AccountModal({ show, onClose, user, onSignIn, onSignUp, onSignOut, onResetPassword, onGoogleSignIn, syncStatus, onSyncNow, onDeleteAccount, onClearLocalData, lastSynced, notificationSettings, onNotificationSettingsChange }) {
+export default function AccountModal({ show, onClose, user, onSignIn, onSignUp, onSignOut, onResetPassword, onGoogleSignIn, syncStatus, onSyncNow, onDeleteAccount, onClearLocalData, lastSynced }) {
   const [mode, setMode] = useState('login'); // login, signup, forgot, account
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -173,129 +172,6 @@ export default function AccountModal({ show, onClose, user, onSignIn, onSignUp, 
               }}>
                 {syncStatus === 'syncing' ? 'Syncing...' : 'Sync Now'}
               </button>
-            </div>
-
-            {/* Notification Settings */}
-            <div style={{
-              padding: '16px', borderRadius: '12px', background: 'var(--glass)',
-              border: '1px solid var(--border)', marginBottom: '16px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>🔔 Notifications</span>
-                <button
-                  onClick={() => {
-                    const updated = { ...notificationSettings, enabled: !notificationSettings?.enabled };
-                    onNotificationSettingsChange(updated);
-                    saveNotificationSettings(updated);
-                    haptic.light();
-                  }}
-                  style={{
-                    width: '44px', height: '24px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                    background: notificationSettings?.enabled ? 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))' : 'var(--border)',
-                    position: 'relative', transition: 'background 0.2s ease',
-                  }}
-                >
-                  <div style={{
-                    width: '20px', height: '20px', borderRadius: '50%', background: '#fff',
-                    position: 'absolute', top: '2px',
-                    left: notificationSettings?.enabled ? '22px' : '2px',
-                    transition: 'left 0.2s ease',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                  }} />
-                </button>
-              </div>
-
-              {notificationSettings?.enabled && (
-                <>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 12px' }}>
-                    Daily bill reminders, weekly summaries &amp; missed bill alerts
-                  </p>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Reminder time:</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <select
-                        value={notificationSettings?.reminderHour ?? 9}
-                        onChange={(e) => {
-                          const updated = { ...notificationSettings, reminderHour: parseInt(e.target.value) };
-                          onNotificationSettingsChange(updated);
-                          saveNotificationSettings(updated);
-                          haptic.light();
-                        }}
-                        style={{
-                          padding: '8px 6px', borderRadius: '8px', border: '1px solid var(--border)',
-                          background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px',
-                          fontWeight: '600', cursor: 'pointer', appearance: 'none', textAlign: 'center',
-                          width: '52px',
-                        }}
-                      >
-                        {Array.from({ length: 24 }, (_, i) => (
-                          <option key={i} value={i}>
-                            {i === 0 ? '12' : i > 12 ? i - 12 : i}
-                          </option>
-                        ))}
-                      </select>
-                      <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>:</span>
-                      <select
-                        value={notificationSettings?.reminderMinute ?? 0}
-                        onChange={(e) => {
-                          const updated = { ...notificationSettings, reminderMinute: parseInt(e.target.value) };
-                          onNotificationSettingsChange(updated);
-                          saveNotificationSettings(updated);
-                          haptic.light();
-                        }}
-                        style={{
-                          padding: '8px 6px', borderRadius: '8px', border: '1px solid var(--border)',
-                          background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px',
-                          fontWeight: '600', cursor: 'pointer', appearance: 'none', textAlign: 'center',
-                          width: '52px',
-                        }}
-                      >
-                        {[0, 15, 30, 45].map(m => (
-                          <option key={m} value={m}>{String(m).padStart(2, '0')}</option>
-                        ))}
-                      </select>
-                      <span style={{ fontSize: '13px', color: 'var(--text-muted)', marginLeft: '4px' }}>
-                        {(notificationSettings?.reminderHour ?? 9) < 12 ? 'AM' : 'PM'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Dev test buttons */}
-                  <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🧪 Test Notifications</p>
-                    {[
-                      { label: 'Single bill reminder', title: 'Tally', body: 'Rent is due tomorrow — £850.00', id: 99991 },
-                      { label: 'Grouped bill reminder', title: 'Tally — 4 bills due soon', body: 'Tomorrow: Rent (£850), Netflix (£15.99)\nToday: Electricity (£120), Water (£35)', id: 99992 },
-                      { label: 'Weekly summary', title: 'Tally — Weekly Summary', body: 'You have 3 unpaid bills this week totalling £245.00', id: 99993 },
-                      { label: 'Single missed bill', title: 'Tally', body: 'Your Netflix payment was missed — £15.99', id: 99994 },
-                      { label: 'Grouped missed bills', title: 'Tally — 3 bills missed', body: 'Netflix (£15.99)\nPhone (£45.00)\nGym (£29.99)', id: 99995 },
-                    ].map(n => (
-                      <button
-                        key={n.id}
-                        onClick={async () => {
-                          try {
-                            const { LocalNotifications } = await import('@capacitor/local-notifications');
-                            const perm = await LocalNotifications.requestPermissions();
-                            if (perm.display !== 'granted') { alert('Notification permission denied'); return; }
-                            await LocalNotifications.schedule({
-                              notifications: [{ title: n.title, body: n.body, id: n.id, schedule: { at: new Date(Date.now() + 3000) }, sound: 'default' }]
-                            });
-                            haptic.success();
-                          } catch (err) { alert('Error: ' + (err.message || err)); }
-                        }}
-                        style={{
-                          width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px dashed var(--border)',
-                          background: 'transparent', color: 'var(--text-muted)', fontSize: '12px',
-                          cursor: 'pointer', textAlign: 'left',
-                        }}
-                      >
-                        {n.label}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
             </div>
 
             {/* Sign Out */}
