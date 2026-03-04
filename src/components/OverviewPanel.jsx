@@ -85,7 +85,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
       },
     });
     return () => { if (chartInstance.current) { chartInstance.current.destroy(); chartInstance.current = null; } };
-  }, []);
+  }, [cs]);
 
   useEffect(() => {
     if (!chartInstance.current || categoryTotals.length === 0) return;
