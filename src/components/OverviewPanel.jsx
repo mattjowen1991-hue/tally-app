@@ -153,7 +153,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
               <div>
                 <div style={{ fontSize: '12px', color: tc.muted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Upcoming Bills</div>
                 <div className="font-mono" style={{ fontSize: '28px', fontWeight: '700', color: upcomingCount > 0 ? tc.warning : tc.success, lineHeight: 1.1 }}>
-                  {upcomingCount > 0 ? `${cs}${upcomingTotal.toFixed(2)}` : 'All clear'}
+                  {upcomingCount > 0 ? `${cs}${upcomingTotal.toFixed(2)}` : bills.length === 0 ? 'No bills' : 'All clear'}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -171,7 +171,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
             <div style={{ fontSize: '13px', color: tc.secondary, marginTop: '8px' }}>
               {upcomingCount > 0
                 ? `${upcomingCount} bill${upcomingCount !== 1 ? 's' : ''} still to pay this month`
-                : 'All bills paid for this month'
+                : bills.length === 0 ? 'Add bills to get started' : 'All bills paid for this month'
               }
             </div>
             {expandedCards.upcoming && upcomingCount > 0 && (
@@ -455,6 +455,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
       </div>
 
       {/* Expense Breakdown Chart */}
+      {categoryTotals.length > 0 && (
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginBottom: '20px' }}>
         <div className="glass-card animate-in" style={{ padding: '32px', animationDelay: '0.5s' }}>
           <h2 className="font-display" style={{ fontSize: '24px', marginBottom: '24px' }}>Expense Breakdown</h2>
@@ -478,6 +479,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
           </div>
         </div>
       </div>
+      )}
     </>
   );
 }

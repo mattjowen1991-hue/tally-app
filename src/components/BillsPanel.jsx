@@ -253,6 +253,12 @@ export default function BillsPanel({
               <Icons.Search size={32} style={{ marginBottom: '12px', opacity: 0.3 }} />
               <p style={{ fontSize: '14px' }}>No bills matching "{billSearch}"</p>
             </div>
+          ) : filteredBills.length === 0 && !billSearch ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+              <Icons.PieChart size={40} style={{ marginBottom: '16px', opacity: 0.2 }} />
+              <p style={{ fontSize: '15px', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '6px' }}>No bills yet</p>
+              <p style={{ fontSize: '13px' }}>Swipe to Actions and tap "Add New Bill" to get started</p>
+            </div>
           ) : (
             filteredBills.map((bill) => (
               <div key={bill.id}
