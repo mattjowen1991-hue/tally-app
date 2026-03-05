@@ -26,7 +26,9 @@ export default function CurrencyPrompt({ onSelect }) {
       padding: '24px',
     }}>
       <div style={{ maxWidth: '400px', width: '100%', textAlign: 'center' }}>
-        <Icons.TallyWordmark width={140} />
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <Icons.TallyWordmark width={140} />
+        </div>
         <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '8px', marginBottom: '40px' }}>
           Finance tracking made easy
         </p>
