@@ -88,7 +88,13 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
   }, [cs]);
 
   useEffect(() => {
-    if (!chartInstance.current || categoryTotals.length === 0) return;
+    if (!chartInstance.current) return;
+    if (categoryTotals.length === 0) {
+      chartInstance.current.data.labels = [];
+      chartInstance.current.data.datasets[0].data = [];
+      chartInstance.current.update();
+      return;
+    }
     chartInstance.current.data.labels = categoryTotals.map((c) => c.name);
     chartInstance.current.data.datasets[0].data = categoryTotals.map((c) => c.total);
     chartInstance.current.data.datasets[0].backgroundColor = CHART_COLORS.slice(0, categoryTotals.length);
