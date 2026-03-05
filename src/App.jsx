@@ -43,7 +43,7 @@ function AppContent() {
       try {
         const { StatusBar } = await import('@capacitor/status-bar');
         await StatusBar.setBackgroundColor({ color: theme === 'light' ? '#f1f5f9' : '#0a0e27' });
-        await StatusBar.setStyle({ style: theme === 'light' ? 'DARK' : 'LIGHT' });
+        await StatusBar.setStyle({ style: theme === 'light' ? 'Dark' : 'Light' });
       } catch (e) {}
     })();
   }, []);
@@ -54,7 +54,7 @@ function AppContent() {
     try {
       const { StatusBar } = await import('@capacitor/status-bar');
       await StatusBar.setBackgroundColor({ color: next === 'light' ? '#f1f5f9' : '#0a0e27' });
-      await StatusBar.setStyle({ style: next === 'light' ? 'DARK' : 'LIGHT' });
+      await StatusBar.setStyle({ style: next === 'light' ? 'Dark' : 'Light' });
     } catch (e) {}
   };
   // ── Bills state ──
@@ -701,7 +701,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     <div style={{ padding: isMobile ? '12px' : '20px', maxWidth: '1400px', margin: '0 auto', display: isMobile ? 'flex' : undefined, flexDirection: isMobile ? 'column' : undefined, height: isMobile ? '100vh' : undefined, overflow: isMobile ? 'hidden' : undefined }}>
       {/* Sticky Collapsible Header */}
       {isMobile && (
-        <div style={{ position: 'sticky', top: 0, zIndex: 100, background: 'var(--bg-primary)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', marginLeft: '-12px', marginRight: '-12px', marginTop: '-12px', paddingTop: '12px', paddingLeft: '12px', paddingRight: '12px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 100, background: 'var(--bg-primary)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', marginLeft: '-12px', marginRight: '-12px', marginTop: '-12px', paddingTop: '12px', paddingLeft: '12px', paddingRight: '12px' }}>
           <div ref={headerRef} data-header-logo style={{
             overflow: 'hidden',
             transition: 'max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease',
