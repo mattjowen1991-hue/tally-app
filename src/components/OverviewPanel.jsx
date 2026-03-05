@@ -1,10 +1,7 @@
 import { useCurrency } from './CurrencyContext';
-import React, { useRef, useEffect, useState } from 'react';
-import { Chart, DoughnutController, ArcElement, Tooltip } from 'chart.js';
+import React, { useState } from 'react';
 import * as Icons from './Icons';
 import { tc } from '../utils/themeColors';
-
-Chart.register(DoughnutController, ArcElement, Tooltip);
 
 const CHART_COLORS = ['rgba(0,212,255,0.8)', 'rgba(124,58,237,0.8)', 'rgba(245,158,11,0.8)', 'rgba(16,185,129,0.8)', 'rgba(239,68,68,0.8)', 'rgba(168,85,247,0.8)'];
 
@@ -52,55 +49,9 @@ function ChevronDown({ expanded, color = 'var(--text-muted)' }) {
 
 export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMobile, insights = {}, bills = [], totalDebt = 0, totalSaved = 0, debts = [], savings = [] }) {
   const cs = useCurrency();
-  const chartRef = useRef(null);
-  const chartInstance = useRef(null);
 
   const [expandedCards, setExpandedCards] = useState({});
   const toggleCard = (key) => setExpandedCards(prev => ({ ...prev, [key]: !prev[key] }));
-
-  useEffect(() => {
-    if (!chartRef.current) return;
-    const ctx = chartRef.current.getContext('2d');
-    chartInstance.current = new Chart(ctx, {
-      type: 'doughnut',
-      data: { labels: [], datasets: [{ data: [], backgroundColor: [], hoverBackgroundColor: [], borderWidth: 0, hoverOffset: 0, hoverBorderWidth: 3, hoverBorderColor: '#fff' }] },
-      options: {
-        cutout: '65%',
-        devicePixelRatio: 3,
-        responsive: false,
-        maintainAspectRatio: true,
-        animation: { duration: 600 },
-        plugins: {
-          tooltip: {
-            backgroundColor: tc.tooltipBg,
-            titleFont: { family: 'DM Sans', size: 14, weight: '600' },
-            bodyFont: { family: 'JetBrains Mono', size: 13 },
-            padding: 14,
-            cornerRadius: 12,
-            borderColor: 'var(--border)',
-            borderWidth: 1,
-            callbacks: { label: (ctx) => ` ${cs}${ctx.parsed.toFixed(2)}` },
-          },
-        },
-      },
-    });
-    return () => { if (chartInstance.current) { chartInstance.current.destroy(); chartInstance.current = null; } };
-  }, [cs]);
-
-  useEffect(() => {
-    if (!chartInstance.current) return;
-    if (categoryTotals.length === 0) {
-      chartInstance.current.data.labels = [];
-      chartInstance.current.data.datasets[0].data = [];
-      chartInstance.current.update();
-      return;
-    }
-    chartInstance.current.data.labels = categoryTotals.map((c) => c.name);
-    chartInstance.current.data.datasets[0].data = categoryTotals.map((c) => c.total);
-    chartInstance.current.data.datasets[0].backgroundColor = CHART_COLORS.slice(0, categoryTotals.length);
-    chartInstance.current.data.datasets[0].hoverBackgroundColor = CHART_COLORS.slice(0, categoryTotals.length).map(c => c.replace('0.8)', '1)'));
-    chartInstance.current.update();
-  }, [categoryTotals]);
 
   const { lastSnapshot, biggestChange } = insights;
 
@@ -460,29 +411,35 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
         </div>
       </div>
 
-      {/* Expense Breakdown Chart */}
+      {/* Expense Breakdown */}
       {categoryTotals.length > 0 && (
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginBottom: '20px' }}>
-        <div className="glass-card animate-in" style={{ padding: '32px', animationDelay: '0.5s' }}>
-          <h2 className="font-display" style={{ fontSize: '24px', marginBottom: '24px' }}>Expense Breakdown</h2>
-          <div className="chart-container" style={{ height: '240px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'visible' }}><canvas ref={chartRef} width={200} height={200} /></div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px', maxHeight: '250px', overflowY: 'auto' }}>
-            {categoryTotals.map((cat, i) => {
-              const pct = totals.actualExpenses > 0 ? ((cat.total / totals.actualExpenses) * 100).toFixed(1) : '0.0';
-              return (
-                <div key={cat.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--glass)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: CHART_COLORS[i], flexShrink: 0 }} />
-                    <span style={{ fontSize: '13px', color: tc.secondary }}>{cat.name}</span>
+      <div className="glass-card animate-in" style={{ padding: isMobile ? '20px' : '32px', marginBottom: '20px', animationDelay: '0.5s' }}>
+        <h2 className="font-display" style={{ fontSize: '20px', marginBottom: '20px' }}>Expense Breakdown</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {categoryTotals.map((cat, i) => {
+            const pct = totals.actualExpenses > 0 ? (cat.total / totals.actualExpenses) * 100 : 0;
+            return (
+              <div key={cat.name}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: CHART_COLORS[i % CHART_COLORS.length], flexShrink: 0 }} />
+                    <span style={{ fontSize: '13px', fontWeight: '500', color: tc.secondary }}>{cat.name}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span className="font-mono" style={{ fontSize: '14px', fontWeight: '600' }}>{cs}{cat.total.toFixed(2)}</span>
-                    <span style={{ fontSize: '12px', color: tc.muted, minWidth: '45px', textAlign: 'right' }}>{pct}%</span>
+                    <span style={{ fontSize: '12px', color: tc.muted, minWidth: '40px', textAlign: 'right' }}>{pct.toFixed(1)}%</span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+                <div style={{ height: '8px', borderRadius: '4px', background: tc.progressTrack, overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${pct}%`, height: '100%', borderRadius: '4px',
+                    background: CHART_COLORS[i % CHART_COLORS.length],
+                    transition: 'width 0.5s ease',
+                  }} />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
       )}
