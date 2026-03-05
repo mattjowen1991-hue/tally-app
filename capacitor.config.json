@@ -16,6 +16,9 @@
       "style": "dark",
       "backgroundColor": "#0a0e27"
     },
+    "NavigationBar": {
+      "backgroundColor": "#0a0e27"
+    },
     "GoogleAuth": {
       "scopes": ["profile", "email"],
       "serverClientId": "135467683617-n5sck8vo4ot0h35lmbepc064d7legva1.apps.googleusercontent.com",
