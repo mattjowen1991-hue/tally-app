@@ -52,6 +52,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
 
   const [expandedCards, setExpandedCards] = useState({});
   const toggleCard = (key) => setExpandedCards(prev => ({ ...prev, [key]: !prev[key] }));
+  const [expandedCategory, setExpandedCategory] = useState(null);
 
   const { lastSnapshot, biggestChange } = insights;
 
@@ -418,25 +419,45 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {categoryTotals.map((cat, i) => {
             const pct = totals.actualExpenses > 0 ? (cat.total / totals.actualExpenses) * 100 : 0;
+            const isExpanded = expandedCategory === cat.name;
+            const catBills = bills.filter(b => b.category === cat.name && (b.actual || 0) > 0);
             return (
               <div key={cat.name}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: CHART_COLORS[i % CHART_COLORS.length], flexShrink: 0 }} />
-                    <span style={{ fontSize: '13px', fontWeight: '500', color: tc.secondary }}>{cat.name}</span>
+                <div onClick={() => setExpandedCategory(isExpanded ? null : cat.name)} style={{ cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: CHART_COLORS[i % CHART_COLORS.length], flexShrink: 0 }} />
+                      <span style={{ fontSize: '13px', fontWeight: '500', color: tc.secondary }}>{cat.name}</span>
+                      <span style={{ fontSize: '11px', color: tc.muted }}>({catBills.length})</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="font-mono" style={{ fontSize: '14px', fontWeight: '600' }}>{cs}{cat.total.toFixed(2)}</span>
+                      <span style={{ fontSize: '12px', color: tc.muted, minWidth: '40px', textAlign: 'right' }}>{pct.toFixed(1)}%</span>
+                      <ChevronDown expanded={isExpanded} color={tc.muted} />
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className="font-mono" style={{ fontSize: '14px', fontWeight: '600' }}>{cs}{cat.total.toFixed(2)}</span>
-                    <span style={{ fontSize: '12px', color: tc.muted, minWidth: '40px', textAlign: 'right' }}>{pct.toFixed(1)}%</span>
+                  <div style={{ height: '8px', borderRadius: '4px', background: tc.progressTrack, overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${pct}%`, height: '100%', borderRadius: '4px',
+                      background: CHART_COLORS[i % CHART_COLORS.length],
+                      transition: 'width 0.5s ease',
+                    }} />
                   </div>
                 </div>
-                <div style={{ height: '8px', borderRadius: '4px', background: tc.progressTrack, overflow: 'hidden' }}>
-                  <div style={{
-                    width: `${pct}%`, height: '100%', borderRadius: '4px',
-                    background: CHART_COLORS[i % CHART_COLORS.length],
-                    transition: 'width 0.5s ease',
-                  }} />
-                </div>
+                {isExpanded && catBills.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px', paddingLeft: '18px' }}>
+                    {catBills.map(bill => (
+                      <div key={bill.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '8px', background: tc.cardDetail, border: `1px solid ${CHART_COLORS[i % CHART_COLORS.length]}20` }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: '500', color: tc.primary }}>{bill.name}</span>
+                          {bill.paid && <span style={{ fontSize: '10px', color: tc.success }}>✓</span>}
+                          {bill.missed && <span style={{ fontSize: '10px', color: tc.danger }}>✗</span>}
+                        </div>
+                        <span className="font-mono" style={{ fontSize: '13px', fontWeight: '600', color: tc.secondary }}>{cs}{(bill.actual || 0).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
