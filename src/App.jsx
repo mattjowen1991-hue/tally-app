@@ -43,7 +43,7 @@ function AppContent() {
       try {
         const { StatusBar } = await import('@capacitor/status-bar');
         await StatusBar.setBackgroundColor({ color: theme === 'light' ? '#f1f5f9' : '#0a0e27' });
-        await StatusBar.setStyle({ style: theme === 'light' ? 'Dark' : 'Light' });
+        await StatusBar.setStyle({ style: theme === 'light' ? 'DARK' : 'LIGHT' });
       } catch (e) {}
     })();
   }, []);
@@ -54,7 +54,7 @@ function AppContent() {
     try {
       const { StatusBar } = await import('@capacitor/status-bar');
       await StatusBar.setBackgroundColor({ color: next === 'light' ? '#f1f5f9' : '#0a0e27' });
-      await StatusBar.setStyle({ style: next === 'light' ? 'Dark' : 'Light' });
+      await StatusBar.setStyle({ style: next === 'light' ? 'DARK' : 'LIGHT' });
     } catch (e) {}
   };
   // ── Bills state ──
