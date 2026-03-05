@@ -468,6 +468,10 @@ body.modal-open {
   margin-top: 16px;
 }
 
+.swipe-panel > *:last-child {
+  margin-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+}
+
 .nav-dots {
   display: flex;
   justify-content: center;
