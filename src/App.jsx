@@ -41,9 +41,9 @@ function AppContent() {
   useEffect(() => {
     (async () => {
       try {
-        const { StatusBar } = await import('@capacitor/status-bar');
+        const { StatusBar, Style } = await import('@capacitor/status-bar');
         await StatusBar.setBackgroundColor({ color: theme === 'light' ? '#f1f5f9' : '#0a0e27' });
-        await StatusBar.setStyle({ style: theme === 'light' ? 'DARK' : 'LIGHT' });
+        await StatusBar.setStyle({ style: theme === 'light' ? Style.Dark : Style.Light });
       } catch (e) {}
     })();
   }, []);
@@ -52,9 +52,9 @@ function AppContent() {
     setTheme(next);
     haptic.light();
     try {
-      const { StatusBar } = await import('@capacitor/status-bar');
+      const { StatusBar, Style } = await import('@capacitor/status-bar');
       await StatusBar.setBackgroundColor({ color: next === 'light' ? '#f1f5f9' : '#0a0e27' });
-      await StatusBar.setStyle({ style: next === 'light' ? 'DARK' : 'LIGHT' });
+      await StatusBar.setStyle({ style: next === 'light' ? Style.Dark : Style.Light });
     } catch (e) {}
   };
   // ── Bills state ──
