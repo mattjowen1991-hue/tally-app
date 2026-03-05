@@ -5,7 +5,7 @@ import { tc } from '../utils/themeColors';
 import { SAVINGS_CATEGORIES } from '../data/initialData';
 
 export default function SavingsPanel({
-  savings, totalSaved,
+  savings, totalSaved, editingSavingsId, editSavingsForm, setEditSavingsForm,
   handleSavingsEditStart, handleSavingsEditSave, handleDeleteSavings,
   handleSavingsDeposit, handleSavingsWithdraw, savingsTransactionAmounts,
   setSavingsTransactionAmounts, showSavingsHistory, setShowSavingsHistory,
