@@ -3,6 +3,7 @@ import { tc } from '../utils/themeColors';
 import React from 'react';
 import haptic from '../utils/haptics';
 import { saveNotificationSettings } from '../utils/notifications';
+import * as Icons from './Icons';
 
 export default function SettingsModal({ show, onClose, theme, onToggleTheme, notificationSettings, onNotificationSettingsChange, currencyCode, onCurrencyChange }) {
   const cs = useCurrency();
@@ -35,7 +36,7 @@ export default function SettingsModal({ show, onClose, theme, onToggleTheme, not
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>🎨 Appearance</span>
+              <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}><Icons.Palette size={16} /> Appearance</span>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
                 {theme === 'dark' ? 'Dark mode' : 'Light mode'}
               </p>
@@ -69,7 +70,7 @@ export default function SettingsModal({ show, onClose, theme, onToggleTheme, not
           border: '1px solid var(--border)', marginBottom: '16px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>💰 Currency</span>
+            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}><Icons.Coins size={16} /> Currency</span>
             <select
               value={currencyCode || 'GBP'}
               onChange={(e) => { onCurrencyChange(e.target.value); haptic.light(); }}
@@ -107,7 +108,7 @@ export default function SettingsModal({ show, onClose, theme, onToggleTheme, not
         }}>
           {/* Master toggle */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>🔔 Notifications</span>
+            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}><Icons.Bell size={16} /> Notifications</span>
             <button
               onClick={() => updateSetting('enabled', !notificationSettings?.enabled)}
               style={{
