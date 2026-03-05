@@ -439,7 +439,7 @@ body.modal-open {
   position: relative;
   touch-action: pan-y;
   flex: 1;
-  height: calc(100vh - var(--header-height, 120px));
+  height: 100%;
 }
 
 .swipe-track {
