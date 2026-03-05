@@ -10,6 +10,7 @@ import { initTheme, toggleTheme } from './utils/theme';
 import { auth, cloudData } from './utils/supabase';
 import AccountModal from './components/AccountModal';
 import SettingsModal from './components/SettingsModal';
+import CurrencyPrompt from './components/CurrencyPrompt';
 import { CurrencyProvider } from './components/CurrencyContext';
 import { getSymbol, loadCurrencyPreference, saveCurrencyPreference, CURRENCIES } from './utils/currency';
 
@@ -680,6 +681,9 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   // ════════════════════════════════════
   return (
     <CurrencyProvider currencySymbol={getSymbol(currencyCode)}>
+    {showCurrencyPrompt && (
+      <CurrencyPrompt onSelect={(code) => { setCurrencyCode(code); saveCurrencyPreference(code); setShowCurrencyPrompt(false); }} />
+    )}
     <div style={{ padding: isMobile ? '12px' : '20px', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Sticky Collapsible Header */}
       {isMobile && (
@@ -749,7 +753,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
               <OverviewPanel totals={totals} incomeNum={incomeNum} categoryTotals={categoryTotals} isMobile={isMobile} monthlySnapshots={monthlySnapshots} totalDebt={totalDebt} totalSaved={totalSaved} insights={insights} bills={bills} debts={debts} savings={savings} />
             </div>
             <div className={`swipe-panel ${activePanel === 1 ? 'panel-active' : ''}`}>
-              <ActionsPanel income={income} setIncome={setIncome} categoryTotals={categoryTotals} setShowAddModal={setShowAddModal} setShowDebtModal={setShowDebtModal} setShowSavingsModal={setShowSavingsModal} setShowCategoryModal={setShowCategoryModal} generateTestSnapshot={generateTestSnapshot} clearTestSnapshots={clearTestSnapshots} snapshotCount={monthlySnapshots.length} />
+              <ActionsPanel income={income} setIncome={setIncome} categoryTotals={categoryTotals} setShowAddModal={setShowAddModal} setShowDebtModal={setShowDebtModal} setShowSavingsModal={setShowSavingsModal} setShowCategoryModal={setShowCategoryModal} />
             </div>
             <div className={`swipe-panel ${activePanel === 2 ? 'panel-active' : ''}`}>
               <BillsPanel categories={['ALL', ...categories]} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} statusFilter={statusFilter} setStatusFilter={setStatusFilter} filteredBills={filteredBills} editingId={editingId} editForm={editForm} setEditForm={setEditForm} handleEditStart={handleEditStart} handleEditSave={handleEditSave} handleDelete={handleDelete} handleTogglePaid={handleTogglePaid} handleToggleMissed={handleToggleMissed} handleTogglePaused={handleTogglePaused} setEditingId={setEditingId} categoryScrollRef={categoryScrollRef} billSearch={billSearch} setBillSearch={setBillSearch} billSort={billSort} setBillSort={setBillSort} onBulkDelete={handleBulkDeleteBills} onBulkTogglePaid={handleBulkTogglePaid} onBulkToggleMissed={handleBulkToggleMissed} onBulkTogglePaused={handleBulkTogglePaused} activePanel={activePanel} />
