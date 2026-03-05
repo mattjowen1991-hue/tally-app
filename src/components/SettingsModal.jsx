@@ -226,38 +226,6 @@ export default function SettingsModal({ show, onClose, theme, onToggleTheme, not
                   </span>
                 </div>
               </div>
-
-              {/* Dev test buttons */}
-              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🧪 Test Notifications</p>
-                {[
-                  { label: 'Single bill reminder', title: 'Tally', body: 'Rent is due tomorrow — £850.00', id: 99991 },
-                  { label: 'Grouped bill reminder', title: 'Tally — 4 bills due soon', body: 'Tomorrow: Rent (£850), Netflix (£15.99)\nToday: Electricity (£120), Water (£35)', id: 99992 },
-                  { label: 'Weekly summary', title: 'Tally — Weekly Summary', body: 'You have 3 unpaid bills this week totalling £245.00', id: 99993 },
-                ].map(n => (
-                  <button
-                    key={n.id}
-                    onClick={async () => {
-                      try {
-                        const { LocalNotifications } = await import('@capacitor/local-notifications');
-                        const perm = await LocalNotifications.requestPermissions();
-                        if (perm.display !== 'granted') { alert('Notification permission denied'); return; }
-                        await LocalNotifications.schedule({
-                          notifications: [{ title: n.title, body: n.body, id: n.id, schedule: { at: new Date(Date.now() + 3000) }, sound: 'default' }]
-                        });
-                        haptic.success();
-                      } catch (err) { alert('Error: ' + (err.message || err)); }
-                    }}
-                    style={{
-                      width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px dashed var(--border)',
-                      background: 'transparent', color: 'var(--text-muted)', fontSize: '12px',
-                      cursor: 'pointer', textAlign: 'left',
-                    }}
-                  >
-                    {n.label}
-                  </button>
-                ))}
-              </div>
               </div>
             </>
         </div>
