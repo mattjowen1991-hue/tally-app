@@ -30,6 +30,6 @@
     "contentInset": "always"
   },
   "android": {
-    "allowMixedContent": true
+    "allowMixedContent": true,
+    "backgroundColor": "#0a0e27"
   }
-}
