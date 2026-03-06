@@ -1,20 +1,28 @@
 {
   "project_info": {
-    "project_number": "64912757257",
-    "project_id": "tally-81f9e",
-    "storage_bucket": "tally-81f9e.firebasestorage.app"
+    "project_number": "135467683617",
+    "project_id": "tally-app-488622",
+    "storage_bucket": "tally-app-488622.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:64912757257:android:c0f5dd1064711ed7631ed8",
+        "mobilesdk_app_id": "1:135467683617:android:c0f5dd1064711ed7631ed8",
         "android_client_info": {
           "package_name": "com.tally.billtracker"
         }
       },
       "oauth_client": [
         {
-          "client_id": "64912757257-63uem63a4sbqnf9uusbhure4kr7240hk.apps.googleusercontent.com",
+          "client_id": "135467683617-1up5533nutamj5atdn9n6eeikmgp2u7d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tally.billtracker",
+            "certificate_hash": "07644471c017dd099c60f1be0edc9bf37dc8d8b58"
+          }
+        },
+        {
+          "client_id": "135467683617-n5sck8vo4ot0h35lmbepc064d7legva1.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
@@ -27,7 +35,7 @@
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "64912757257-63uem63a4sbqnf9uusbhure4kr7240hk.apps.googleusercontent.com",
+              "client_id": "135467683617-n5sck8vo4ot0h35lmbepc064d7legva1.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
