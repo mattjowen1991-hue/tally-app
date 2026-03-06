@@ -39,23 +39,15 @@ function AppContent() {
   // ── Theme ──
   const [theme, setTheme] = useState(() => initTheme());
   useEffect(() => {
-    (async () => {
-      try {
-        const { StatusBar, Style } = await import('@capacitor/status-bar');
-        await StatusBar.setBackgroundColor({ color: theme === 'light' ? '#f1f5f9' : '#0a0e27' });
-        await StatusBar.setStyle({ style: theme === 'light' ? Style.Dark : Style.Light });
-      } catch (e) {}
-    })();
+    const color = theme === 'light' ? '#f1f5f9' : '#0a0e27';
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
   }, []);
-  const handleToggleTheme = async () => {
+  const handleToggleTheme = () => {
     const next = toggleTheme();
     setTheme(next);
     haptic.light();
-    try {
-      const { StatusBar, Style } = await import('@capacitor/status-bar');
-      await StatusBar.setBackgroundColor({ color: next === 'light' ? '#f1f5f9' : '#0a0e27' });
-      await StatusBar.setStyle({ style: next === 'light' ? Style.Dark : Style.Light });
-    } catch (e) {}
+    const color = next === 'light' ? '#f1f5f9' : '#0a0e27';
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
   };
   // ── Bills state ──
   const [bills, setBills] = useState([]);
