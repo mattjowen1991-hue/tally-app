@@ -15,6 +15,7 @@
         <item name="android:background">@null</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:statusBarColor">#0a0e27</item>
+        <item name="android:windowContentOverlay">@null</item>
     </style>
 
 
