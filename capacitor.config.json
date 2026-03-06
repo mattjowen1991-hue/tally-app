@@ -13,11 +13,7 @@
       "showSpinner": false
     },
     "StatusBar": {
-      "style": "light",
-      "backgroundColor": "#0a0e27",
-      "overlaysWebView": false
-    },
-    "NavigationBar": {
+      "style": "dark",
       "backgroundColor": "#0a0e27"
     },
     "GoogleAuth": {
@@ -30,6 +26,6 @@
     "contentInset": "always"
   },
   "android": {
-    "allowMixedContent": true,
-    "backgroundColor": "#0a0e27"
+    "allowMixedContent": true
   }
+}
