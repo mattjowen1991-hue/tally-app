@@ -26,10 +26,16 @@ export function applyTheme(theme) {
   try {
     localStorage.setItem(STORAGE_KEY, theme);
   } catch {}
+  const color = theme === 'light' ? '#f1f5f9' : '#0a0e27';
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) {
-    meta.setAttribute('content', theme === 'light' ? '#f1f5f9' : '#0a0e27');
-  }
+  if (meta) meta.setAttribute('content', color);
+  try {
+    const { StatusBar, Style } = window.Capacitor?.Plugins || {};
+    if (StatusBar) {
+      StatusBar.setBackgroundColor({ color });
+      StatusBar.setStyle({ style: theme === 'light' ? 'LIGHT' : 'DARK' });
+    }
+  } catch {}
 }
 
 export function toggleTheme() {
