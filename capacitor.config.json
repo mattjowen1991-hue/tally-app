@@ -14,7 +14,8 @@
     },
     "StatusBar": {
       "style": "dark",
-      "backgroundColor": "#0a0e27"
+      "backgroundColor": "#0a0e27",
+      "overlaysWebView": false
     },
     "GoogleAuth": {
       "scopes": ["profile", "email"],

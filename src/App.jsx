@@ -41,7 +41,7 @@ function AppContent() {
   useEffect(() => {
     const color = theme === 'light' ? '#f1f5f9' : '#0a0e27';
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
-  }, []);
+  }, [theme]);
   const handleToggleTheme = () => {
     const next = toggleTheme();
     setTheme(next);
