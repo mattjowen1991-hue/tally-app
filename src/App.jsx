@@ -699,7 +699,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     {showCurrencyPrompt && (
       <CurrencyPrompt onSelect={(code) => { setCurrencyCode(code); saveCurrencyPreference(code); setShowCurrencyPrompt(false); }} />
     )}
-    <div style={{ padding: isMobile ? '12px' : '20px', paddingTop: isMobile ? 'calc(env(safe-area-inset-top) + 12px)' : '20px', maxWidth: '1400px', margin: '0 auto', display: isMobile ? 'flex' : undefined, flexDirection: isMobile ? 'column' : undefined, height: isMobile ? '100vh' : undefined, overflow: isMobile ? 'hidden' : undefined }}>
+    <div style={{ padding: isMobile ? '12px' : '20px', paddingTop: isMobile ? '0' : '20px', maxWidth: '1400px', margin: '0 auto', display: isMobile ? 'flex' : undefined, flexDirection: isMobile ? 'column' : undefined, height: isMobile ? '100vh' : undefined, overflow: isMobile ? 'hidden' : undefined }}>
       {/* Sticky Collapsible Header */}
       {isMobile && (
         <div style={{ position: 'sticky', top: 0, zIndex: 100, background: 'var(--bg-primary)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', marginLeft: '-12px', marginRight: '-12px', marginTop: '-12px', paddingTop: 'calc(env(safe-area-inset-top) + 12px)', paddingLeft: '12px', paddingRight: '12px' }}>
