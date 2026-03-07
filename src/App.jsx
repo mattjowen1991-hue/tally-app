@@ -41,6 +41,10 @@ function AppContent() {
   useEffect(() => {
     const color = theme === 'light' ? '#f1f5f9' : '#0a0e27';
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
+    try {
+      window.Capacitor?.Plugins?.StatusBar?.setBackgroundColor({ color });
+      window.Capacitor?.Plugins?.StatusBar?.setStyle({ style: theme === 'light' ? 'DARK' : 'LIGHT' });
+    } catch(e) {}
   }, [theme]);
   const handleToggleTheme = () => {
     const next = toggleTheme();
@@ -48,6 +52,10 @@ function AppContent() {
     haptic.light();
     const color = next === 'light' ? '#f1f5f9' : '#0a0e27';
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
+    try {
+      window.Capacitor?.Plugins?.StatusBar?.setBackgroundColor({ color });
+      window.Capacitor?.Plugins?.StatusBar?.setStyle({ style: next === 'light' ? 'DARK' : 'LIGHT' });
+    } catch(e) {}
   };
   // ── Bills state ──
   const [bills, setBills] = useState([]);
