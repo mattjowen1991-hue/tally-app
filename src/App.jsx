@@ -13,6 +13,7 @@ import SettingsModal from './components/SettingsModal';
 import CurrencyPrompt from './components/CurrencyPrompt';
 import { CurrencyProvider } from './components/CurrencyContext';
 import { getSymbol, loadCurrencyPreference, saveCurrencyPreference, CURRENCIES } from './utils/currency';
+import { StatusBar, Style } from '@capacitor/status-bar';
 
 // Panel components
 import OverviewPanel from './components/OverviewPanel';
@@ -38,23 +39,23 @@ function AppContent() {
   const toast = useToast();
   // ── Theme ──
   const [theme, setTheme] = useState(() => initTheme());
-  useEffect(() => {
+  useEffect(() => { (async () => {
     const color = theme === 'light' ? '#f1f5f9' : '#0a0e27';
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
     try {
-      window.Capacitor?.Plugins?.StatusBar?.setBackgroundColor({ color });
-      window.Capacitor?.Plugins?.StatusBar?.setStyle({ style: theme === 'light' ? 'DARK' : 'LIGHT' });
+      await StatusBar.setBackgroundColor({ color });
+      await StatusBar.setStyle({ style: theme === 'light' ? Style.Dark : Style.Light });
     } catch(e) {}
-  }, [theme]);
-  const handleToggleTheme = () => {
+  })(); }, [theme]);
+  const handleToggleTheme = async () => {
     const next = toggleTheme();
     setTheme(next);
     haptic.light();
     const color = next === 'light' ? '#f1f5f9' : '#0a0e27';
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
     try {
-      window.Capacitor?.Plugins?.StatusBar?.setBackgroundColor({ color });
-      window.Capacitor?.Plugins?.StatusBar?.setStyle({ style: next === 'light' ? 'DARK' : 'LIGHT' });
+      await StatusBar.setBackgroundColor({ color });
+      await StatusBar.setStyle({ style: next === 'light' ? Style.Dark : Style.Light });
     } catch(e) {}
   };
   // ── Bills state ──
