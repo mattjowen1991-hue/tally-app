@@ -44,7 +44,7 @@ function AppContent() {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
     try {
       await StatusBar.setBackgroundColor({ color });
-      await StatusBar.setStyle({ style: theme === 'light' ? Style.Dark : Style.Light });
+      await StatusBar.setStyle({ style: theme === 'light' ? Style.Light : Style.Dark });
     } catch(e) {}
   })(); }, [theme]);
   const handleToggleTheme = async () => {
@@ -55,7 +55,7 @@ function AppContent() {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
     try {
       await StatusBar.setBackgroundColor({ color });
-      await StatusBar.setStyle({ style: next === 'light' ? Style.Dark : Style.Light });
+      await StatusBar.setStyle({ style: next === 'light' ? Style.Light : Style.Dark });
     } catch(e) {}
   };
   // ── Bills state ──
