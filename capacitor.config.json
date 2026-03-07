@@ -15,7 +15,7 @@
     "StatusBar": {
       "style": "LIGHT",
       "backgroundColor": "#0a0e27",
-      "overlaysWebView": false
+      "overlaysWebView": true
     },
     "GoogleAuth": {
       "scopes": ["profile", "email"],
