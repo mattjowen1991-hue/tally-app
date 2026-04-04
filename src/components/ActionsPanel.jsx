@@ -95,7 +95,6 @@ const DEFAULT_SETTINGS = {
 
 const STORAGE_KEY = 'tally-salary-calc';
 
-// ── InfoTip ───────────────────────────────────────────────────────────────────
 function InfoTip({ text }) {
   const [open, setOpen] = React.useState(false);
   return (
@@ -110,7 +109,6 @@ function InfoTip({ text }) {
   );
 }
 
-// ── Toggle row ────────────────────────────────────────────────────────────────
 function DeductionRow({ label, sublabel, enabled, onToggle, color, tip }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -127,26 +125,35 @@ function DeductionRow({ label, sublabel, enabled, onToggle, color, tip }) {
   );
 }
 
-// ── Take-Home Calculator Modal ────────────────────────────────────────────────
 function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly, breakdown, totalDeductions, grossYearly, newDeduction, setNewDeduction, addCustomDeduction, removeDeduction, toggleDeduction, onApply }) {
+  React.useEffect(() => {
+    if (show) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
+  }, [show]);
+
   if (!show) return null;
   const gross = parseFloat(settings.gross) || 0;
+  const netYearly = netMonthly * 12;
 
   return ReactDOM.createPortal(
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      {/* Backdrop */}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
+      <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-secondary)', borderRadius: '24px 24px 0 0', maxHeight: '92vh', display: 'flex', flexDirection: 'column', animation: 'slideInUp 0.25s ease' }}>
 
-      {/* Sheet */}
-      <div style={{
-        position: 'relative', zIndex: 1,
-        background: 'var(--bg-secondary)', borderRadius: '24px 24px 0 0',
-        maxHeight: '92vh', display: 'flex', flexDirection: 'column',
-        animation: 'slideInUp 0.25s ease',
-      }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 20px 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 20px 0', flexShrink: 0 }}>
           <div>
             <h2 className="font-display" style={{ fontSize: '22px', marginBottom: '2px' }}>Take-Home Calculator</h2>
             <p style={{ fontSize: '12px', color: tc.muted }}>Estimate your monthly take-home pay</p>
@@ -162,12 +169,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
           {/* Mode toggle */}
           <div style={{ display: 'flex', gap: '8px' }}>
             {['uk', 'custom'].map(m => (
-              <button key={m} onClick={() => updateSettings({ mode: m })} style={{
-                flex: 1, padding: '10px', borderRadius: '10px', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
-                border: settings.mode === m ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
-                background: settings.mode === m ? 'var(--info-tint)' : 'var(--glass)',
-                color: settings.mode === m ? 'var(--accent-primary)' : 'var(--text-muted)',
-              }}>
+              <button key={m} onClick={() => updateSettings({ mode: m })} style={{ flex: 1, padding: '10px', borderRadius: '10px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', border: settings.mode === m ? '2px solid var(--accent-primary)' : '1px solid var(--border)', background: settings.mode === m ? 'var(--info-tint)' : 'var(--glass)', color: settings.mode === m ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
                 {m === 'uk' ? '🇬🇧 UK (2024/25)' : '🌍 Custom'}
               </button>
             ))}
@@ -179,41 +181,24 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
               <label style={{ fontSize: '14px', fontWeight: '600' }}>Gross Salary</label>
               <div style={{ display: 'flex', gap: '4px' }}>
                 {['yearly', 'monthly'].map(t => (
-                  <button key={t} onClick={() => updateSettings({ grossInput: t })} style={{
-                    padding: '4px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer',
-                    border: settings.grossInput === t ? '1px solid var(--accent-primary)' : '1px solid var(--border)',
-                    background: settings.grossInput === t ? 'var(--info-tint)' : 'transparent',
-                    color: settings.grossInput === t ? 'var(--accent-primary)' : 'var(--text-muted)',
-                  }}>{t}</button>
+                  <button key={t} onClick={() => updateSettings({ grossInput: t })} style={{ padding: '4px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', border: settings.grossInput === t ? '1px solid var(--accent-primary)' : '1px solid var(--border)', background: settings.grossInput === t ? 'var(--info-tint)' : 'transparent', color: settings.grossInput === t ? 'var(--accent-primary)' : 'var(--text-muted)' }}>{t}</button>
                 ))}
               </div>
             </div>
-            <input
-              type="number"
-              className="input"
-              placeholder={settings.grossInput === 'yearly' ? 'e.g. 35000' : 'e.g. 2917'}
-              value={settings.gross}
-              onChange={(e) => updateSettings({ gross: e.target.value })}
-              style={{ fontSize: '16px' }}
-            />
+            <input type="number" className="input" placeholder={settings.grossInput === 'yearly' ? 'e.g. 35000' : 'e.g. 2917'} value={settings.gross} onChange={(e) => updateSettings({ gross: e.target.value })} style={{ fontSize: '16px' }} />
           </div>
 
           {/* UK deductions */}
           {settings.mode === 'uk' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+            <div>
               <div style={{ fontSize: '11px', fontWeight: '700', color: tc.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>UK Deductions</div>
               <div style={{ background: 'var(--glass)', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-                {/* Income Tax */}
                 <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-                  <DeductionRow label="Income Tax" sublabel={grossYearly > UK_BASIC_RATE_LIMIT ? '40% higher rate applies' : '20% basic rate'} enabled={settings.incomeTax} onToggle={() => updateSettings({ incomeTax: !settings.incomeTax })} color={tc.danger}
-                    tip="Most employees pay income tax via PAYE. You get a £12,570 tax-free allowance, then pay 20% up to £50,270, 40% up to £125,140, and 45% above that." />
+                  <DeductionRow label="Income Tax" sublabel={grossYearly > UK_BASIC_RATE_LIMIT ? '40% higher rate applies' : '20% basic rate'} enabled={settings.incomeTax} onToggle={() => updateSettings({ incomeTax: !settings.incomeTax })} color={tc.danger} tip="Most employees pay income tax via PAYE. You get a £12,570 tax-free allowance, then pay 20% up to £50,270, 40% up to £125,140, and 45% above that." />
                 </div>
-                {/* National Insurance */}
                 <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-                  <DeductionRow label="National Insurance" sublabel="Class 1 — 8% / 2%" enabled={settings.nationalInsurance} onToggle={() => updateSettings({ nationalInsurance: !settings.nationalInsurance })} color={tc.warning}
-                    tip="NI contributions fund the NHS, state pension, and benefits. As an employee you pay 8% on earnings between £12,570–£50,270, then 2% above that." />
+                  <DeductionRow label="National Insurance" sublabel="Class 1 — 8% / 2%" enabled={settings.nationalInsurance} onToggle={() => updateSettings({ nationalInsurance: !settings.nationalInsurance })} color={tc.warning} tip="NI contributions fund the NHS, state pension, and benefits. As an employee you pay 8% on earnings between £12,570–£50,270, then 2% above that." />
                 </div>
-                {/* Student Finance */}
                 <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
@@ -228,10 +213,8 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
                     </select>
                   </div>
                 </div>
-                {/* Pension */}
                 <div style={{ padding: '14px 16px' }}>
-                  <DeductionRow label="Pension" sublabel={settings.pension ? `${settings.pensionPercent}% · ${settings.pensionPreTax ? 'pre-tax' : 'post-tax'}` : 'Auto-enrolment or custom'} enabled={settings.pension} onToggle={() => updateSettings({ pension: !settings.pension })} color={tc.info}
-                    tip="Auto-enrolment minimum is 5% employee + 3% employer. Pre-tax contributions reduce your taxable income (saving you tax). Post-tax contributions don't. Most workplace pensions are pre-tax." />
+                  <DeductionRow label="Pension" sublabel={settings.pension ? `${settings.pensionPercent}% · ${settings.pensionPreTax ? 'pre-tax' : 'post-tax'}` : 'Auto-enrolment or custom'} enabled={settings.pension} onToggle={() => updateSettings({ pension: !settings.pension })} color={tc.info} tip="Auto-enrolment minimum is 5% employee + 3% employer. Pre-tax contributions reduce your taxable income (saving you tax). Post-tax contributions don't. Most workplace pensions are pre-tax." />
                   {settings.pension && (
                     <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', display: 'flex', gap: '10px', alignItems: 'center' }}>
                       <input type="number" className="input" value={settings.pensionPercent} onChange={(e) => updateSettings({ pensionPercent: e.target.value })} style={{ width: '80px' }} placeholder="%" />
@@ -239,12 +222,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
                       <InfoTip text="Pre-tax: contributions come out before tax is calculated, reducing your tax bill. Post-tax: contributions come out after tax — you may be able to claim relief via Self Assessment." />
                       <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
                         {['pre', 'post'].map(t => (
-                          <button key={t} onClick={() => updateSettings({ pensionPreTax: t === 'pre' })} style={{
-                            padding: '4px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer',
-                            border: (settings.pensionPreTax ? 'pre' : 'post') === t ? '1px solid var(--accent-primary)' : '1px solid var(--border)',
-                            background: (settings.pensionPreTax ? 'pre' : 'post') === t ? 'var(--info-tint)' : 'transparent',
-                            color: (settings.pensionPreTax ? 'pre' : 'post') === t ? 'var(--accent-primary)' : 'var(--text-muted)',
-                          }}>{t}-tax</button>
+                          <button key={t} onClick={() => updateSettings({ pensionPreTax: t === 'pre' })} style={{ padding: '4px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', border: (settings.pensionPreTax ? 'pre' : 'post') === t ? '1px solid var(--accent-primary)' : '1px solid var(--border)', background: (settings.pensionPreTax ? 'pre' : 'post') === t ? 'var(--info-tint)' : 'transparent', color: (settings.pensionPreTax ? 'pre' : 'post') === t ? 'var(--accent-primary)' : 'var(--text-muted)' }}>{t}-tax</button>
                         ))}
                       </div>
                     </div>
@@ -281,7 +259,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
             </div>
           </div>
 
-          {/* Results breakdown */}
+          {/* Results */}
           {gross > 0 && (
             <div style={{ padding: '16px', background: 'var(--glass)', borderRadius: '14px', border: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: tc.muted, marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px solid var(--border)' }}>
@@ -294,26 +272,23 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
                   <span className="font-mono" style={{ color: item.color }}>−{cs}{item.amount.toFixed(0)}/mo</span>
                 </div>
               ))}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
-                <span style={{ fontSize: '15px', fontWeight: '700' }}>Estimated take-home</span>
-                <span className="font-mono" style={{ fontSize: '18px', fontWeight: '700', color: tc.success }}>{cs}{netMonthly.toFixed(2)}/mo</span>
-              </div>
-              {settings.mode === 'uk' && grossYearly > 0 && (
-                <div style={{ fontSize: '12px', color: tc.muted, marginTop: '4px', textAlign: 'right' }}>
-                  Effective deduction rate: {((totalDeductions / (grossYearly / 12)) * 100).toFixed(1)}% · {cs}{(netMonthly * 12).toFixed(0)}/yr
+              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '15px', fontWeight: '700' }}>Estimated take-home</span>
+                  <span className="font-mono" style={{ fontSize: '20px', fontWeight: '700', color: tc.success }}>{cs}{netMonthly.toFixed(2)}/mo</span>
                 </div>
-              )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: tc.muted }}>
+                  <span>{settings.mode === 'uk' && grossYearly > 0 ? `Effective deduction rate: ${((totalDeductions / (grossYearly / 12)) * 100).toFixed(1)}%` : ''}</span>
+                  <span className="font-mono">{cs}{netYearly.toFixed(0)}/yr</span>
+                </div>
+              </div>
             </div>
           )}
 
           {/* Apply button */}
           {netMonthly > 0 && (
-            <button
-              onClick={onApply}
-              className="btn btn-primary"
-              style={{ width: '100%', justifyContent: 'center', fontSize: '15px', padding: '14px' }}
-            >
-              Use {cs}{netMonthly.toFixed(2)}/mo as my income
+            <button onClick={onApply} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', fontSize: '15px', padding: '14px' }}>
+              ✓ Apply — use {cs}{netMonthly.toFixed(2)}/mo as my income
             </button>
           )}
 
@@ -331,7 +306,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
   );
 }
 
-// ── Main ActionsPanel ─────────────────────────────────────────────────────────
+// ── Main panel ────────────────────────────────────────────────────────────────
 export default function ActionsPanel({ income, setIncome, categoryTotals, setShowAddModal, setShowDebtModal, setShowSavingsModal, setShowCategoryModal }) {
   const cs = useCurrency();
   const [calcEnabled, setCalcEnabled] = useState(false);
@@ -340,6 +315,7 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
   const [newDeduction, setNewDeduction] = useState({ name: '', value: '', type: 'fixed' });
   const [loaded, setLoaded] = useState(false);
 
+  // Load saved settings on mount
   useEffect(() => {
     window.storage?.get(STORAGE_KEY).then(result => {
       if (result?.value) {
@@ -353,11 +329,13 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
     }).catch(() => setLoaded(true));
   }, []);
 
+  // Persist settings
   useEffect(() => {
     if (!loaded) return;
     window.storage?.set(STORAGE_KEY, JSON.stringify({ settings, calcEnabled })).catch(() => {});
   }, [settings, calcEnabled, loaded]);
 
+  // When calculator is enabled, keep income in sync with calculated value
   useEffect(() => {
     if (!calcEnabled || !loaded) return;
     const net = getNetMonthly();
@@ -431,12 +409,24 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
   const breakdown = getBreakdown();
   const totalDeductions = breakdown.reduce((s, i) => s + i.amount, 0);
 
+  // Toggle the calculator on/off
+  const handleCalcToggle = () => {
+    if (calcEnabled) {
+      // Turning off — unlock the field, keep the current income value as-is
+      setCalcEnabled(false);
+    } else {
+      // Turning on — open modal so user can configure/confirm
+      setCalcEnabled(true);
+      setShowCalcModal(true);
+    }
+  };
+
+  // Apply from modal — set income and close
   const handleApply = () => {
     if (netMonthly > 0) {
       setIncome(Math.round(netMonthly * 100) / 100);
-      setCalcEnabled(true);
-      setShowCalcModal(false);
     }
+    setShowCalcModal(false);
   };
 
   return (
@@ -446,26 +436,60 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
       {/* ── Income ── */}
       <div style={{ marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <label style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '500' }}>
-            Monthly Income
-            {calcEnabled && netMonthly > 0 && (
-              <span style={{ marginLeft: '8px', fontSize: '11px', color: tc.info, background: tc.infoTint, padding: '2px 7px', borderRadius: '5px', border: '1px solid var(--info-tint-strong)', fontWeight: '600' }}>Calculated</span>
-            )}
-          </label>
+          <label style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '500' }}>Monthly Income</label>
+
+          {/* Calculator toggle */}
           <button
-            onClick={() => setShowCalcModal(true)}
-            style={{ fontSize: '11px', fontWeight: '600', padding: '4px 12px', borderRadius: '8px', cursor: 'pointer', border: calcEnabled ? '1px solid var(--accent-primary)' : '1px solid var(--border)', background: calcEnabled ? 'var(--info-tint)' : 'var(--glass)', color: calcEnabled ? 'var(--accent-primary)' : 'var(--text-muted)', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '5px' }}
+            onClick={handleCalcToggle}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '7px',
+              fontSize: '12px', fontWeight: '600', padding: '5px 12px', borderRadius: '20px', cursor: 'pointer',
+              border: calcEnabled ? '1.5px solid var(--accent-primary)' : '1.5px solid var(--border)',
+              background: calcEnabled ? 'var(--info-tint)' : 'var(--glass)',
+              color: calcEnabled ? 'var(--accent-primary)' : 'var(--text-muted)',
+              transition: 'all 0.2s',
+            }}
           >
-            {calcEnabled ? '✓ Calculated' : '🧮 Calculate'}
+            {/* Toggle pill */}
+            <div style={{ width: '28px', height: '16px', borderRadius: '8px', background: calcEnabled ? 'var(--accent-primary)' : 'var(--border)', position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
+              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: calcEnabled ? '14px' : '2px', transition: 'left 0.2s' }} />
+            </div>
+            🧮 Calculator
           </button>
         </div>
-        <input type="number" className="input" value={income} onChange={(e) => { if (calcEnabled) setCalcEnabled(false); setIncome(e.target.value === '' ? '' : e.target.value); }} onBlur={(e) => setIncome(parseFloat(e.target.value) || 0)} onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }} style={{ opacity: calcEnabled && netMonthly > 0 ? 0.75 : 1 }} />
+
+        {/* Income field — locked when calculator is on */}
+        <div style={{ position: 'relative' }}>
+          <input
+            type="number"
+            className="input"
+            value={income}
+            onChange={(e) => { if (!calcEnabled) setIncome(e.target.value === '' ? '' : e.target.value); }}
+            onBlur={(e) => { if (!calcEnabled) setIncome(parseFloat(e.target.value) || 0); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+            readOnly={calcEnabled}
+            style={{ opacity: calcEnabled ? 0.6 : 1, cursor: calcEnabled ? 'default' : 'text', paddingRight: calcEnabled ? '44px' : undefined }}
+          />
+          {calcEnabled && (
+            <button
+              onClick={() => setShowCalcModal(true)}
+              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-primary)', fontSize: '18px', lineHeight: 1, padding: '4px' }}
+              title="Edit calculator settings"
+            >✎</button>
+          )}
+        </div>
+
+        {/* Status hint */}
         {calcEnabled && netMonthly > 0 && (
-          <p style={{ fontSize: '11px', color: tc.muted, marginTop: '4px' }}>
-            Auto-set from take-home calculator ·{' '}
-            <button onClick={() => setShowCalcModal(true)} style={{ background: 'none', border: 'none', color: tc.info, cursor: 'pointer', fontSize: '11px', padding: 0 }}>edit</button>
-            {' '}·{' '}
-            <button onClick={() => setCalcEnabled(false)} style={{ background: 'none', border: 'none', color: tc.muted, cursor: 'pointer', fontSize: '11px', padding: 0 }}>override manually</button>
+          <p style={{ fontSize: '11px', color: tc.muted, marginTop: '5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ color: tc.success }}>●</span>
+            Calculated from your salary ·{' '}
+            <button onClick={() => setShowCalcModal(true)} style={{ background: 'none', border: 'none', color: tc.info, cursor: 'pointer', fontSize: '11px', padding: 0 }}>edit settings</button>
+          </p>
+        )}
+        {!calcEnabled && (
+          <p style={{ fontSize: '11px', color: tc.muted, marginTop: '5px' }}>
+            Toggle the calculator to auto-calculate from your salary
           </p>
         )}
       </div>

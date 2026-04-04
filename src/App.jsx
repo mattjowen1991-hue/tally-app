@@ -47,14 +47,8 @@ function AppContent() {
       await StatusBar.setStyle({ style: theme === 'light' ? Style.Light : Style.Dark });
     } catch(e) {}
   })(); }, [theme]);
-
-  useEffect(() => {
-    import('./utils/theme').then(({ applyStatusBarWhenReady }) => {
-      applyStatusBarWhenReady(theme);
-    });
-  }, []);
   const handleToggleTheme = async () => {
-    const next = await toggleTheme();
+    const next = toggleTheme();
     setTheme(next);
     haptic.light();
     const color = next === 'light' ? '#f1f5f9' : '#0a0e27';
