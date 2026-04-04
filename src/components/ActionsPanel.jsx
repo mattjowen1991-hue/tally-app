@@ -127,17 +127,14 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
   React.useEffect(() => {
     if (show) {
       document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
+      document.body.style.touchAction = 'none';
     } else {
       document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
+      document.body.style.touchAction = '';
     }
     return () => {
       document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
+      document.body.style.touchAction = '';
     };
   }, [show]);
 

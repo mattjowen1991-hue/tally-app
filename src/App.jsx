@@ -488,8 +488,13 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const anyModalOpen = showAddModal || showCategoryModal || showDebtModal || showSavingsModal || showAccountModal || showSettingsModal;
 
   useEffect(() => {
-    if (anyModalOpen) { document.body.style.overflow = 'hidden'; document.body.style.position = 'fixed'; document.body.style.width = '100%'; }
-    else { document.body.style.overflow = ''; document.body.style.position = ''; document.body.style.width = ''; }
+    if (anyModalOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    }
   }, [anyModalOpen]);
 
   useEffect(() => {

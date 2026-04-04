@@ -461,7 +461,8 @@ body.modal-open {
   padding: 0 4px;
   height: 100%;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
+  -webkit-overscroll-behavior: none;
 }
 
 .swipe-panel > *:first-child {
@@ -612,7 +613,7 @@ body.modal-open {
     gap: 12px;
     overflow-x: auto;
     padding: 8px 0;
-    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
     scrollbar-width: none;
   }
 
@@ -633,7 +634,7 @@ body.modal-open {
     gap: 8px;
     overflow-x: auto;
     padding: 4px 0;
-    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
     scrollbar-width: none;
     margin-bottom: 16px;
   }
@@ -672,7 +673,7 @@ body.modal-open {
     left: 0;
     right: 0;
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
     padding-bottom: 200px;
   }
 
