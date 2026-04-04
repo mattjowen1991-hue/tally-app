@@ -263,13 +263,13 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // Auto-save to cloud when data changes (debounced)
   useEffect(() => {
-    if (!user || bills.length === 0 || deletingAccountRef.current) return;
+    if (!user || deletingAccountRef.current) return;
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     syncTimeoutRef.current = setTimeout(() => {
       saveToCloud();
     }, 3000); // 3 second debounce
     return () => { if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current); };
-  }, [bills, income, debts, savings, customCategories, user]);
+  }, [bills, income, debts, savings, customCategories, salaryCalc, user]);
 
   // Load last sync time on mount
   useEffect(() => {
