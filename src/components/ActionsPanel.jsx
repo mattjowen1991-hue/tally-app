@@ -93,8 +93,6 @@ const DEFAULT_SETTINGS = {
   pension: false, pensionPercent: '5', pensionPreTax: true, customDeductions: [],
 };
 
-const STORAGE_KEY = 'tally-salary-calc';
-
 function InfoTip({ text }) {
   const [open, setOpen] = React.useState(false);
   return (
@@ -307,42 +305,35 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
 }
 
 // ── Main panel ────────────────────────────────────────────────────────────────
-export default function ActionsPanel({ income, setIncome, categoryTotals, setShowAddModal, setShowDebtModal, setShowSavingsModal, setShowCategoryModal }) {
+export default function ActionsPanel({ income, setIncome, categoryTotals, setShowAddModal, setShowDebtModal, setShowSavingsModal, setShowCategoryModal, salaryCalc, setSalaryCalc }) {
   const cs = useCurrency();
-  const [calcEnabled, setCalcEnabled] = useState(false);
-  const [calcApplied, setCalcApplied] = useState(false); // true only after Apply is pressed
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+
+  // Derived state from lifted salaryCalc prop
+  const calcEnabled = salaryCalc?.calcEnabled || false;
+  const calcApplied = salaryCalc?.calcApplied || false;
+  const setCalcEnabled = (val) => setSalaryCalc(s => ({ ...s, calcEnabled: val }));
+  const setCalcApplied = (val) => setSalaryCalc(s => ({ ...s, calcApplied: val }));
+
+  const [settings, setSettings] = useState(() => salaryCalc?.settings || DEFAULT_SETTINGS);
   const [showCalcModal, setShowCalcModal] = useState(false);
   const [newDeduction, setNewDeduction] = useState({ name: '', value: '', type: 'fixed' });
-  const [loaded, setLoaded] = useState(false);
 
-  // Load saved settings on mount
+  // Sync settings into salaryCalc whenever they change
   useEffect(() => {
-    window.storage?.get(STORAGE_KEY).then(result => {
-      if (result?.value) {
-        try {
-          const saved = JSON.parse(result.value);
-          if (saved.settings) setSettings(saved.settings);
-          if (saved.calcEnabled !== undefined) setCalcEnabled(saved.calcEnabled);
-          if (saved.calcApplied !== undefined) setCalcApplied(saved.calcApplied);
-        } catch {}
-      }
-      setLoaded(true);
-    }).catch(() => setLoaded(true));
-  }, []);
+    setSalaryCalc(s => ({ ...s, settings }));
+  }, [settings]);
 
-  // Persist settings
+  // Initialise settings from salaryCalc if it arrives after mount (e.g. from cloud restore)
   useEffect(() => {
-    if (!loaded) return;
-    window.storage?.set(STORAGE_KEY, JSON.stringify({ settings, calcEnabled, calcApplied })).catch(() => {});
-  }, [settings, calcEnabled, calcApplied, loaded]);
+    if (salaryCalc?.settings) setSettings(salaryCalc.settings);
+  }, [salaryCalc?.calcEnabled]); // re-sync when calc is toggled on after cloud restore
 
   // Only sync income automatically if calculator has been applied
   useEffect(() => {
-    if (!calcEnabled || !calcApplied || !loaded) return;
+    if (!calcEnabled || !calcApplied) return;
     const net = getNetMonthly();
     if (net > 0) setIncome(Math.round(net * 100) / 100);
-  }, [calcEnabled, calcApplied, settings, loaded]);
+  }, [calcEnabled, calcApplied, settings]);
 
   const updateSettings = (patch) => setSettings(s => ({ ...s, ...patch }));
 

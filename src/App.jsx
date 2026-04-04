@@ -61,6 +61,7 @@ function AppContent() {
   // ── Bills state ──
   const [bills, setBills] = useState([]);
   const [income, setIncome] = useState(1960);
+  const [salaryCalc, setSalaryCalc] = useState({ calcEnabled: false, calcApplied: false, settings: null });
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [showAddModal, setShowAddModal] = useState(false);
@@ -194,7 +195,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   // ── Cloud sync functions ──
   const getAppData = () => ({
     bills, income: parseFloat(income) || 0, debts, savings,
-    customCategories, monthlySnapshots,
+    customCategories, monthlySnapshots, salaryCalc,
     lastMonth: new Date().getFullYear() + '-' + (new Date().getMonth() + 1),
   });
 
@@ -257,6 +258,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     if (d.savings) setSavings(d.savings);
     if (d.customCategories) setCustomCategories(d.customCategories);
     if (d.monthlySnapshots) setMonthlySnapshots(d.monthlySnapshots);
+    if (d.salaryCalc) setSalaryCalc(d.salaryCalc);
   };
 
   // Auto-save to cloud when data changes (debounced)
@@ -356,6 +358,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     setCustomCategories([]);
     setMonthlySnapshots([]);
     setIncome(0);
+    setSalaryCalc({ calcEnabled: false, calcApplied: false, settings: null });
     try { await window.storage.set('bills-data', '{}'); } catch (e) {}
     setUser(null);
     userRef.current = null;
@@ -373,8 +376,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     setCustomCategories([]);
     setMonthlySnapshots([]);
     setIncome(0);
-    try { await window.storage.set('bills-data', '{}'); } catch (e) {}
-    haptic.error();
+    setSalaryCalc({ calcEnabled: false, calcApplied: false, settings: null });
     toast('Local data cleared', 'error');
   };
 
@@ -602,13 +604,14 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
         loadedSavings = loadedSavings.map((s) => ({ ...s, transactions: s.transactions || [], currentAmount: s.currentAmount || 0 }));
         setSavings(loadedSavings);
         setCustomCategories(data.customCategories || []);
+        if (data.salaryCalc) setSalaryCalc(data.salaryCalc);
       } else { setBills(initialBills); setDebts([]); }
     } catch (error) { console.log('No stored data, using initial bills'); setBills(initialBills); setDebts([]); }
   };
 
   // ── Save data ──
-  useEffect(() => { if (bills.length > 0 || debts.length > 0 || savings.length > 0 || customCategories.length > 0) saveData(); }, [bills, income, debts, savings, customCategories]);
-  const saveData = async () => { try { await window.storage.set('bills-data', JSON.stringify({ bills, income: parseFloat(income) || 0, debts, savings, customCategories, monthlySnapshots, lastMonth: new Date().getFullYear() + '-' + (new Date().getMonth() + 1) })); } catch (e) { console.error('Error saving:', e); } };
+  useEffect(() => { if (bills.length > 0 || debts.length > 0 || savings.length > 0 || customCategories.length > 0) saveData(); }, [bills, income, debts, savings, customCategories, salaryCalc]);
+  const saveData = async () => { try { await window.storage.set('bills-data', JSON.stringify({ bills, income: parseFloat(income) || 0, debts, savings, customCategories, monthlySnapshots, salaryCalc, lastMonth: new Date().getFullYear() + '-' + (new Date().getMonth() + 1) })); } catch (e) { console.error('Error saving:', e); } };
 
   // ── Calculations ──
   const categories = [...DEFAULT_CATEGORIES, ...customCategories];
@@ -768,7 +771,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
               <OverviewPanel totals={totals} incomeNum={incomeNum} categoryTotals={categoryTotals} isMobile={isMobile} monthlySnapshots={monthlySnapshots} totalDebt={totalDebt} totalSaved={totalSaved} insights={insights} bills={bills} debts={debts} savings={savings} />
             </div>
             <div className={`swipe-panel ${activePanel === 1 ? 'panel-active' : ''}`}>
-              <ActionsPanel income={income} setIncome={setIncome} categoryTotals={categoryTotals} setShowAddModal={setShowAddModal} setShowDebtModal={setShowDebtModal} setShowSavingsModal={setShowSavingsModal} setShowCategoryModal={setShowCategoryModal} />
+              <ActionsPanel income={income} setIncome={setIncome} categoryTotals={categoryTotals} setShowAddModal={setShowAddModal} setShowDebtModal={setShowDebtModal} setShowSavingsModal={setShowSavingsModal} setShowCategoryModal={setShowCategoryModal} salaryCalc={salaryCalc} setSalaryCalc={setSalaryCalc} />
             </div>
             <div className={`swipe-panel ${activePanel === 2 ? 'panel-active' : ''}`}>
               <BillsPanel categories={['ALL', ...categories]} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} statusFilter={statusFilter} setStatusFilter={setStatusFilter} filteredBills={filteredBills} editingId={editingId} editForm={editForm} setEditForm={setEditForm} handleEditStart={handleEditStart} handleEditSave={handleEditSave} handleDelete={handleDelete} handleTogglePaid={handleTogglePaid} handleToggleMissed={handleToggleMissed} handleTogglePaused={handleTogglePaused} setEditingId={setEditingId} categoryScrollRef={categoryScrollRef} billSearch={billSearch} setBillSearch={setBillSearch} billSort={billSort} setBillSort={setBillSort} onBulkDelete={handleBulkDeleteBills} onBulkTogglePaid={handleBulkTogglePaid} onBulkToggleMissed={handleBulkToggleMissed} onBulkTogglePaused={handleBulkTogglePaused} activePanel={activePanel} setShowAddModal={setShowAddModal} setShowCategoryModal={setShowCategoryModal} />
