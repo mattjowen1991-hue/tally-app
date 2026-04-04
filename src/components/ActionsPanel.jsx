@@ -454,39 +454,54 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
             <div style={{ width: '28px', height: '16px', borderRadius: '8px', background: calcEnabled ? 'var(--accent-primary)' : 'var(--border)', position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
               <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: calcEnabled ? '14px' : '2px', transition: 'left 0.2s' }} />
             </div>
-            <Icons.Calculator size={14} /> Calculator
+            <Icons.Calculator size={14} />
+            {calcEnabled ? (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                On
+                <span
+                  onClick={(e) => { e.stopPropagation(); setShowCalcModal(true); }}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', borderRadius: '4px', background: 'var(--accent-primary)', cursor: 'pointer' }}
+                >
+                  <Icons.Edit size={10} style={{ color: '#fff' }} />
+                </span>
+              </span>
+            ) : 'Calculator'}
           </button>
         </div>
 
-        {/* Income field — locked when calculator is on */}
-        <div style={{ position: 'relative' }}>
+        {/* Income field — fully non-interactive when calculator is on */}
+        {calcEnabled ? (
+          <div style={{
+            width: '100%', padding: '12px 16px', borderRadius: '12px',
+            border: '1px solid var(--accent-primary)',
+            background: 'var(--info-tint)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            pointerEvents: 'none', userSelect: 'none',
+          }}>
+            <div>
+              <div className="font-mono" style={{ fontSize: '20px', fontWeight: '700', color: 'var(--accent-primary)' }}>
+                {cs}{parseFloat(income).toFixed(2)}
+              </div>
+              <div style={{ fontSize: '11px', color: tc.muted, marginTop: '2px' }}>
+                ✓ Applied from take-home calculator
+              </div>
+            </div>
+            <div style={{ fontSize: '11px', color: tc.muted, textAlign: 'right' }}>
+              {cs}{(parseFloat(income) * 12).toFixed(0)}/yr
+            </div>
+          </div>
+        ) : (
           <input
             type="number"
             className="input"
             value={income}
-            onChange={(e) => { if (!calcEnabled) setIncome(e.target.value === '' ? '' : e.target.value); }}
-            onBlur={(e) => { if (!calcEnabled) setIncome(parseFloat(e.target.value) || 0); }}
+            onChange={(e) => setIncome(e.target.value === '' ? '' : e.target.value)}
+            onBlur={(e) => setIncome(parseFloat(e.target.value) || 0)}
             onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
-            readOnly={calcEnabled}
-            style={{ opacity: calcEnabled ? 0.6 : 1, cursor: calcEnabled ? 'default' : 'text', paddingRight: calcEnabled ? '44px' : undefined }}
           />
-          {calcEnabled && (
-            <button
-              onClick={() => setShowCalcModal(true)}
-              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-primary)', fontSize: '18px', lineHeight: 1, padding: '4px' }}
-              title="Edit calculator settings"
-            >✎</button>
-          )}
-        </div>
+        )}
 
         {/* Status hint */}
-        {calcEnabled && netMonthly > 0 && (
-          <p style={{ fontSize: '11px', color: tc.muted, marginTop: '5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ color: tc.success }}>●</span>
-            Calculated from your salary ·{' '}
-            <button onClick={() => setShowCalcModal(true)} style={{ background: 'none', border: 'none', color: tc.info, cursor: 'pointer', fontSize: '11px', padding: 0 }}>edit settings</button>
-          </p>
-        )}
         {!calcEnabled && (
           <p style={{ fontSize: '11px', color: tc.muted, marginTop: '5px' }}>
             Toggle the calculator to auto-calculate from your salary
