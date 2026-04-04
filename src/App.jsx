@@ -95,7 +95,6 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [currencyCode, setCurrencyCode] = useState('GBP');
   const [showCurrencyPrompt, setShowCurrencyPrompt] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showFirstBillHint, setShowFirstBillHint] = useState(false);
 
   // ── Debt state ──
   const [debts, setDebts] = useState([]);
@@ -671,7 +670,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     const id = Date.now().toString(), amount = parseFloat(newBill.amount) || 0;
     const bill = { ...newBill, id, projected: amount, actual: amount };
     if (shouldAutoPay(bill)) { bill.paid = true; bill.lastAutoPaid = new Date().toISOString(); }
-    setBills([...bills, bill]); setShowAddModal(false); setValidationErrors({}); setNewBill({ ...emptyBill }); haptic.success(); toast('Bill added', 'success'); setShowFirstBillHint(false);
+    setBills([...bills, bill]); setShowAddModal(false); setValidationErrors({}); setNewBill({ ...emptyBill }); haptic.success(); toast('Bill added', 'success');
   };
   const handleTogglePaid = (id) => { setBills(bills.map((b) => (b.id !== id ? b : { ...b, paid: !b.paid, missed: false, paused: false }))); haptic.medium(); };
   const handleToggleMissed = (id) => { setBills(bills.map((b) => (b.id !== id ? b : { ...b, missed: !b.missed, paid: false, paused: false }))); haptic.warning(); };
@@ -714,7 +713,11 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
           else { setCurrencyCode('GBP'); saveCurrencyPreference('GBP'); }
           if (inc > 0) setIncome(inc);
           setShowOnboarding(false);
-          setShowFirstBillHint(true);
+          // Go straight to Bills and open Add Bill modal
+          setTimeout(() => {
+            goToPanel(2);
+            setTimeout(() => setShowAddModal(true), 300);
+          }, 100);
         }}
         onSelectCurrency={(code) => { setCurrencyCode(code); saveCurrencyPreference(code); }}
       />
@@ -722,18 +725,6 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     {showCurrencyPrompt && (
       <CurrencyPrompt onSelect={(code) => { setCurrencyCode(code); saveCurrencyPreference(code); setShowCurrencyPrompt(false); }} />
     )}
-    {showFirstBillHint && bills.length === 0 && activePanel === 2 && (
-      <div style={{
-        position: 'fixed', top: '180px', left: '50%', transform: 'translateX(-50%)',
-        zIndex: 999, background: 'var(--accent-primary)', color: '#fff',
-        padding: '10px 18px', borderRadius: '20px', fontSize: '13px', fontWeight: '600',
-        boxShadow: '0 4px 20px rgba(0,212,255,0.4)', whiteSpace: 'nowrap',
-        animation: 'slideInUp 0.3s ease',
-        display: 'flex', alignItems: 'center', gap: '8px',
-      }}>
-        <span>👆 Tap Add Bill to add your first bill</span>
-        <button onClick={() => setShowFirstBillHint(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '14px', padding: 0, opacity: 0.7 }}>✕</button>
-      </div>
     )}
     <div style={{ padding: isMobile ? '12px' : '20px', paddingTop: isMobile ? '0' : '20px', maxWidth: '1400px', margin: '0 auto', display: isMobile ? 'flex' : undefined, flexDirection: isMobile ? 'column' : undefined, height: isMobile ? '100vh' : undefined, overflow: isMobile ? 'hidden' : undefined }}>
       {/* Sticky Collapsible Header */}
