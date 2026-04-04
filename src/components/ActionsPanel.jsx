@@ -355,6 +355,7 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
                     enabled={settings.incomeTax}
                     onToggle={() => updateSettings({ incomeTax: !settings.incomeTax })}
                     color={tc.danger}
+                    tip="Most employees pay income tax via PAYE. You get a £12,570 tax-free allowance, then pay 20% up to £50,270, 40% up to £125,140, and 45% above that."
                   />
 
                   {/* NI toggle */}
@@ -364,13 +365,17 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
                     enabled={settings.nationalInsurance}
                     onToggle={() => updateSettings({ nationalInsurance: !settings.nationalInsurance })}
                     color={tc.warning}
+                    tip="NI contributions fund the NHS, state pension, and benefits. As an employee you pay 8% on earnings between £12,570–£50,270, then 2% above that."
                   />
 
                   {/* Student loan */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <div style={{ fontSize: '13px', fontWeight: '500' }}>Student Finance</div>
+                        <div style={{ fontSize: '13px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          Student Finance
+                          <InfoTip text="You repay 9% of earnings above your plan's threshold. Plan 1: started before 2012 (England/Wales) or any year (Scotland/NI). Plan 2: started 2012 or later (England/Wales). Plan 4: Scottish students. Plan 5: new courses from 2023. Postgrad: Master's/PhD loans." />
+                        </div>
                         <div style={{ fontSize: '11px', color: tc.muted }}>9% above threshold</div>
                       </div>
                       <select
@@ -379,7 +384,7 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
                         onChange={(e) => updateSettings({ studentPlan: e.target.value })}
                         style={{ width: 'auto', fontSize: '12px', padding: '4px 8px', height: 'auto' }}
                       >
-                        {STUDENT_PLANS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+                        {STUDENT_PLANS.map(p => <option key={p.key} value={p.key}>{p.label}{p.threshold ? ` (£${p.threshold.toLocaleString()})` : ''}</option>)}
                       </select>
                     </div>
                   </div>
@@ -392,6 +397,7 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
                       enabled={settings.pension}
                       onToggle={() => updateSettings({ pension: !settings.pension })}
                       color={tc.info}
+                      tip="Auto-enrolment minimum is 5% employee + 3% employer. Pre-tax contributions reduce your taxable income (saving you tax). Post-tax contributions don't. Most workplace pensions are pre-tax."
                     />
                     {settings.pension && (
                       <div style={{ marginTop: '8px', paddingLeft: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -404,6 +410,7 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
                           placeholder="%"
                         />
                         <span style={{ fontSize: '12px', color: tc.muted }}>%</span>
+                        <InfoTip text="Pre-tax: contributions come out before tax is calculated, reducing your tax bill. Post-tax: contributions come out after tax — you may be able to claim relief via Self Assessment." />
                         <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
                           {['pre', 'post'].map(t => (
                             <button key={t} onClick={() => updateSettings({ pensionPreTax: t === 'pre' })} style={{
@@ -501,11 +508,31 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
   );
 }
 
-function DeductionRow({ label, sublabel, enabled, onToggle, color }) {
+function InfoTip({ text }) {
+  const [open, setOpen] = React.useState(false);
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <div>
-        <div style={{ fontSize: '13px', fontWeight: '500' }}>{label}</div>
+    <span style={{ display: 'inline-flex', flexDirection: 'column', gap: '4px' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', color: open ? 'var(--accent-primary)' : 'var(--text-muted)', fontSize: '13px', lineHeight: 1, flexShrink: 0 }}
+      >ⓘ</button>
+      {open && (
+        <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 10px', lineHeight: 1.5, marginTop: '2px', maxWidth: '260px' }}>
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function DeductionRow({ label, sublabel, enabled, onToggle, color, tip }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: '13px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          {label}
+          {tip && <InfoTip text={tip} />}
+        </div>
         <div style={{ fontSize: '11px', color: tc.muted }}>{sublabel}</div>
       </div>
       <button
@@ -513,7 +540,7 @@ function DeductionRow({ label, sublabel, enabled, onToggle, color }) {
         style={{
           width: '42px', height: '24px', borderRadius: '12px', border: 'none', cursor: 'pointer',
           background: enabled ? color : 'var(--border)',
-          position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+          position: 'relative', transition: 'background 0.2s', flexShrink: 0, marginLeft: '12px',
         }}
       >
         <div style={{
