@@ -454,7 +454,7 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
             <div style={{ width: '28px', height: '16px', borderRadius: '8px', background: calcEnabled ? 'var(--accent-primary)' : 'var(--border)', position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
               <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: calcEnabled ? '14px' : '2px', transition: 'left 0.2s' }} />
             </div>
-            🧮 Calculator
+            <Icons.Calculator size={14} /> Calculator
           </button>
         </div>
 

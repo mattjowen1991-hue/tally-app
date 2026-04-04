@@ -121,6 +121,19 @@ export const Palette = ({ size = 24, style = {}, className = '' }) => (
   </svg>
 );
 
+export const Calculator = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} className={className}>
+    <rect x="4" y="2" width="16" height="20" rx="3" fill="currentColor" opacity="0.12" stroke="currentColor" strokeWidth="1.75"/>
+    <rect x="7" y="5" width="10" height="4" rx="1.5" fill="currentColor" opacity="0.5"/>
+    <circle cx="8" cy="13" r="1.2" fill="currentColor"/>
+    <circle cx="12" cy="13" r="1.2" fill="currentColor"/>
+    <circle cx="16" cy="13" r="1.2" fill="currentColor"/>
+    <circle cx="8" cy="17" r="1.2" fill="currentColor"/>
+    <circle cx="12" cy="17" r="1.2" fill="currentColor"/>
+    <rect x="14.8" y="15.8" width="2.4" height="2.4" rx="0.8" fill="currentColor"/>
+  </svg>
+);
+
 export const Coins = ({ size = 24, style = {}, className = '' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} className={className}>
     <ellipse cx="9" cy="8" rx="6" ry="3" fill="currentColor" opacity="0.15" stroke="currentColor" strokeWidth="1.5"/>
