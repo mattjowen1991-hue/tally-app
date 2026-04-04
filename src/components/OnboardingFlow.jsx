@@ -186,61 +186,62 @@ export default function OnboardingFlow({ onComplete, onSelectCurrency }) {
                 placeholder="e.g. 2000"
                 value={income}
                 onChange={(e) => setIncome(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.target.blur(); handleFinish(); } }}
                 style={{ paddingLeft: '36px', fontSize: '24px', fontWeight: '700', height: '60px' }}
                 autoFocus
               />
             </div>
-            <div style={{ padding: '12px 14px', background: 'var(--glass)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+            <div style={{ padding: '12px 14px', background: 'var(--glass)', borderRadius: '10px', border: '1px solid var(--border)', marginBottom: '20px' }}>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
                 💡 Not sure of your exact take-home? Skip for now — the <strong style={{ color: 'var(--text-secondary)' }}>Take-Home Calculator</strong> in Actions can work it out from your salary after tax, NI and other deductions.
               </p>
             </div>
+            {/* Inline buttons for step 3 — visible above keyboard */}
+            <button
+              className="btn btn-primary"
+              onClick={handleFinish}
+              style={{ width: '100%', justifyContent: 'center', fontSize: '16px', padding: '16px', marginBottom: '10px' }}
+            >
+              {income ? "Let's go →" : 'Skip and get started →'}
+            </button>
           </div>
         )}
 
       </div>
 
-      {/* Bottom actions */}
-      <div style={{
-        padding: '20px 24px',
-        paddingBottom: 'calc(env(safe-area-inset-bottom) + 20px)',
-        flexShrink: 0,
-        display: 'flex', flexDirection: 'column', gap: '10px',
-      }}>
-        {step < 3 ? (
-          <>
-            <button
-              className="btn btn-primary"
-              onClick={goNext}
-              disabled={step === 2 && !canProceedStep2}
-              style={{
-                width: '100%', justifyContent: 'center', fontSize: '16px', padding: '16px',
-                opacity: (step === 2 && !canProceedStep2) ? 0.4 : 1,
-              }}
-            >
-              {step === 0 ? "Let's get started" : step === 2 ? 'Continue' : 'Next'}
-            </button>
-            {step === 2 && (
+      {/* Bottom actions — hidden on step 3 where button is inline above keyboard */}
+      {step < 3 && (
+        <div style={{
+          padding: '20px 24px',
+          paddingBottom: 'calc(env(safe-area-inset-bottom) + 20px)',
+          flexShrink: 0,
+          display: 'flex', flexDirection: 'column', gap: '10px',
+        }}>
+          {step < 3 ? (
+            <>
               <button
+                className="btn btn-primary"
                 onClick={goNext}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '13px', padding: '4px', textAlign: 'center' }}
+                disabled={step === 2 && !canProceedStep2}
+                style={{
+                  width: '100%', justifyContent: 'center', fontSize: '16px', padding: '16px',
+                  opacity: (step === 2 && !canProceedStep2) ? 0.4 : 1,
+                }}
               >
-                Skip for now
+                {step === 0 ? "Let's get started" : step === 2 ? 'Continue' : 'Next'}
               </button>
-            )}
-          </>
-        ) : (
-          <>
-            <button
-              className="btn btn-primary"
-              onClick={handleFinish}
-              style={{ width: '100%', justifyContent: 'center', fontSize: '16px', padding: '16px' }}
-            >
-              {income ? "Let's go →" : 'Skip and get started →'}
-            </button>
-          </>
-        )}
-      </div>
+              {step === 2 && (
+                <button
+                  onClick={goNext}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '13px', padding: '4px', textAlign: 'center' }}
+                >
+                  Skip for now
+                </button>
+              )}
+            </>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }
