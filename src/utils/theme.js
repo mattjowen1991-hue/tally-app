@@ -33,7 +33,7 @@ function applyStatusBar(theme) {
   } catch {}
 }
 
-export function applyTheme(theme) {
+export async function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   try {
     localStorage.setItem(STORAGE_KEY, theme);
@@ -42,13 +42,13 @@ export function applyTheme(theme) {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', color);
   applyStatusBar(theme);
-  mirrorThemeToNative(theme);
+  await mirrorThemeToNative(theme);
 }
 
-function mirrorThemeToNative(theme) {
+async function mirrorThemeToNative(theme) {
   try {
-    // Mirror to Android SharedPreferences so MainActivity can read it on cold start
-    window.Capacitor?.Plugins?.Preferences?.set({ key: '_tally_theme_native', value: theme });
+    const prefs = window.Capacitor?.Plugins?.Preferences;
+    if (prefs) await prefs.set({ key: '_tally_theme_native', value: theme });
   } catch {}
 }
 export function applyStatusBarWhenReady(theme) {
@@ -60,15 +60,15 @@ export function applyStatusBarWhenReady(theme) {
   }
 }
 
-export function toggleTheme() {
+export async function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme') || 'dark';
   const next = current === 'dark' ? 'light' : 'dark';
-  applyTheme(next);
+  await applyTheme(next);
   return next;
 }
 
 export function initTheme() {
   const theme = getPreferredTheme();
-  applyTheme(theme);
+  applyTheme(theme); // intentionally not awaited — sync parts run immediately
   return theme;
 }

@@ -54,7 +54,7 @@ function AppContent() {
     });
   }, []);
   const handleToggleTheme = async () => {
-    const next = toggleTheme();
+    const next = await toggleTheme();
     setTheme(next);
     haptic.light();
     const color = next === 'light' ? '#f1f5f9' : '#0a0e27';
