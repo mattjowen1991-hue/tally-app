@@ -42,8 +42,15 @@ export function applyTheme(theme) {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', color);
   applyStatusBar(theme);
+  mirrorThemeToNative(theme);
 }
 
+function mirrorThemeToNative(theme) {
+  try {
+    // Mirror to Android SharedPreferences so MainActivity can read it on cold start
+    window.Capacitor?.Plugins?.Preferences?.set({ key: '_tally_theme_native', value: theme });
+  } catch {}
+}
 export function applyStatusBarWhenReady(theme) {
   if (window.Capacitor?.Plugins?.StatusBar) {
     applyStatusBar(theme);
