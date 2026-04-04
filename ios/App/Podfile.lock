@@ -1,4 +1,10 @@
 PODS:
+  - AppAuth (1.7.6):
+    - AppAuth/Core (= 1.7.6)
+    - AppAuth/ExternalUserAgent (= 1.7.6)
+  - AppAuth/Core (1.7.6)
+  - AppAuth/ExternalUserAgent (1.7.6):
+    - AppAuth/Core
   - Capacitor (5.7.8):
     - CapacitorCordova
   - CapacitorApp (5.0.8):
@@ -6,21 +12,43 @@ PODS:
   - CapacitorCordova (5.7.8)
   - CapacitorHaptics (5.0.8):
     - Capacitor
+  - CapacitorLocalNotifications (5.0.8):
+    - Capacitor
   - CapacitorPreferences (5.0.8):
     - Capacitor
   - CapacitorSplashScreen (5.0.8):
     - Capacitor
   - CapacitorStatusBar (5.0.8):
     - Capacitor
+  - CodetrixStudioCapacitorGoogleAuth (0.0.1):
+    - Capacitor
+    - GoogleSignIn (~> 6.2.4)
+  - GoogleSignIn (6.2.4):
+    - AppAuth (~> 1.5)
+    - GTMAppAuth (~> 1.3)
+    - GTMSessionFetcher/Core (< 3.0, >= 1.1)
+  - GTMAppAuth (1.3.1):
+    - AppAuth/Core (~> 1.6)
+    - GTMSessionFetcher/Core (< 3.0, >= 1.5)
+  - GTMSessionFetcher/Core (2.3.0)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
+  - "CapacitorLocalNotifications (from `../../node_modules/@capacitor/local-notifications`)"
   - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
   - "CapacitorSplashScreen (from `../../node_modules/@capacitor/splash-screen`)"
   - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
+  - "CodetrixStudioCapacitorGoogleAuth (from `../../node_modules/@codetrix-studio/capacitor-google-auth`)"
+
+SPEC REPOS:
+  trunk:
+    - AppAuth
+    - GoogleSignIn
+    - GTMAppAuth
+    - GTMSessionFetcher
 
 EXTERNAL SOURCES:
   Capacitor:
@@ -31,22 +59,32 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorHaptics:
     :path: "../../node_modules/@capacitor/haptics"
+  CapacitorLocalNotifications:
+    :path: "../../node_modules/@capacitor/local-notifications"
   CapacitorPreferences:
     :path: "../../node_modules/@capacitor/preferences"
   CapacitorSplashScreen:
     :path: "../../node_modules/@capacitor/splash-screen"
   CapacitorStatusBar:
     :path: "../../node_modules/@capacitor/status-bar"
+  CodetrixStudioCapacitorGoogleAuth:
+    :path: "../../node_modules/@codetrix-studio/capacitor-google-auth"
 
 SPEC CHECKSUMS:
+  AppAuth: d4f13a8fe0baf391b2108511793e4b479691fb73
   Capacitor: 9686e5711b48a1aa84671ede795d0175848abcba
   CapacitorApp: 8026f7ce1ac72780258d05a90c07deb5c724c0fa
   CapacitorCordova: 31ab98dca2ddcee051027a1afe7e8c85c82f7297
   CapacitorHaptics: acd823c6ed0ec2cd968a09316768144b0495a1e7
+  CapacitorLocalNotifications: 73765422be07829b2d0a4c7c22a77ea2252ca210
   CapacitorPreferences: 5331d7a33044d252dcb2f7fee712f0322c04bae7
   CapacitorSplashScreen: 0b962a2bee014151569dc59b089ba0e93daeeaf0
   CapacitorStatusBar: 8e0a8f213504695505dc8c4f808dffbe03aa0e0f
+  CodetrixStudioCapacitorGoogleAuth: 9dcfabfb7dd804ad6231a1513bc6e81e620cbec6
+  GoogleSignIn: 5651ce3a61e56ca864160e79b484cd9ed3f49b7a
+  GTMAppAuth: 0ff230db599948a9ad7470ca667337803b3fc4dd
+  GTMSessionFetcher: 3a63d75eecd6aa32c2fc79f578064e1214dfdec2
 
-PODFILE CHECKSUM: 507a70136c9cc2add7da1ea2a0bb703e358da59f
+PODFILE CHECKSUM: 3d018c5d94778eb052d793f25634f37146e02f19
 
 COCOAPODS: 1.16.2

@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import WebKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,7 +8,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Disable bounce/rubber-band scrolling on the WebView
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            if let webView = self.window?.rootViewController?.view.subviews.compactMap({ $0 as? WKWebView }).first {
+                webView.scrollView.bounces = false
+                webView.scrollView.alwaysBounceVertical = false
+                webView.scrollView.alwaysBounceHorizontal = false
+            }
+        }
         return true
     }
 
