@@ -11,6 +11,7 @@ import { auth, cloudData } from './utils/supabase';
 import AccountModal from './components/AccountModal';
 import SettingsModal from './components/SettingsModal';
 import CurrencyPrompt from './components/CurrencyPrompt';
+import OnboardingFlow from './components/OnboardingFlow';
 import { CurrencyProvider } from './components/CurrencyContext';
 import { getSymbol, loadCurrencyPreference, saveCurrencyPreference, CURRENCIES } from './utils/currency';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -93,6 +94,8 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [notificationSettings, setNotificationSettings] = useState({ enabled: true, reminderHour: 9, reminderMinute: 0 });
   const [currencyCode, setCurrencyCode] = useState('GBP');
   const [showCurrencyPrompt, setShowCurrencyPrompt] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showFirstBillHint, setShowFirstBillHint] = useState(false);
 
   // ── Debt state ──
   const [debts, setDebts] = useState([]);
@@ -292,13 +295,13 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     loadNotificationSettings().then(setNotificationSettings);
   }, []);
 
-  // Load currency preference on mount
+  // Load currency preference on mount — show onboarding if first launch
   useEffect(() => {
     loadCurrencyPreference().then(code => {
       if (code) {
         setCurrencyCode(code);
       } else {
-        setShowCurrencyPrompt(true);
+        setShowOnboarding(true);
       }
     });
   }, []);
@@ -668,7 +671,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     const id = Date.now().toString(), amount = parseFloat(newBill.amount) || 0;
     const bill = { ...newBill, id, projected: amount, actual: amount };
     if (shouldAutoPay(bill)) { bill.paid = true; bill.lastAutoPaid = new Date().toISOString(); }
-    setBills([...bills, bill]); setShowAddModal(false); setValidationErrors({}); setNewBill({ ...emptyBill }); haptic.success(); toast('Bill added', 'success');
+    setBills([...bills, bill]); setShowAddModal(false); setValidationErrors({}); setNewBill({ ...emptyBill }); haptic.success(); toast('Bill added', 'success'); setShowFirstBillHint(false);
   };
   const handleTogglePaid = (id) => { setBills(bills.map((b) => (b.id !== id ? b : { ...b, paid: !b.paid, missed: false, paused: false }))); haptic.medium(); };
   const handleToggleMissed = (id) => { setBills(bills.map((b) => (b.id !== id ? b : { ...b, missed: !b.missed, paid: false, paused: false }))); haptic.warning(); };
@@ -704,8 +707,33 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   // ════════════════════════════════════
   return (
     <CurrencyProvider currencySymbol={getSymbol(currencyCode)}>
+    {showOnboarding && (
+      <OnboardingFlow
+        onComplete={({ currencyCode: code, income: inc }) => {
+          if (code) { setCurrencyCode(code); saveCurrencyPreference(code); }
+          else { setCurrencyCode('GBP'); saveCurrencyPreference('GBP'); }
+          if (inc > 0) setIncome(inc);
+          setShowOnboarding(false);
+          setShowFirstBillHint(true);
+        }}
+        onSelectCurrency={(code) => { setCurrencyCode(code); saveCurrencyPreference(code); }}
+      />
+    )}
     {showCurrencyPrompt && (
       <CurrencyPrompt onSelect={(code) => { setCurrencyCode(code); saveCurrencyPreference(code); setShowCurrencyPrompt(false); }} />
+    )}
+    {showFirstBillHint && bills.length === 0 && activePanel === 2 && (
+      <div style={{
+        position: 'fixed', top: '180px', left: '50%', transform: 'translateX(-50%)',
+        zIndex: 999, background: 'var(--accent-primary)', color: '#fff',
+        padding: '10px 18px', borderRadius: '20px', fontSize: '13px', fontWeight: '600',
+        boxShadow: '0 4px 20px rgba(0,212,255,0.4)', whiteSpace: 'nowrap',
+        animation: 'slideInUp 0.3s ease',
+        display: 'flex', alignItems: 'center', gap: '8px',
+      }}>
+        <span>👆 Tap Add Bill to add your first bill</span>
+        <button onClick={() => setShowFirstBillHint(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '14px', padding: 0, opacity: 0.7 }}>✕</button>
+      </div>
     )}
     <div style={{ padding: isMobile ? '12px' : '20px', paddingTop: isMobile ? '0' : '20px', maxWidth: '1400px', margin: '0 auto', display: isMobile ? 'flex' : undefined, flexDirection: isMobile ? 'column' : undefined, height: isMobile ? '100vh' : undefined, overflow: isMobile ? 'hidden' : undefined }}>
       {/* Sticky Collapsible Header */}
