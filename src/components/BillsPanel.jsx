@@ -22,15 +22,22 @@ const SORT_OPTIONS = [
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-const CATEGORY_ICONS = {
-  HOME: '🏠', TRANSPORT: '🚗', FOOD: '🍔', ENTERTAINMENT: '🎬',
-  HEALTH: '💊', INSURANCE: '🛡️', SAVINGS: '💰', UTILITIES: '⚡',
-  'CREDIT CARDS': '💳', SUBSCRIPTION: '🔄', EDUCATION: '📚',
-  SHOPPING: '🛍️', TRAVEL: '✈️', PETS: '🐾', OTHER: '📌',
+const CATEGORY_ICON_MAP = {
+  HOME: Icons.CategoryHome,
+  TRANSPORT: Icons.CategoryTransport,
+  FOOD: Icons.CategoryFood,
+  ENTERTAINMENT: Icons.CategoryEntertainment,
+  HEALTH: Icons.CategoryHealth,
+  INSURANCE: Icons.CategoryInsurance,
+  'CREDIT CARDS': Icons.CategoryCreditCard,
+  SUBSCRIPTION: Icons.CategorySubscription,
+  SAVINGS: Icons.CategorySavings,
+  UTILITIES: Icons.CategoryUtilities,
 };
 
-function getCategoryIcon(cat) {
-  return CATEGORY_ICONS[cat] || '📌';
+function getCategoryIcon(cat, size = 20, color = 'currentColor') {
+  const IconComponent = CATEGORY_ICON_MAP[cat] || Icons.CategoryOther;
+  return <IconComponent size={size} style={{ color }} />;
 }
 
 function formatDueDate(bill) {
@@ -181,9 +188,8 @@ function BillCard({
               background: statusConfig ? statusConfig.tint : 'var(--glass)',
               border: `1px solid ${statusConfig ? statusConfig.tintStrong : 'var(--border)'}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '18px',
             }}>
-              {getCategoryIcon(bill.category)}
+              {getCategoryIcon(bill.category, 20, statusConfig ? statusConfig.color : 'var(--text-secondary)')}
             </div>
 
             {/* Name + category */}
