@@ -87,10 +87,10 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
     <>
       {/* Stats Grid */}
       <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: isMobile ? '12px' : '20px', marginBottom: isMobile ? '20px' : '40px' }}>
-        <StatCard label="Income" value={`${cs}${incomeNum.toFixed(2)}`} subtitle="Monthly income" icon={<Icons.DollarSign size={20} />} color="var(--success)" delay="0.1s" isMobile={isMobile} />
-        <StatCard label="Expenses" value={`${cs}${totals.actualExpenses.toFixed(2)}`} subtitle={`${totals.paidBills} of ${totals.totalBills} bills paid`} icon={<Icons.TrendingUp size={20} />} color="var(--danger)" delay="0.2s" isMobile={isMobile} />
-        <StatCard label="Balance" value={`${cs}${totals.actualBalance.toFixed(2)}`} subtitle="Remaining this month" icon={totals.actualBalance >= 0 ? <Icons.TrendingUp size={20} /> : <Icons.TrendingDown size={20} />} color={totals.actualBalance >= 0 ? 'var(--accent-primary)' : 'var(--danger)'} valueColor={totals.actualBalance >= 0 ? tc.success : tc.danger} delay="0.3s" isMobile={isMobile} />
-        <StatCard label="Variance" value={`${totals.difference > 0 ? '+' : ''}${cs}${totals.difference.toFixed(2)}`} subtitle="vs projected budget" icon={<Icons.PieChart size={20} />} color={Math.abs(totals.difference) < 10 ? 'var(--warning)' : 'var(--accent-secondary)'} valueColor={totals.difference === 0 ? tc.success : totals.difference > 0 ? tc.danger : tc.info} delay="0.4s" isMobile={isMobile} />
+        <StatCard label="Income" value={`${cs}${incomeNum.toFixed(2)}`} subtitle="Monthly income" icon={<Icons.DollarSign size={16} />} color="var(--success)" delay="0.1s" isMobile={isMobile} />
+        <StatCard label="Expenses" value={`${cs}${totals.actualExpenses.toFixed(2)}`} subtitle={`${totals.paidBills} of ${totals.totalBills} bills paid`} icon={<Icons.TrendingUp size={16} />} color="var(--danger)" delay="0.2s" isMobile={isMobile} progress={totals.totalBills > 0 ? (totals.paidBills / totals.totalBills) * 100 : 0} progressColor="var(--success)" />
+        <StatCard label="Balance" value={`${cs}${totals.actualBalance.toFixed(2)}`} subtitle="Remaining this month" icon={totals.actualBalance >= 0 ? <Icons.TrendingUp size={16} /> : <Icons.TrendingDown size={16} />} color={totals.actualBalance >= 0 ? 'var(--accent-primary)' : 'var(--danger)'} valueColor={totals.actualBalance >= 0 ? tc.success : tc.danger} delay="0.3s" isMobile={isMobile} progress={incomeNum > 0 ? Math.min(100, (totals.actualBalance / incomeNum) * 100) : 0} progressColor="var(--accent-primary)" />
+        <StatCard label="Variance" value={`${totals.difference > 0 ? '+' : ''}${cs}${totals.difference.toFixed(2)}`} subtitle="vs projected budget" icon={<Icons.PieChart size={16} />} color={Math.abs(totals.difference) < 10 ? 'var(--warning)' : 'var(--accent-secondary)'} valueColor={totals.difference === 0 ? tc.success : totals.difference > 0 ? tc.danger : tc.info} delay="0.4s" isMobile={isMobile} />
       </div>
 
       {/* ── Smart Insights ── */}
@@ -468,15 +468,31 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
   );
 }
 
-function StatCard({ label, value, subtitle, icon, color, valueColor, delay, isMobile }) {
+function StatCard({ label, value, subtitle, icon, color, valueColor, delay, isMobile, progress, progressColor }) {
   return (
-    <div className="glass-card stat-card animate-in" style={{ padding: isMobile ? '16px' : '24px', animationDelay: delay }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <span style={{ color: tc.secondary, fontSize: '14px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
-        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: `linear-gradient(135deg, color-mix(in srgb, ${color} 20%, transparent), color-mix(in srgb, ${color} 5%, transparent))`, display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>{icon}</div>
+    <div className="glass-card stat-card animate-in" style={{ padding: '14px', animationDelay: delay, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {/* Top row: icon pill + label */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{
+          width: '32px', height: '32px', borderRadius: '9px', flexShrink: 0,
+          background: `color-mix(in srgb, ${color} 15%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', color,
+        }}>
+          {icon}
+        </div>
+        <span style={{ fontSize: '12px', fontWeight: '600', color: tc.secondary, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
       </div>
-      <div className="font-mono" style={{ fontSize: isMobile ? '28px' : '36px', fontWeight: '700', marginBottom: '8px', wordBreak: 'break-word', color: valueColor }}>{value}</div>
-      <div style={{ fontSize: '13px', color: tc.muted }}>{subtitle}</div>
+      {/* Value */}
+      <div className="font-mono" style={{ fontSize: '24px', fontWeight: '700', color: valueColor || color, lineHeight: 1.1, wordBreak: 'break-word' }}>{value}</div>
+      {/* Progress bar (optional) */}
+      {progress !== undefined && (
+        <div style={{ height: '3px', borderRadius: '2px', background: 'var(--glass)', overflow: 'hidden' }}>
+          <div style={{ width: `${Math.min(100, progress)}%`, height: '100%', background: progressColor || color, borderRadius: '2px', transition: 'width 0.5s ease' }} />
+        </div>
+      )}
+      {/* Subtitle */}
+      <div style={{ fontSize: '12px', color: tc.muted, lineHeight: 1.3 }}>{subtitle}</div>
     </div>
   );
 }
