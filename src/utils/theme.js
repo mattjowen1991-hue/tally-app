@@ -21,6 +21,18 @@ export function getPreferredTheme() {
   return themes.DARK;
 }
 
+function applyStatusBar(theme) {
+  const color = theme === 'light' ? '#f1f5f9' : '#0a0e27';
+  const style = theme === 'light' ? 'LIGHT' : 'DARK';
+  try {
+    const { StatusBar } = window.Capacitor?.Plugins || {};
+    if (StatusBar) {
+      StatusBar.setBackgroundColor({ color });
+      StatusBar.setStyle({ style });
+    }
+  } catch {}
+}
+
 export function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   try {
@@ -29,13 +41,16 @@ export function applyTheme(theme) {
   const color = theme === 'light' ? '#f1f5f9' : '#0a0e27';
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', color);
-  try {
-    const { StatusBar, Style } = window.Capacitor?.Plugins || {};
-    if (StatusBar) {
-      StatusBar.setBackgroundColor({ color });
-      StatusBar.setStyle({ style: theme === 'light' ? 'LIGHT' : 'DARK' });
-    }
-  } catch {}
+  applyStatusBar(theme);
+}
+
+export function applyStatusBarWhenReady(theme) {
+  if (window.Capacitor?.Plugins?.StatusBar) {
+    applyStatusBar(theme);
+  } else {
+    document.addEventListener('deviceready', () => applyStatusBar(theme), { once: true });
+    setTimeout(() => applyStatusBar(theme), 300);
+  }
 }
 
 export function toggleTheme() {

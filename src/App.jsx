@@ -47,6 +47,12 @@ function AppContent() {
       await StatusBar.setStyle({ style: theme === 'light' ? Style.Light : Style.Dark });
     } catch(e) {}
   })(); }, [theme]);
+
+  useEffect(() => {
+    import('./utils/theme').then(({ applyStatusBarWhenReady }) => {
+      applyStatusBarWhenReady(theme);
+    });
+  }, []);
   const handleToggleTheme = async () => {
     const next = toggleTheme();
     setTheme(next);
