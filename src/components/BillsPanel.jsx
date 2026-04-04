@@ -311,6 +311,7 @@ export default function BillsPanel({
   handleDelete, handleTogglePaid, handleToggleMissed, handleTogglePaused, setEditingId, categoryScrollRef,
   billSearch, setBillSearch, billSort, setBillSort,
   onBulkDelete, onBulkTogglePaid, onBulkToggleMissed, onBulkTogglePaused, activePanel,
+  setShowAddModal, setShowCategoryModal,
 }) {
   const cs = useCurrency();
   const [showSort, setShowSort] = useState(false);
@@ -405,6 +406,16 @@ export default function BillsPanel({
         )}
       </div>
 
+      {/* Quick Add Buttons */}
+      <div className="animate-in" style={{ display: 'flex', gap: '8px', marginBottom: '12px', animationDelay: '0.65s' }}>
+        <button className="btn btn-primary" onClick={() => setShowAddModal(true)} style={{ flex: 1, justifyContent: 'center' }}>
+          <Icons.Plus size={16} /> Add Bill
+        </button>
+        <button className="btn btn-secondary" onClick={() => setShowCategoryModal(true)} style={{ flex: 1, justifyContent: 'center' }}>
+          Manage Categories
+        </button>
+      </div>
+
       {/* Category + Status Filters */}
       <div className="animate-in" style={{ marginBottom: '16px', animationDelay: '0.7s' }}>
         <div ref={categoryScrollRef} className="mobile-category-scroll" style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
@@ -452,7 +463,7 @@ export default function BillsPanel({
             <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
               <Icons.PieChart size={40} style={{ marginBottom: '16px', opacity: 0.2 }} />
               <p style={{ fontSize: '15px', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '6px' }}>No bills yet</p>
-              <p style={{ fontSize: '13px' }}>Swipe to Actions and tap "Add New Bill" to get started</p>
+              <p style={{ fontSize: '13px' }}>Tap "Add Bill" above to get started</p>
             </div>
           ) : (
             filteredBills.map((bill) => (
