@@ -226,6 +226,14 @@ export const CategoryUtilities = ({ size = 24, style = {}, className = '' }) => 
   </svg>
 );
 
+export const CategoryEducation = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} className={className}>
+    <path d="M12 3L2 8l10 5 10-5-10-5z" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round"/>
+    <path d="M6 10.6V16c0 1.66 2.69 3 6 3s6-1.34 6-3v-5.4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+    <path d="M22 8v5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+  </svg>
+);
+
 export const CategoryOther = ({ size = 24, style = {}, className = '' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} className={className}>
     <rect x="3" y="3" width="7.5" height="7.5" rx="2.5" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="1.75"/>
