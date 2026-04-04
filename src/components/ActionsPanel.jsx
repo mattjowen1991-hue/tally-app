@@ -477,9 +477,9 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
                 onClick={() => setShowCalcModal(true)}
                 style={{
                   fontSize: '12px', fontWeight: '600', padding: '5px 12px', borderRadius: '20px', cursor: 'pointer',
-                  border: '1.5px solid var(--accent-primary)',
+                  border: '1.5px solid var(--border)',
                   background: 'var(--glass)',
-                  color: 'var(--accent-primary)',
+                  color: 'var(--text-secondary)',
                   transition: 'all 0.2s', whiteSpace: 'nowrap',
                 }}
               >
