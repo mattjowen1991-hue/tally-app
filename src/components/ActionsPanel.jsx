@@ -438,38 +438,42 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
           <label style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '500' }}>Monthly Income</label>
 
-          {/* Calculator toggle */}
-          <button
-            onClick={handleCalcToggle}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '7px',
-              fontSize: '12px', fontWeight: '600', padding: '5px 12px', borderRadius: '20px', cursor: 'pointer',
-              border: calcEnabled ? '1.5px solid var(--accent-primary)' : '1.5px solid var(--border)',
-              background: calcEnabled ? 'var(--info-tint)' : 'var(--glass)',
-              color: calcEnabled ? 'var(--accent-primary)' : 'var(--text-muted)',
-              transition: 'all 0.2s',
-            }}
-          >
-            {/* Toggle pill */}
-            <div style={{ width: '28px', height: '16px', borderRadius: '8px', background: calcEnabled ? 'var(--accent-primary)' : 'var(--border)', position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
-              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: calcEnabled ? '14px' : '2px', transition: 'left 0.2s' }} />
-            </div>
-            <Icons.Calculator size={14} />
-            {calcEnabled ? (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                On
-                <span
-                  onClick={(e) => { e.stopPropagation(); setShowCalcModal(true); }}
-                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', borderRadius: '4px', background: 'var(--accent-primary)', cursor: 'pointer' }}
-                >
-                  <Icons.Edit size={10} style={{ color: '#fff' }} />
-                </span>
-              </span>
-            ) : 'Calculator'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Calculator toggle */}
+            <button
+              onClick={handleCalcToggle}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '7px',
+                fontSize: '12px', fontWeight: '600', padding: '5px 12px', borderRadius: '20px', cursor: 'pointer',
+                border: calcEnabled ? '1.5px solid var(--accent-primary)' : '1.5px solid var(--border)',
+                background: calcEnabled ? 'var(--info-tint)' : 'var(--glass)',
+                color: calcEnabled ? 'var(--accent-primary)' : 'var(--text-muted)',
+                transition: 'all 0.2s',
+              }}
+            >
+              {/* Toggle pill */}
+              <div style={{ width: '28px', height: '16px', borderRadius: '8px', background: calcEnabled ? 'var(--accent-primary)' : 'var(--border)', position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
+                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: calcEnabled ? '14px' : '2px', transition: 'left 0.2s' }} />
+              </div>
+              <Icons.Calculator size={14} />
+              {calcEnabled ? 'On' : 'Calculator'}
+            </button>
+            {calcEnabled && (
+              <button
+                onClick={() => setShowCalcModal(true)}
+                style={{
+                  fontSize: '12px', fontWeight: '600', padding: '5px 12px', borderRadius: '20px', cursor: 'pointer',
+                  border: '1.5px solid var(--accent-primary)',
+                  background: 'var(--glass)',
+                  color: 'var(--accent-primary)',
+                  transition: 'all 0.2s', whiteSpace: 'nowrap',
+                }}
+              >
+                Edit
+              </button>
+            )}
+          </div>
         </div>
-
-        {/* Income field — fully non-interactive when calculator is on */}
         {calcEnabled ? (
           <div style={{
             width: '100%', padding: '12px 16px', borderRadius: '12px',
