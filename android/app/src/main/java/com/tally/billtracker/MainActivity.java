@@ -12,9 +12,7 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-        getWindow().getDecorView().post(() -> applyThemeFromPrefs());
-        // Re-apply after bridge loads (Capacitor StatusBar plugin may override)
-        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> applyThemeFromPrefs(), 500);
+        // Apply after Capacitor bridge loads (~800ms) to override StatusBar plugin defaults
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> applyThemeFromPrefs(), 800);
     }
 
