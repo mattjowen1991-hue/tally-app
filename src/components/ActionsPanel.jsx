@@ -310,6 +310,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
 export default function ActionsPanel({ income, setIncome, categoryTotals, setShowAddModal, setShowDebtModal, setShowSavingsModal, setShowCategoryModal }) {
   const cs = useCurrency();
   const [calcEnabled, setCalcEnabled] = useState(false);
+  const [calcApplied, setCalcApplied] = useState(false); // true only after Apply is pressed
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [showCalcModal, setShowCalcModal] = useState(false);
   const [newDeduction, setNewDeduction] = useState({ name: '', value: '', type: 'fixed' });
@@ -323,6 +324,7 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
           const saved = JSON.parse(result.value);
           if (saved.settings) setSettings(saved.settings);
           if (saved.calcEnabled !== undefined) setCalcEnabled(saved.calcEnabled);
+          if (saved.calcApplied !== undefined) setCalcApplied(saved.calcApplied);
         } catch {}
       }
       setLoaded(true);
@@ -332,15 +334,15 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
   // Persist settings
   useEffect(() => {
     if (!loaded) return;
-    window.storage?.set(STORAGE_KEY, JSON.stringify({ settings, calcEnabled })).catch(() => {});
-  }, [settings, calcEnabled, loaded]);
+    window.storage?.set(STORAGE_KEY, JSON.stringify({ settings, calcEnabled, calcApplied })).catch(() => {});
+  }, [settings, calcEnabled, calcApplied, loaded]);
 
-  // When calculator is enabled, keep income in sync with calculated value
+  // Only sync income automatically if calculator has been applied
   useEffect(() => {
-    if (!calcEnabled || !loaded) return;
+    if (!calcEnabled || !calcApplied || !loaded) return;
     const net = getNetMonthly();
     if (net > 0) setIncome(Math.round(net * 100) / 100);
-  }, [calcEnabled, settings, loaded]);
+  }, [calcEnabled, calcApplied, settings, loaded]);
 
   const updateSettings = (patch) => setSettings(s => ({ ...s, ...patch }));
 
@@ -412,19 +414,31 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
   // Toggle the calculator on/off
   const handleCalcToggle = () => {
     if (calcEnabled) {
-      // Turning off — unlock the field, keep the current income value as-is
+      // Turning off — clear applied state, unlock the field
       setCalcEnabled(false);
+      setCalcApplied(false);
     } else {
-      // Turning on — open modal so user can configure/confirm
+      // Turning on — open modal, but NOT applied yet
       setCalcEnabled(true);
       setShowCalcModal(true);
     }
   };
 
-  // Apply from modal — set income and close
+  // Close without applying — if never applied before, turn calculator off entirely
+  const handleModalClose = () => {
+    setShowCalcModal(false);
+    if (!calcApplied) {
+      // Never been applied — user just closed without committing, so turn it off
+      setCalcEnabled(false);
+    }
+    // If previously applied, just close — keep the applied income value as-is
+  };
+
+  // Apply from modal — commit the calculated value, mark as applied
   const handleApply = () => {
     if (netMonthly > 0) {
       setIncome(Math.round(netMonthly * 100) / 100);
+      setCalcApplied(true);
     }
     setShowCalcModal(false);
   };
@@ -458,7 +472,7 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
               <Icons.Calculator size={14} />
               {calcEnabled ? 'On' : 'Calculator'}
             </button>
-            {calcEnabled && (
+            {calcEnabled && calcApplied && (
               <button
                 onClick={() => setShowCalcModal(true)}
                 style={{
@@ -474,7 +488,7 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
             )}
           </div>
         </div>
-        {calcEnabled ? (
+        {calcEnabled && calcApplied ? (
           <div style={{
             width: '100%', padding: '12px 16px', borderRadius: '12px',
             border: '1px solid var(--accent-primary)',
@@ -539,7 +553,7 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
       {/* ── Calculator Modal ── */}
       <TakeHomeModal
         show={showCalcModal}
-        onClose={() => setShowCalcModal(false)}
+        onClose={handleModalClose}
         settings={settings}
         updateSettings={updateSettings}
         cs={cs}
