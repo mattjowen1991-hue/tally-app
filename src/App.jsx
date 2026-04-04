@@ -2,7 +2,7 @@ import { scheduleNotifications, loadNotificationSettings, saveNotificationSettin
 import React, { useState, useEffect, useRef } from 'react';
 import * as Icons from './components/Icons';
 import { shouldAutoPay } from './utils/billHelpers';
-import { initialBills, DEFAULT_CATEGORIES } from './data/initialData';
+import { DEFAULT_CATEGORIES } from './data/initialData';
 import useSwipe from './hooks/useSwipe';
 import haptic from './utils/haptics';
 import { ToastProvider, useToast } from './components/Toast';
@@ -524,7 +524,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
       const stored = await window.storage.get('bills-data');
       if (stored && stored.value) {
         const data = JSON.parse(stored.value);
-        let loadedBills = data.bills || initialBills;
+        let loadedBills = data.bills || [];
         const savedMonth = data.lastMonth || null;
         const now = new Date();
         const currentMonth = now.getFullYear() + '-' + (now.getMonth() + 1);
@@ -613,8 +613,8 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
         setSavings(loadedSavings);
         setCustomCategories(data.customCategories || []);
         if (data.salaryCalc) setSalaryCalc(data.salaryCalc);
-      } else { setBills(initialBills); setDebts([]); }
-    } catch (error) { console.log('No stored data, using initial bills'); setBills(initialBills); setDebts([]); }
+      } else { setBills([]); setDebts([]); }
+    } catch (error) { console.log('No stored data, starting fresh'); setBills([]); setDebts([]); }
   };
 
   // ── Save data ──
