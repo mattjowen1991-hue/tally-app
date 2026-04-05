@@ -93,17 +93,51 @@ const DEFAULT_SETTINGS = {
   pension: false, pensionPercent: '5', pensionPreTax: true, customDeductions: [],
 };
 
-function InfoTip({ text }) {
+function InfoTip({ text, title }) {
   const [open, setOpen] = React.useState(false);
   return (
-    <span style={{ display: 'inline-flex', flexDirection: 'column', gap: '4px' }}>
-      <button onClick={() => setOpen(o => !o)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', color: open ? 'var(--accent-primary)' : 'var(--text-muted)', fontSize: '13px', lineHeight: 1, flexShrink: 0 }}>ⓘ</button>
+    <>
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1, flexShrink: 0, display: 'inline-flex', alignItems: 'center' }}
+      >ⓘ</button>
       {open && (
-        <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 10px', lineHeight: 1.5, marginTop: '2px', maxWidth: '240px' }}>
-          {text}
-        </span>
+        <div
+          onClick={() => setOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px',
+            touchAction: 'none',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--bg-card)', borderRadius: '16px',
+              border: '1px solid var(--border)',
+              padding: '20px', maxWidth: '320px', width: '100%',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: title ? '12px' : '0' }}>
+              {title && <span style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>{title}</span>}
+              <button
+                onClick={() => setOpen(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '18px', padding: '0', marginLeft: 'auto', lineHeight: 1 }}
+              >✕</button>
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>{text}</p>
+            <button
+              onClick={() => setOpen(false)}
+              className="btn btn-primary"
+              style={{ width: '100%', justifyContent: 'center', marginTop: '16px', padding: '10px' }}
+            >Got it</button>
+          </div>
+        </div>
       )}
-    </span>
+    </>
   );
 }
 
@@ -112,7 +146,7 @@ function DeductionRow({ label, sublabel, enabled, onToggle, color, tip }) {
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {label}{tip && <InfoTip text={tip} />}
+          {label}{tip && <InfoTip text={tip} title={label} />}
         </div>
         <div style={{ fontSize: '12px', color: tc.muted, marginTop: '2px' }}>{sublabel}</div>
       </div>
@@ -199,7 +233,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
                     <div>
                       <div style={{ fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         Student Finance
-                        <InfoTip text="You repay 9% of earnings above your plan's threshold. Plan 1: started before 2012 (England/Wales) or any year (Scotland/NI). Plan 2: started 2012 or later (England/Wales). Plan 4: Scottish students. Plan 5: new courses from 2023. Postgrad: Master's/PhD loans." />
+                        <InfoTip title="Student Finance" text="You repay 9% of earnings above your plan's threshold. Plan 1: started before 2012 (England/Wales) or any year (Scotland/NI). Plan 2: started 2012 or later (England/Wales). Plan 4: Scottish students. Plan 5: new courses from 2023. Postgrad: Master's/PhD loans." />
                       </div>
                       <div style={{ fontSize: '12px', color: tc.muted, marginTop: '2px' }}>9% above threshold</div>
                     </div>
@@ -214,7 +248,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
                     <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', display: 'flex', gap: '10px', alignItems: 'center' }}>
                       <input type="number" className="input" value={settings.pensionPercent} onChange={(e) => updateSettings({ pensionPercent: e.target.value })} style={{ width: '80px' }} placeholder="%" />
                       <span style={{ fontSize: '13px', color: tc.muted }}>% contribution</span>
-                      <InfoTip text="Pre-tax: contributions come out before tax is calculated, reducing your tax bill. Post-tax: contributions come out after tax — you may be able to claim relief via Self Assessment." />
+                      <InfoTip title="Pension Contributions" text="Pre-tax: contributions come out before tax is calculated, reducing your tax bill. Post-tax: contributions come out after tax — you may be able to claim relief via Self Assessment." />
                       <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
                         {['pre', 'post'].map(t => (
                           <button key={t} onClick={() => updateSettings({ pensionPreTax: t === 'pre' })} style={{ padding: '4px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', border: (settings.pensionPreTax ? 'pre' : 'post') === t ? '1px solid var(--accent-primary)' : '1px solid var(--border)', background: (settings.pensionPreTax ? 'pre' : 'post') === t ? 'var(--info-tint)' : 'transparent', color: (settings.pensionPreTax ? 'pre' : 'post') === t ? 'var(--accent-primary)' : 'var(--text-muted)' }}>{t}-tax</button>
