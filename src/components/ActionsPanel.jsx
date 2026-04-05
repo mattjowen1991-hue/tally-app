@@ -160,11 +160,12 @@ function DeductionRow({ label, sublabel, enabled, onToggle, color, tip }) {
 function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly, breakdown, totalDeductions, grossYearly, newDeduction, setNewDeduction, addCustomDeduction, removeDeduction, toggleDeduction, onApply }) {
   const touchStartX = React.useRef(null);
   const touchStartY = React.useRef(null);
+  const modalRef = React.useRef(null);
 
   React.useEffect(() => {
     if (show) {
       document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'pan-y';
+      document.body.style.touchAction = 'none';
     } else {
       document.body.style.overflow = '';
       document.body.style.touchAction = '';
@@ -175,29 +176,39 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
     };
   }, [show]);
 
-  const handleTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  };
+  React.useEffect(() => {
+    if (!show || !modalRef.current) return;
+    const el = modalRef.current;
 
-  const handleTouchEnd = (e) => {
-    if (touchStartX.current === null) return;
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
-    // Swipe left (dx < -60) and mostly horizontal (not a vertical scroll)
-    if (dx < -60 && dy < 60) onClose();
-    touchStartX.current = null;
-    touchStartY.current = null;
-  };
+    const onStart = (e) => {
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+    };
+    const onEnd = (e) => {
+      if (touchStartX.current === null) return;
+      const dx = e.changedTouches[0].clientX - touchStartX.current;
+      const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
+      if (dx < -60 && dy < 80) onClose();
+      touchStartX.current = null;
+      touchStartY.current = null;
+    };
+
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchend', onEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchend', onEnd);
+    };
+  }, [show, onClose]);
 
   if (!show) return null;
   const gross = parseFloat(settings.gross) || 0;
   const netYearly = netMonthly * 12;
 
   return ReactDOM.createPortal(
-    <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', touchAction: 'pan-x' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
-      <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-secondary)', borderRadius: '24px 24px 0 0', maxHeight: '92vh', display: 'flex', flexDirection: 'column', animation: 'slideInUp 0.25s ease', touchAction: 'pan-x pan-y' }}>
+      <div ref={modalRef} style={{ position: 'relative', zIndex: 1, background: 'var(--bg-secondary)', borderRadius: '24px 24px 0 0', maxHeight: '92vh', display: 'flex', flexDirection: 'column', animation: 'slideInUp 0.25s ease' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 20px 0', flexShrink: 0 }}>
