@@ -164,7 +164,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
   React.useEffect(() => {
     if (show) {
       document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
+      document.body.style.touchAction = 'pan-y';
     } else {
       document.body.style.overflow = '';
       document.body.style.touchAction = '';
@@ -195,9 +195,9 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
   const netYearly = netMonthly * 12;
 
   return ReactDOM.createPortal(
-    <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+    <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', touchAction: 'pan-x' }}>
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
-      <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-secondary)', borderRadius: '24px 24px 0 0', maxHeight: '92vh', display: 'flex', flexDirection: 'column', animation: 'slideInUp 0.25s ease' }}>
+      <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-secondary)', borderRadius: '24px 24px 0 0', maxHeight: '92vh', display: 'flex', flexDirection: 'column', animation: 'slideInUp 0.25s ease', touchAction: 'pan-x pan-y' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 20px 0', flexShrink: 0 }}>
