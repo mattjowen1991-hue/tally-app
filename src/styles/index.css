@@ -693,7 +693,7 @@ body.modal-open {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: none;
-    padding-bottom: 120px;
+    padding-bottom: 40px;
   }
 
   .input {
