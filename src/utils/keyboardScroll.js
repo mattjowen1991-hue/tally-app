@@ -18,10 +18,11 @@ export function initKeyboardScroll() {
       const modal = el.closest('.modal-content');
       const elRect = el.getBoundingClientRect();
       const visibleBottom = window.innerHeight - Math.max(keyboardHeight, 0);
-      
-      // If the element is below the visible area (behind keyboard), scroll it up
-      if (elRect.bottom > visibleBottom - 20) {
-        const scrollAmount = elRect.bottom - visibleBottom + 80;
+      const scrollAmount = elRect.bottom - visibleBottom + 80;
+
+      console.log('[KB] field:', el.placeholder, 'elBottom:', Math.round(elRect.bottom), 'visibleBottom:', Math.round(visibleBottom), 'keyboardH:', Math.round(keyboardHeight), 'scrollBy:', Math.round(scrollAmount));
+
+      if (scrollAmount > 0) {
         modal.scrollTop += scrollAmount;
       }
     }, 350);
