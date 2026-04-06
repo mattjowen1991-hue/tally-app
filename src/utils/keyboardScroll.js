@@ -1,10 +1,11 @@
 export function initKeyboardScroll() {
   if (!window.visualViewport) return;
 
+  // Capture the full screen height once on load, before any keyboard interaction
+  const fullHeight = window.screen.height;
+
   window.visualViewport.addEventListener('resize', () => {
-    // The keyboard height is the difference between the full window height
-    // and the current visual viewport height (what's visible above the keyboard)
-    const keyboardHeight = window.innerHeight - window.visualViewport.height;
+    const keyboardHeight = fullHeight - window.visualViewport.height;
     if (keyboardHeight > 50) {
       document.documentElement.style.setProperty('--keyboard-height', `${keyboardHeight}px`);
     } else {
