@@ -821,11 +821,12 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
         {showImportModal && (
           <CSVImportModal
             onClose={() => setShowImportModal(false)}
-            onComplete={({ bills: newBills, debts: newDebts, savings: newSavings }) => {
-              if (newBills?.length)   setBills(prev => [...prev, ...newBills]);
-              if (newDebts?.length)   setDebts(prev => [...prev, ...newDebts]);
-              if (newSavings?.length) setSavings(prev => [...prev, ...newSavings]);
-              setShowImportModal(false);
+            onComplete={({ bills: newBills, debts: newDebts, savings: newSavings, partial }) => {
+              // For partial (one-by-one) adds, merge without duplicating already-added items
+              if (newBills?.length)   setBills(prev => { const ids = new Set(prev.map(x => x.id)); return [...prev, ...newBills.filter(x => !ids.has(x.id))]; });
+              if (newDebts?.length)   setDebts(prev => { const ids = new Set(prev.map(x => x.id)); return [...prev, ...newDebts.filter(x => !ids.has(x.id))]; });
+              if (newSavings?.length) setSavings(prev => { const ids = new Set(prev.map(x => x.id)); return [...prev, ...newSavings.filter(x => !ids.has(x.id))]; });
+              if (!partial) setShowImportModal(false);
             }}
           />
         )}
