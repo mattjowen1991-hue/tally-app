@@ -1,10 +1,9 @@
 export function initKeyboardScroll() {
   if (!window.visualViewport) return;
 
-  // Sample the viewport height continuously so we always have a recent "before keyboard" value
   let recentHeight = window.visualViewport.height;
-  let samplingInterval = setInterval(() => {
-    // Only update when no keyboard is open (height close to full screen)
+
+  setInterval(() => {
     const h = window.visualViewport.height;
     if (h > recentHeight * 0.85) {
       recentHeight = h;
@@ -14,6 +13,7 @@ export function initKeyboardScroll() {
   window.visualViewport.addEventListener('resize', () => {
     const currentHeight = window.visualViewport.height;
     const keyboardHeight = recentHeight - currentHeight;
+    console.log('[KB] resize - recent:', recentHeight, 'current:', currentHeight, 'keyboard:', keyboardHeight);
 
     if (keyboardHeight > 50) {
       document.documentElement.style.setProperty('--keyboard-height', `${keyboardHeight}px`);
@@ -22,7 +22,4 @@ export function initKeyboardScroll() {
       recentHeight = currentHeight;
     }
   });
-
-  // Clean up interval if needed
-  return () => clearInterval(samplingInterval);
 }
