@@ -1,41 +1,67 @@
 export function initKeyboardScroll() {
   if (!window.visualViewport) return;
 
-  let recentHeight = window.visualViewport.height;
-  let keyboardHeight = 0;
+  function scrollFieldIntoView(el, modal) {
+    const vv = window.visualViewport;
+    const modalRect = modal.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
 
-  setInterval(() => {
-    const h = window.visualViewport.height;
-    if (h > recentHeight * 0.85) recentHeight = h;
-  }, 100);
+    // Visible bottom INSIDE the modal, accounting for visualViewport offset
+    const visibleBottomInModal =
+      (vv.height + vv.offsetTop) - modalRect.top;
 
-  window.visualViewport.addEventListener('resize', () => {
-    keyboardHeight = recentHeight - window.visualViewport.height;
-    const modals = document.querySelectorAll('.modal-content');
-    if (keyboardHeight > 50) {
-      // Keyboard open: set padding to keyboard height so content is scrollable past it
-      modals.forEach(el => { el.style.paddingBottom = `${keyboardHeight}px`; });
-    } else {
-      // Keyboard closed: reset padding
-      keyboardHeight = 0;
-      modals.forEach(el => { el.style.paddingBottom = ''; });
-      recentHeight = window.visualViewport.height;
+    // Element bottom in modal coordinates
+    const elBottomInModal = elRect.bottom - modalRect.top;
+
+    const delta = elBottomInModal - visibleBottomInModal + 24;
+    if (delta > 0) {
+      modal.scrollTop += delta;
     }
+  }
+
+  function layoutModal(modal) {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const topOffset = 28;
+    modal.style.top = `${topOffset}px`;
+    modal.style.height = `${vv.height - topOffset}px`;
+    modal.style.bottom = 'auto';
+  }
+
+  function resetModal(modal) {
+    modal.style.top = '';
+    modal.style.height = '';
+    modal.style.bottom = '';
+  }
+
+  // Resize modal to fit visible viewport when keyboard opens/closes
+  window.visualViewport.addEventListener('resize', () => {
+    document.querySelectorAll('.modal-content').forEach(modal => {
+      const vv = window.visualViewport;
+      const keyboardOpen = vv.height < window.screen.height * 0.75;
+      if (keyboardOpen) {
+        layoutModal(modal);
+      } else {
+        resetModal(modal);
+      }
+    });
   });
 
+  // Scroll focused field into view using double rAF to wait for viewport to settle
+  let raf1, raf2;
   document.addEventListener('focusin', (e) => {
     const el = e.target;
-    if (!el.closest('.modal-content')) return;
     if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return;
+    const modal = el.closest('.modal-content');
+    if (!modal) return;
 
-    setTimeout(() => {
-      const modal = el.closest('.modal-content');
-      const elRect = el.getBoundingClientRect();
-      const visibleBottom = window.visualViewport.height;
-      const scrollAmount = elRect.bottom - visibleBottom + 80;
-      if (scrollAmount > 0) {
-        modal.scrollTop += scrollAmount;
-      }
-    }, 500);
+    cancelAnimationFrame(raf1);
+    cancelAnimationFrame(raf2);
+
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        scrollFieldIntoView(el, modal);
+      });
+    });
   }, true);
 }
