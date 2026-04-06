@@ -687,7 +687,34 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const handleArchiveDebt = (id) => { setDebts(debts.map((d) => d.id !== id ? d : { ...d, archived: true, archivedAt: d.archivedAt || new Date().toISOString() })); haptic.success(); toast('Debt archived', 'success'); };
   const handleUnarchiveDebt = (id) => { setDebts(debts.map((d) => d.id !== id ? d : { ...d, archived: false })); haptic.medium(); toast('Debt restored', 'info'); };
   const handleDebtEditStart = (debt) => { setEditingDebtId(debt.id); setEditDebtForm({ ...debt }); };
-  const handleDebtEditSave = () => { setDebts(debts.map((d) => d.id === editingDebtId ? { ...editDebtForm, totalAmount: parseFloat(editDebtForm.totalAmount) || 0, interestRate: parseFloat(editDebtForm.interestRate) || 0, minimumPayment: parseFloat(editDebtForm.minimumPayment) || 0, recurringPayment: parseFloat(editDebtForm.recurringPayment) || 0, installmentMonths: parseInt(editDebtForm.installmentMonths) || 0, bnplPromoMonths: parseInt(editDebtForm.bnplPromoMonths) || 0, bnplPostInterest: parseFloat(editDebtForm.bnplPostInterest) || 0, bnplPostPayment: parseFloat(editDebtForm.bnplPostPayment) || 0, paymentDate: editDebtForm.paymentDate ? String(Math.min(31, Math.max(1, parseInt(editDebtForm.paymentDate) || 0))) : '' } : d)); setEditingDebtId(null); setEditDebtForm({}); haptic.medium(); toast('Debt updated', 'success'); };
+  const handleDebtEditSave = () => {
+    setDebts(debts.map((d) => {
+      if (d.id !== editingDebtId) return d;
+      const newTotal = parseFloat(editDebtForm.totalAmount) || 0;
+      // If user increased the total debt amount, update originalAmount too
+      // so the progress bar doesn't show false progress
+      const newOriginal = newTotal > (d.originalAmount || d.totalAmount)
+        ? newTotal
+        : (d.originalAmount || d.totalAmount);
+      return {
+        ...editDebtForm,
+        totalAmount: newTotal,
+        originalAmount: newOriginal,
+        interestRate: parseFloat(editDebtForm.interestRate) || 0,
+        minimumPayment: parseFloat(editDebtForm.minimumPayment) || 0,
+        recurringPayment: parseFloat(editDebtForm.recurringPayment) || 0,
+        installmentMonths: parseInt(editDebtForm.installmentMonths) || 0,
+        bnplPromoMonths: parseInt(editDebtForm.bnplPromoMonths) || 0,
+        bnplPostInterest: parseFloat(editDebtForm.bnplPostInterest) || 0,
+        bnplPostPayment: parseFloat(editDebtForm.bnplPostPayment) || 0,
+        paymentDate: editDebtForm.paymentDate ? String(Math.min(31, Math.max(1, parseInt(editDebtForm.paymentDate) || 0))) : '',
+      };
+    }));
+    setEditingDebtId(null);
+    setEditDebtForm({});
+    haptic.medium();
+    toast('Debt updated', 'success');
+  };
   const handleMakePayment = (debtId) => { const amount = parseFloat(debtPaymentAmounts[debtId]); if (!amount || amount <= 0) return; const debt = debts.find(d => d.id === debtId); const newTotal = Math.max(0, (debt?.totalAmount || 0) - amount); setDebts(debts.map((d) => d.id !== debtId ? d : { ...d, totalAmount: newTotal, payments: [...(d.payments || []), { date: new Date().toISOString(), amount, type: 'manual' }] })); setDebtPaymentAmounts({ ...debtPaymentAmounts, [debtId]: '' }); haptic.success(); if (newTotal === 0) { toast('🎉 Debt paid off!', 'success'); setTimeout(() => { setDebts(prev => prev.map(d => d.id !== debtId ? d : { ...d, archived: true, archivedAt: new Date().toISOString() })); }, 1500); } else { toast(`${getSymbol(currencyCode)}${amount.toFixed(2)} payment made`, 'success'); } };
   const calculatePayoff = (debt, monthlyPayment) => { if (!monthlyPayment || monthlyPayment <= 0 || debt.totalAmount <= 0) return null; const r = (debt.interestRate || 0) / 100 / 12; let bal = debt.totalAmount, m = 0, ti = 0; while (bal > 0 && m < 600) { const i = bal * r; ti += i; bal = bal + i - monthlyPayment; m++; if (monthlyPayment <= i) return { months: Infinity, totalInterest: Infinity }; } return { months: m, totalInterest: ti, totalPaid: debt.totalAmount + ti }; };
 
