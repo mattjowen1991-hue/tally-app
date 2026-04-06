@@ -2,6 +2,7 @@ export function initKeyboardScroll() {
   if (!window.visualViewport) return;
 
   let recentHeight = window.visualViewport.height;
+  let keyboardHeight = 0;
 
   setInterval(() => {
     const h = window.visualViewport.height;
@@ -9,11 +10,17 @@ export function initKeyboardScroll() {
   }, 100);
 
   window.visualViewport.addEventListener('resize', () => {
-    const keyboardHeight = recentHeight - window.visualViewport.height;
-    // Set padding-bottom to exactly keyboard height so no gap is visible
-    document.querySelectorAll('.modal-content').forEach(el => {
-      el.style.paddingBottom = keyboardHeight > 50 ? `${keyboardHeight}px` : '24px';
-    });
+    keyboardHeight = recentHeight - window.visualViewport.height;
+    const modals = document.querySelectorAll('.modal-content');
+    if (keyboardHeight > 50) {
+      // Keyboard open: set padding to keyboard height so content is scrollable past it
+      modals.forEach(el => { el.style.paddingBottom = `${keyboardHeight}px`; });
+    } else {
+      // Keyboard closed: reset padding
+      keyboardHeight = 0;
+      modals.forEach(el => { el.style.paddingBottom = ''; });
+      recentHeight = window.visualViewport.height;
+    }
   });
 
   document.addEventListener('focusin', (e) => {
