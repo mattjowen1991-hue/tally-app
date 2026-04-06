@@ -3,7 +3,6 @@ import * as Icons from './Icons';
 import haptic from '../utils/haptics';
 import { tc } from '../utils/themeColors';
 import { applyTheme } from '../utils/theme';
-
 const CURRENCY_OPTIONS = [
   { code: 'GBP', symbol: '£', flag: '🇬🇧' },
   { code: 'USD', symbol: '$', flag: '🇺🇸' },
@@ -96,7 +95,7 @@ export default function OnboardingFlow({ onComplete, onSelectCurrency }) {
           cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
           fontSize: '13px', color: 'var(--text-muted)',
         }}>
-          {theme === 'dark' ? '☀️' : '🌙'}
+          {theme === 'dark' ? <Icons.Sun size={16} /> : <Icons.Moon size={16} />}
         </button>
       </div>
 

@@ -294,3 +294,18 @@ export const TallyWordmark = ({ width = 190 }) => (
     </text>
   </svg>
 );
+
+export const Sun = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} className={className}>
+    <rect x="2" y="2" width="20" height="20" rx="6" fill="currentColor" opacity="0.12"/>
+    <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="1.75"/>
+    <path d="M12 5v1.5M12 17.5V19M5 12H6.5M17.5 12H19M7.05 7.05l1.06 1.06M15.89 15.89l1.06 1.06M7.05 16.95l1.06-1.06M15.89 8.11l1.06-1.06" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+  </svg>
+);
+
+export const Moon = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} className={className}>
+    <rect x="2" y="2" width="20" height="20" rx="6" fill="currentColor" opacity="0.12"/>
+    <path d="M12.5 6.5A6 6 0 0 0 17.5 17 6 6 0 1 1 8 7.5a6 6 0 0 0 4.5-1z" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
