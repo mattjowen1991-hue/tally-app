@@ -1,13 +1,6 @@
 export function initKeyboardScroll() {
   if (!window.visualViewport) return;
 
-  let recentHeight = window.visualViewport.height;
-
-  setInterval(() => {
-    const h = window.visualViewport.height;
-    if (h > recentHeight * 0.85) recentHeight = h;
-  }, 100);
-
   document.addEventListener('focusin', (e) => {
     const el = e.target;
     if (!el.closest('.modal-content')) return;
@@ -16,15 +9,22 @@ export function initKeyboardScroll() {
     setTimeout(() => {
       const modal = el.closest('.modal-content');
       const elRect = el.getBoundingClientRect();
-      // Use visualViewport.height directly - this is the actual visible area above keyboard
       const visibleBottom = window.visualViewport.height;
       const scrollAmount = elRect.bottom - visibleBottom + 80;
-
-      console.log('[KB] field:', el.placeholder, 'elBottom:', Math.round(elRect.bottom), 'visibleBottom:', Math.round(visibleBottom), 'scrollBy:', Math.round(scrollAmount));
+      const scrollBefore = modal.scrollTop;
 
       if (scrollAmount > 0) {
         modal.scrollTop += scrollAmount;
       }
+
+      console.log('[KB] field:', el.placeholder, 
+        'elBottom:', Math.round(elRect.bottom), 
+        'visibleBottom:', Math.round(visibleBottom),
+        'scrollBy:', Math.round(scrollAmount),
+        'scrollBefore:', Math.round(scrollBefore),
+        'scrollAfter:', Math.round(modal.scrollTop),
+        'modalScrollHeight:', modal.scrollHeight,
+        'modalClientHeight:', modal.clientHeight);
     }, 500);
   }, true);
 }
