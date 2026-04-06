@@ -131,6 +131,22 @@ html {
   background: var(--bg-primary);
 }
 
+/* Prevent text selection / copy menu throughout the app */
+* {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Re-enable selection only for actual text inputs */
+input, textarea, [contenteditable] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
 body {
   font-family: 'DM Sans', sans-serif;
   background: var(--bg-primary);
