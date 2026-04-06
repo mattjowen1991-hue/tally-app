@@ -13,6 +13,7 @@ import SettingsModal from './components/SettingsModal';
 import CurrencyPrompt from './components/CurrencyPrompt';
 import OnboardingFlow from './components/OnboardingFlow';
 import CSVImportModal from './components/CSVImportModal';
+import { initKeyboardScroll } from './utils/keyboardScroll';
 import { CurrencyProvider } from './components/CurrencyContext';
 import { getSymbol, loadCurrencyPreference, saveCurrencyPreference, CURRENCIES } from './utils/currency';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -41,6 +42,7 @@ function AppContent() {
   const toast = useToast();
   // ── Theme ──
   const [theme, setTheme] = useState(() => initTheme());
+  useEffect(() => { initKeyboardScroll(); }, []);
   useEffect(() => { (async () => {
     const color = theme === 'light' ? '#f1f5f9' : '#0a0e27';
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
