@@ -7,7 +7,6 @@ import useSwipe from './hooks/useSwipe';
 import haptic from './utils/haptics';
 import { ToastProvider, useToast } from './components/Toast';
 import { initTheme, toggleTheme } from './utils/theme';
-import { initKeyboardScroll } from './utils/keyboardScroll';
 import { auth, cloudData } from './utils/supabase';
 import AccountModal from './components/AccountModal';
 import SettingsModal from './components/SettingsModal';
@@ -493,16 +492,6 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const anyModalOpen = showAddModal || showCategoryModal || showDebtModal || showSavingsModal || showAccountModal || showSettingsModal;
 
   useEffect(() => {
-    if (anyModalOpen) {
-      document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.touchAction = '';
-    }
-  }, [anyModalOpen]);
-
-  useEffect(() => {
     if (!anyModalOpen) return;
     window.history.pushState({ modal: true }, '');
     const handlePopState = () => {
@@ -520,7 +509,6 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // ── Load data ──
   useEffect(() => { loadData(); }, []);
-  useEffect(() => initKeyboardScroll(), []);
 
   const loadData = async () => {
     try {
