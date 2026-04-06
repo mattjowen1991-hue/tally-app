@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import * as Icons from './Icons';
 import haptic from '../utils/haptics';
 import { tc } from '../utils/themeColors';
+import { applyTheme } from '../utils/theme';
 
 const CURRENCY_OPTIONS = [
   { code: 'GBP', symbol: '£', flag: '🇬🇧' },
@@ -30,6 +31,14 @@ export default function OnboardingFlow({ onComplete, onSelectCurrency }) {
   const [step, setStep] = useState(0);
   const [selectedCurrency, setSelectedCurrency] = useState(null);
   const [income, setIncome] = useState('');
+  const [theme, setTheme] = useState(() => document.documentElement.getAttribute('data-theme') || 'dark');
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    applyTheme(next);
+    haptic.light();
+  };
 
   const totalSteps = 4;
 
@@ -59,20 +68,36 @@ export default function OnboardingFlow({ onComplete, onSelectCurrency }) {
       padding: '0',
       overflow: 'hidden',
     }}>
-      {/* Progress dots */}
+      {/* Top bar — progress dots + theme toggle */}
       <div style={{
-        display: 'flex', justifyContent: 'center', gap: '6px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
         paddingTop: 'calc(env(safe-area-inset-top) + 16px)',
-        paddingBottom: '8px', flexShrink: 0,
+        paddingBottom: '8px', paddingLeft: '20px', paddingRight: '20px',
+        flexShrink: 0, position: 'relative',
       }}>
-        {Array.from({ length: totalSteps }).map((_, i) => (
-          <div key={i} style={{
-            width: i === step ? '24px' : '6px', height: '6px',
-            borderRadius: '3px',
-            background: i === step ? 'var(--accent-primary)' : 'var(--border)',
-            transition: 'all 0.3s ease',
-          }} />
-        ))}
+        {/* Progress dots — centred */}
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {Array.from({ length: totalSteps }).map((_, i) => (
+            <div key={i} style={{
+              width: i === step ? '24px' : '6px', height: '6px',
+              borderRadius: '3px',
+              background: i === step ? 'var(--accent-primary)' : 'var(--border)',
+              transition: 'all 0.3s ease',
+            }} />
+          ))}
+        </div>
+
+        {/* Theme toggle — top right */}
+        <button onClick={toggleTheme} style={{
+          position: 'absolute', right: '20px',
+          background: 'rgba(255,255,255,0.06)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '20px', padding: '5px 10px',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+          fontSize: '13px', color: 'var(--text-muted)',
+        }}>
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
       </div>
 
       {/* Step content */}
