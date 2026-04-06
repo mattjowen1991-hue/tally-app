@@ -449,7 +449,8 @@ body.modal-open {
   -webkit-overflow-scrolling: touch;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
   animation: slideInUp 0.28s cubic-bezier(0.32, 0.72, 0, 1);
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--keyboard-height, 0px));
+  transition: padding-bottom 0.15s ease;
 }
 /* ── Swipe Navigation ── */
 .swipe-container {
@@ -689,7 +690,8 @@ body.modal-open {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: none;
-    padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
+    padding-bottom: calc(env(safe-area-inset-bottom) + var(--keyboard-height, 0px) + 16px);
+    transition: padding-bottom 0.15s ease;
   }
 
   .input {
