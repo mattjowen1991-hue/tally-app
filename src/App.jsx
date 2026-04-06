@@ -708,15 +708,23 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     <CurrencyProvider currencySymbol={getSymbol(currencyCode)}>
     {showOnboarding && (
       <OnboardingFlow
-        onComplete={({ currencyCode: code, income: inc }) => {
+        onComplete={({ currencyCode: code, income: inc, importedData }) => {
           if (code) { setCurrencyCode(code); saveCurrencyPreference(code); }
           else { setCurrencyCode('GBP'); saveCurrencyPreference('GBP'); }
           if (inc > 0) setIncome(inc);
+          // Apply any imported bills/debts/savings
+          if (importedData) {
+            if (importedData.bills?.length)   setBills(prev => [...prev, ...importedData.bills]);
+            if (importedData.debts?.length)   setDebts(prev => [...prev, ...importedData.debts]);
+            if (importedData.savings?.length) setSavings(prev => [...prev, ...importedData.savings]);
+          }
           setShowOnboarding(false);
-          // Go straight to Bills and open Add Bill modal
+          // Go straight to Bills — open Add Bill if no bills were imported
           setTimeout(() => {
             goToPanel(2);
-            setTimeout(() => setShowAddModal(true), 300);
+            if (!importedData?.bills?.length) {
+              setTimeout(() => setShowAddModal(true), 300);
+            }
           }, 100);
         }}
         onSelectCurrency={(code) => { setCurrencyCode(code); saveCurrencyPreference(code); }}

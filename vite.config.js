@@ -6,6 +6,9 @@ export default defineConfig({
   build: {
     outDir: 'www',
     emptyOutDir: true,
+    rollupOptions: {
+      external: ['@capawesome/capacitor-file-picker'],
+    },
   },
   server: {
     port: 3000,
