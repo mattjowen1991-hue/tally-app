@@ -103,6 +103,9 @@ export default function SavingsPanel({
                         <button className="btn btn-primary" onClick={handleSavingsEditSave} style={{ flex: 1 }}><Icons.Check size={18} /> Save</button>
                         <button className="btn btn-secondary" onClick={() => setEditingSavingsId(null)} style={{ flex: 1 }}><Icons.X size={18} /> Cancel</button>
                       </div>
+                      <button onClick={() => { setEditingSavingsId(null); handleDeleteSavings(goal.id); }} style={{ width: '100%', marginTop: '8px', padding: '9px', background: tc.dangerTintLight, border: `1px solid ${tc.dangerTintStrong}`, borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: tc.danger }}>
+                        Delete goal
+                      </button>
                     </div>
                   ) : (
                     <div>
@@ -121,9 +124,6 @@ export default function SavingsPanel({
                             <span style={{ fontWeight: '600', fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{goal.name}</span>
                             <button onClick={() => handleSavingsEditStart(goal)} style={{ width: '22px', height: '22px', borderRadius: '5px', border: '1px solid var(--accent-primary)', background: 'var(--info-tint)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)', flexShrink: 0 }}>
                               <Icons.Edit size={12} />
-                            </button>
-                            <button onClick={() => handleDeleteSavings(goal.id)} style={{ width: '22px', height: '22px', borderRadius: '5px', border: `1px solid ${tc.dangerTintStrong}`, background: tc.dangerTintLight, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: tc.danger, flexShrink: 0 }}>
-                              <Icons.X size={12} />
                             </button>
                           </div>
                           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>{goal.category || 'Savings'}</div>
