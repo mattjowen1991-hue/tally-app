@@ -13,14 +13,15 @@ export function initKeyboardScroll() {
     const keyboardHeight = recentHeight - currentHeight;
 
     if (keyboardHeight > 50) {
-      // Keyboard opened - scroll focused element into view above keyboard
-      setTimeout(() => {
-        const el = document.activeElement;
-        if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 50);
+      // Keyboard open - add padding so content scrolls above keyboard
+      document.querySelectorAll('.modal-content').forEach(el => {
+        el.style.paddingBottom = `${keyboardHeight + 24}px`;
+      });
     } else {
+      // Keyboard closed - remove all padding
+      document.querySelectorAll('.modal-content').forEach(el => {
+        el.style.paddingBottom = '24px';
+      });
       recentHeight = currentHeight;
     }
   });

@@ -698,7 +698,6 @@ body.modal-open {
     overscroll-behavior: contain;
     padding-top: 16px;
     padding-bottom: 24px;
-    transition: none;
   }
 
   .input {
