@@ -13,7 +13,6 @@ export function initKeyboardScroll() {
   window.visualViewport.addEventListener('resize', () => {
     const currentHeight = window.visualViewport.height;
     const keyboardHeight = recentHeight - currentHeight;
-    console.log('[KB] resize - recent:', recentHeight, 'current:', currentHeight, 'keyboard:', keyboardHeight);
 
     if (keyboardHeight > 50) {
       document.documentElement.style.setProperty('--keyboard-height', `${keyboardHeight}px`);
