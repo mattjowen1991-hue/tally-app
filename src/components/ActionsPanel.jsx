@@ -115,20 +115,21 @@ function InfoTip({ text, title }) {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: 'var(--bg-card)', borderRadius: '16px',
-              border: '1px solid var(--border)',
+              background: '#1a1f3a',
+              borderRadius: '16px',
+              border: '1px solid rgba(255,255,255,0.12)',
               padding: '20px', maxWidth: '320px', width: '100%',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.8)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: title ? '12px' : '0' }}>
-              {title && <span style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>{title}</span>}
+              {title && <span style={{ fontSize: '15px', fontWeight: '600', color: '#e2e8f0' }}>{title}</span>}
               <button
                 onClick={() => setOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '18px', padding: '0', marginLeft: 'auto', lineHeight: 1 }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: '18px', padding: '0', marginLeft: 'auto', lineHeight: 1 }}
               >✕</button>
             </div>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>{text}</p>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, margin: 0 }}>{text}</p>
             <button
               onClick={() => setOpen(false)}
               className="btn btn-primary"
