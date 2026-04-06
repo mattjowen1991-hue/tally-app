@@ -683,8 +683,6 @@ body.modal-open {
 
   .modal-content {
     max-width: 100%;
-    height: auto;
-    max-height: 92dvh;
     max-height: 92vh;
     margin: 0;
     border-radius: 24px 24px 0 0;
@@ -695,8 +693,7 @@ body.modal-open {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: none;
-    padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
-    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    padding-bottom: 300px;
   }
 
   .input {
