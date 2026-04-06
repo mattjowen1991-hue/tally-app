@@ -122,6 +122,9 @@ export default function SavingsPanel({
                             <button onClick={() => handleSavingsEditStart(goal)} style={{ width: '22px', height: '22px', borderRadius: '5px', border: '1px solid var(--accent-primary)', background: 'var(--info-tint)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)', flexShrink: 0 }}>
                               <Icons.Edit size={12} />
                             </button>
+                            <button onClick={() => handleDeleteSavings(goal.id)} style={{ width: '22px', height: '22px', borderRadius: '5px', border: `1px solid ${tc.dangerTintStrong}`, background: tc.dangerTintLight, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: tc.danger, flexShrink: 0 }}>
+                              <Icons.X size={12} />
+                            </button>
                           </div>
                           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>{goal.category || 'Savings'}</div>
                         </div>
