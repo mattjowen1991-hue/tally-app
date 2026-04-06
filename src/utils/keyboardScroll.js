@@ -14,13 +14,13 @@ export function initKeyboardScroll() {
     if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return;
 
     setTimeout(() => {
-      const keyboardHeight = recentHeight - window.visualViewport.height;
       const modal = el.closest('.modal-content');
       const elRect = el.getBoundingClientRect();
-      const visibleBottom = window.innerHeight - Math.max(keyboardHeight, 0);
+      // Use visualViewport.height directly - this is the actual visible area above keyboard
+      const visibleBottom = window.visualViewport.height;
       const scrollAmount = elRect.bottom - visibleBottom + 80;
 
-      console.log('[KB] field:', el.placeholder, 'elBottom:', Math.round(elRect.bottom), 'visibleBottom:', Math.round(visibleBottom), 'keyboardH:', Math.round(keyboardHeight), 'scrollBy:', Math.round(scrollAmount));
+      console.log('[KB] field:', el.placeholder, 'elBottom:', Math.round(elRect.bottom), 'visibleBottom:', Math.round(visibleBottom), 'scrollBy:', Math.round(scrollAmount));
 
       if (scrollAmount > 0) {
         modal.scrollTop += scrollAmount;
