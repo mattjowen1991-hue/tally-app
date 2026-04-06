@@ -1,26 +1,28 @@
 export function initKeyboardScroll() {
   if (!window.visualViewport) return;
 
-  let baselineHeight = window.visualViewport.height;
-
-  document.addEventListener('focusin', (e) => {
-    const isTextInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
-    if (isTextInput) {
-      baselineHeight = window.visualViewport.height;
+  // Sample the viewport height continuously so we always have a recent "before keyboard" value
+  let recentHeight = window.visualViewport.height;
+  let samplingInterval = setInterval(() => {
+    // Only update when no keyboard is open (height close to full screen)
+    const h = window.visualViewport.height;
+    if (h > recentHeight * 0.85) {
+      recentHeight = h;
     }
-  }, true);
+  }, 100);
 
   window.visualViewport.addEventListener('resize', () => {
-    // Small delay so focusin always fires and updates baseline before we calculate
-    setTimeout(() => {
-      const currentHeight = window.visualViewport.height;
-      const keyboardHeight = baselineHeight - currentHeight;
+    const currentHeight = window.visualViewport.height;
+    const keyboardHeight = recentHeight - currentHeight;
 
-      if (keyboardHeight > 50) {
-        document.documentElement.style.setProperty('--keyboard-height', `${keyboardHeight}px`);
-      } else {
-        document.documentElement.style.setProperty('--keyboard-height', '0px');
-      }
-    }, 50);
+    if (keyboardHeight > 50) {
+      document.documentElement.style.setProperty('--keyboard-height', `${keyboardHeight}px`);
+    } else {
+      document.documentElement.style.setProperty('--keyboard-height', '0px');
+      recentHeight = currentHeight;
+    }
   });
+
+  // Clean up interval if needed
+  return () => clearInterval(samplingInterval);
 }
