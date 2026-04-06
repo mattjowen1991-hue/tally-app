@@ -1,100 +1,93 @@
-// Smooth keyboard handling for modals
-// Only moves modal when a real text keyboard is open (not selects/dropdowns)
+// Keyboard handling for modals
+// Core principle: slide up ONCE on first text focus, stay locked, reset on modal close
 
 export function initKeyboardScroll() {
   const viewport = window.visualViewport;
   if (!viewport) return () => {};
 
-  let currentKeyboardHeight = 0;
-  let rafId = null;
-  let isTextInputFocused = false;
-
   const TEXT_INPUTS = ['text', 'number', 'email', 'tel', 'password', 'search', 'url'];
 
-  const isRealKeyboardInput = (el) => {
+  const isTextInput = (el) => {
     if (!el) return false;
     if (el.tagName === 'TEXTAREA') return true;
     if (el.tagName === 'INPUT' && TEXT_INPUTS.includes(el.type || 'text')) return true;
     return false;
   };
 
-  const onFocusIn = (e) => {
-    isTextInputFocused = isRealKeyboardInput(e.target);
+  // Lock the modal at its current position — called once when keyboard opens
+  const lockModalUp = () => {
+    const modals = document.querySelectorAll('.modal-content');
+    if (!modals.length) return;
+
+    const keyboardHeight = Math.max(0, window.innerHeight - viewport.height);
+    if (keyboardHeight < 100) return; // keyboard not actually open
+
+    modals.forEach(modal => {
+      // Only lock if not already locked
+      if (modal.dataset.keyboardLocked) return;
+      modal.dataset.keyboardLocked = 'true';
+      modal.style.transform = `translateY(-${keyboardHeight}px)`;
+      modal.style.maxHeight = `${viewport.height - 8}px`;
+
+      // Scroll focused input into view within the modal
+      setTimeout(() => {
+        const el = document.activeElement;
+        if (!el) return;
+        const elRect = el.getBoundingClientRect();
+        const modalBottom = modal.getBoundingClientRect().bottom;
+        if (elRect.bottom > modalBottom - 20) {
+          modal.scrollTop += elRect.bottom - modalBottom + 80;
+        }
+      }, 100);
+    });
   };
 
-  const onFocusOut = () => {
-    isTextInputFocused = false;
-  };
-
-  const applyModalPosition = (keyboardHeight) => {
+  // Release all modals back to natural position
+  const unlockModals = () => {
     const modals = document.querySelectorAll('.modal-content');
     modals.forEach(modal => {
-      if (keyboardHeight > 100) {
-        modal.style.transform = `translateY(-${keyboardHeight}px)`;
-        modal.style.maxHeight = `${viewport.height - 8}px`;
-      } else {
-        modal.style.transform = 'translateY(0)';
-        modal.style.maxHeight = '';
-      }
+      if (!modal.dataset.keyboardLocked) return;
+      delete modal.dataset.keyboardLocked;
+      modal.style.transform = 'translateY(0)';
+      modal.style.maxHeight = '';
     });
   };
 
-  const onViewportResize = () => {
-    // Only respond if a real text input is focused
-    if (!isTextInputFocused) return;
-
-    if (rafId) cancelAnimationFrame(rafId);
-    rafId = requestAnimationFrame(() => {
-      const keyboardHeight = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
-
-      // Ignore tiny fluctuations (less than 50px change) to prevent bouncing
-      if (Math.abs(keyboardHeight - currentKeyboardHeight) < 50) return;
-
-      currentKeyboardHeight = keyboardHeight;
-      applyModalPosition(keyboardHeight);
-
-      // Scroll focused input into view
-      const el = document.activeElement;
-      if (el && keyboardHeight > 100) {
-        setTimeout(() => {
-          const modal = el.closest('.modal-content');
-          if (!modal) return;
-          const elRect = el.getBoundingClientRect();
-          const modalBottom = modal.getBoundingClientRect().bottom;
-          if (elRect.bottom > modalBottom - 20) {
-            modal.scrollTop += elRect.bottom - modalBottom + 80;
-          }
-        }, 50);
-      }
-    });
+  // When a text input is focused — lock modal up
+  const onFocusIn = (e) => {
+    if (isTextInput(e.target)) {
+      // Small delay to let keyboard finish opening
+      setTimeout(lockModalUp, 300);
+    }
   };
 
-  // When keyboard closes (focus leaves text input), reset modal position
-  const onKeyboardClose = () => {
-    if (rafId) cancelAnimationFrame(rafId);
-    rafId = requestAnimationFrame(() => {
-      currentKeyboardHeight = 0;
-      applyModalPosition(0);
-    });
+  // When focus leaves — check if we should unlock
+  const onFocusOut = () => {
+    setTimeout(() => {
+      // If focus moved to another text input, stay locked
+      if (isTextInput(document.activeElement)) return;
+      // If focus moved to a select/button/etc within modal, stay locked too
+      const modal = document.activeElement?.closest?.('.modal-content');
+      if (modal?.dataset.keyboardLocked) return;
+      // Focus left entirely — unlock
+      unlockModals();
+    }, 150);
   };
+
+  // Mutation observer to detect when modal is removed from DOM (closed)
+  // Reset any locked state when that happens
+  const observer = new MutationObserver(() => {
+    const modals = document.querySelectorAll('.modal-content');
+    if (!modals.length) unlockModals();
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
 
   document.addEventListener('focusin', onFocusIn);
-  document.addEventListener('focusout', (e) => {
-    onFocusOut();
-    // Small delay to check if focus moved to another text input
-    setTimeout(() => {
-      if (!isRealKeyboardInput(document.activeElement)) {
-        onKeyboardClose();
-      }
-    }, 100);
-  });
-
-  viewport.addEventListener('resize', onViewportResize);
+  document.addEventListener('focusout', onFocusOut);
 
   return () => {
     document.removeEventListener('focusin', onFocusIn);
     document.removeEventListener('focusout', onFocusOut);
-    viewport.removeEventListener('resize', onViewportResize);
-    if (rafId) cancelAnimationFrame(rafId);
+    observer.disconnect();
   };
 }
