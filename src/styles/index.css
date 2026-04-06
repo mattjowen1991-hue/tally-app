@@ -683,17 +683,13 @@ body.modal-open {
 
   .modal-content {
     max-width: 100%;
-    max-height: 92vh;
+    max-height: 85vh;
     margin: 0;
     border-radius: 24px 24px 0 0;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: none;
-    padding-bottom: max(40px, env(keyboard-inset-height, 40px));
+    padding-bottom: 80px;
   }
 
   .input {
