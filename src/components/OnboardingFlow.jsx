@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import * as Icons from './Icons';
 import haptic from '../utils/haptics';
 import { tc } from '../utils/themeColors';
-import CSVImportFlow from './CSVImportFlow';
 
 const CURRENCY_OPTIONS = [
   { code: 'GBP', symbol: '£', flag: '🇬🇧' },
@@ -31,7 +30,6 @@ export default function OnboardingFlow({ onComplete, onSelectCurrency }) {
   const [step, setStep] = useState(0);
   const [selectedCurrency, setSelectedCurrency] = useState(null);
   const [income, setIncome] = useState('');
-  const [showImport, setShowImport] = useState(false);
 
   const totalSteps = 4;
 
@@ -47,37 +45,8 @@ export default function OnboardingFlow({ onComplete, onSelectCurrency }) {
 
   const handleFinish = () => {
     haptic.success();
-    setShowImport(true);
+    onComplete({ currencyCode: selectedCurrency, income: parseFloat(income) || 0 });
   };
-
-  const handleImportComplete = (importedData) => {
-    onComplete({ currencyCode: selectedCurrency, income: parseFloat(income) || 0, importedData });
-  };
-
-  const handleImportSkip = () => {
-    onComplete({ currencyCode: selectedCurrency, income: parseFloat(income) || 0, importedData: null });
-  };
-
-  // Show CSV import step after income
-  if (showImport) return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'var(--bg-primary)',
-      display: 'flex', flexDirection: 'column' }}>
-      <div style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)', flexShrink: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '8px 20px' }}>
-          {[0,1,2,3,4].map(i => (
-            <div key={i} style={{ width: i === 4 ? '24px' : '6px', height: '6px', borderRadius: '3px',
-              background: i === 4 ? 'var(--accent-primary)' : 'var(--border)', transition: 'all 0.3s ease' }} />
-          ))}
-        </div>
-      </div>
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        <CSVImportFlow
-          onComplete={handleImportComplete}
-          onSkip={handleImportSkip}
-        />
-      </div>
-    </div>
-  );
 
   const canProceedStep2 = selectedCurrency !== null;
   const canProceedStep3 = true; // income is optional

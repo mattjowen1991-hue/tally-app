@@ -12,6 +12,7 @@ import AccountModal from './components/AccountModal';
 import SettingsModal from './components/SettingsModal';
 import CurrencyPrompt from './components/CurrencyPrompt';
 import OnboardingFlow from './components/OnboardingFlow';
+import CSVImportModal from './components/CSVImportModal';
 import { CurrencyProvider } from './components/CurrencyContext';
 import { getSymbol, loadCurrencyPreference, saveCurrencyPreference, CURRENCIES } from './utils/currency';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -86,6 +87,7 @@ function AppContent() {
   const [user, setUser] = useState(null);
   const [showAccountModal, setShowAccountModal] = useState(false);
 const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, synced, error
   const [lastSynced, setLastSynced] = useState(null);
   const syncTimeoutRef = useRef(null);
@@ -708,23 +710,15 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     <CurrencyProvider currencySymbol={getSymbol(currencyCode)}>
     {showOnboarding && (
       <OnboardingFlow
-        onComplete={({ currencyCode: code, income: inc, importedData }) => {
+        onComplete={({ currencyCode: code, income: inc }) => {
           if (code) { setCurrencyCode(code); saveCurrencyPreference(code); }
           else { setCurrencyCode('GBP'); saveCurrencyPreference('GBP'); }
           if (inc > 0) setIncome(inc);
-          // Apply any imported bills/debts/savings
-          if (importedData) {
-            if (importedData.bills?.length)   setBills(prev => [...prev, ...importedData.bills]);
-            if (importedData.debts?.length)   setDebts(prev => [...prev, ...importedData.debts]);
-            if (importedData.savings?.length) setSavings(prev => [...prev, ...importedData.savings]);
-          }
           setShowOnboarding(false);
-          // Go straight to Bills — open Add Bill if no bills were imported
+          // Go straight to Bills and open Add Bill modal
           setTimeout(() => {
             goToPanel(2);
-            if (!importedData?.bills?.length) {
-              setTimeout(() => setShowAddModal(true), 300);
-            }
+            setTimeout(() => setShowAddModal(true), 300);
           }, 100);
         }}
         onSelectCurrency={(code) => { setCurrencyCode(code); saveCurrencyPreference(code); }}
@@ -805,7 +799,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
               <ActionsPanel income={income} setIncome={setIncome} categoryTotals={categoryTotals} setShowAddModal={setShowAddModal} setShowDebtModal={setShowDebtModal} setShowSavingsModal={setShowSavingsModal} setShowCategoryModal={setShowCategoryModal} salaryCalc={salaryCalc} setSalaryCalc={setSalaryCalc} />
             </div>
             <div className={`swipe-panel ${activePanel === 2 ? 'panel-active' : ''}`}>
-              <BillsPanel categories={['ALL', ...categories]} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} statusFilter={statusFilter} setStatusFilter={setStatusFilter} filteredBills={filteredBills} editingId={editingId} editForm={editForm} setEditForm={setEditForm} handleEditStart={handleEditStart} handleEditSave={handleEditSave} handleDelete={handleDelete} handleTogglePaid={handleTogglePaid} handleToggleMissed={handleToggleMissed} handleTogglePaused={handleTogglePaused} setEditingId={setEditingId} categoryScrollRef={categoryScrollRef} billSearch={billSearch} setBillSearch={setBillSearch} billSort={billSort} setBillSort={setBillSort} onBulkDelete={handleBulkDeleteBills} onBulkTogglePaid={handleBulkTogglePaid} onBulkToggleMissed={handleBulkToggleMissed} onBulkTogglePaused={handleBulkTogglePaused} activePanel={activePanel} setShowAddModal={setShowAddModal} setShowCategoryModal={setShowCategoryModal} />
+              <BillsPanel categories={['ALL', ...categories]} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} statusFilter={statusFilter} setStatusFilter={setStatusFilter} filteredBills={filteredBills} editingId={editingId} editForm={editForm} setEditForm={setEditForm} handleEditStart={handleEditStart} handleEditSave={handleEditSave} handleDelete={handleDelete} handleTogglePaid={handleTogglePaid} handleToggleMissed={handleToggleMissed} handleTogglePaused={handleTogglePaused} setEditingId={setEditingId} categoryScrollRef={categoryScrollRef} billSearch={billSearch} setBillSearch={setBillSearch} billSort={billSort} setBillSort={setBillSort} onBulkDelete={handleBulkDeleteBills} onBulkTogglePaid={handleBulkTogglePaid} onBulkToggleMissed={handleBulkToggleMissed} onBulkTogglePaused={handleBulkTogglePaused} activePanel={activePanel} setShowAddModal={setShowAddModal} setShowCategoryModal={setShowCategoryModal} setShowImportModal={setShowImportModal} />
             </div>
             <div className={`swipe-panel ${activePanel === 3 ? 'panel-active' : ''}`}>
               <DebtPanel debts={debts} totalDebt={totalDebt} calculatePayoff={calculatePayoff} editingDebtId={editingDebtId} editDebtForm={editDebtForm} setEditDebtForm={setEditDebtForm} handleDebtEditStart={handleDebtEditStart} handleDebtEditSave={handleDebtEditSave} handleDeleteDebt={handleDeleteDebt} handleMakePayment={handleMakePayment} debtPaymentAmounts={debtPaymentAmounts} setDebtPaymentAmounts={setDebtPaymentAmounts} showDebtHistory={showDebtHistory} setShowDebtHistory={setShowDebtHistory} setEditingDebtId={setEditingDebtId} setShowDebtModal={setShowDebtModal} handleArchiveDebt={handleArchiveDebt} handleUnarchiveDebt={handleUnarchiveDebt} />
@@ -824,6 +818,17 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
       <AddSavingsModal show={showSavingsModal} onClose={() => setShowSavingsModal(false)} newSavingsGoal={newSavingsGoal} setNewSavingsGoal={setNewSavingsGoal} handleAddSavings={handleAddSavings} emptySavings={emptySavings} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
         <AccountModal show={showAccountModal} onClose={() => setShowAccountModal(false)} user={user} onSignIn={handleSignIn} onSignUp={handleSignUp} onSignOut={handleSignOut} onResetPassword={handleResetPassword} onGoogleSignIn={handleGoogleSignIn} syncStatus={syncStatus} onSyncNow={saveToCloud} onDeleteAccount={handleDeleteAccount} onClearLocalData={handleClearLocalData} lastSynced={lastSynced} />
         <SettingsModal show={showSettingsModal} onClose={() => setShowSettingsModal(false)} theme={theme} onToggleTheme={handleToggleTheme} notificationSettings={notificationSettings} onNotificationSettingsChange={setNotificationSettings} currencyCode={currencyCode} onCurrencyChange={(code) => { setCurrencyCode(code); saveCurrencyPreference(code); }} />
+        {showImportModal && (
+          <CSVImportModal
+            onClose={() => setShowImportModal(false)}
+            onComplete={({ bills: newBills, debts: newDebts, savings: newSavings }) => {
+              if (newBills?.length)   setBills(prev => [...prev, ...newBills]);
+              if (newDebts?.length)   setDebts(prev => [...prev, ...newDebts]);
+              if (newSavings?.length) setSavings(prev => [...prev, ...newSavings]);
+              setShowImportModal(false);
+            }}
+          />
+        )}
 
     </div>
     </CurrencyProvider>

@@ -311,7 +311,7 @@ export default function BillsPanel({
   handleDelete, handleTogglePaid, handleToggleMissed, handleTogglePaused, setEditingId, categoryScrollRef,
   billSearch, setBillSearch, billSort, setBillSort,
   onBulkDelete, onBulkTogglePaid, onBulkToggleMissed, onBulkTogglePaused, activePanel,
-  setShowAddModal, setShowCategoryModal,
+  setShowAddModal, setShowCategoryModal, setShowImportModal,
 }) {
   const cs = useCurrency();
   const [showSort, setShowSort] = useState(false);
@@ -407,12 +407,22 @@ export default function BillsPanel({
       </div>
 
       {/* Quick Add Buttons */}
-      <div className="animate-in" style={{ display: 'flex', gap: '8px', marginBottom: '12px', animationDelay: '0.65s' }}>
+      <div className="animate-in" style={{ display: 'flex', gap: '8px', marginBottom: '8px', animationDelay: '0.65s' }}>
         <button className="btn btn-primary" onClick={() => setShowAddModal(true)} style={{ flex: 1, justifyContent: 'center' }}>
           <Icons.Plus size={16} /> Add Bill
         </button>
         <button className="btn btn-secondary" onClick={() => setShowCategoryModal(true)} style={{ flex: 1, justifyContent: 'center' }}>
           Manage Categories
+        </button>
+      </div>
+      <div className="animate-in" style={{ marginBottom: '12px', animationDelay: '0.7s' }}>
+        <button onClick={() => setShowImportModal(true)} style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+          background: 'rgba(0,212,255,0.06)', border: '1px solid rgba(0,212,255,0.2)',
+          borderRadius: '12px', padding: '10px', cursor: 'pointer', color: 'var(--accent-primary)',
+          fontSize: '13px', fontWeight: '600',
+        }}>
+          Import from bank statement
         </button>
       </div>
 
