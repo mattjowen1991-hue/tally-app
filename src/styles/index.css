@@ -697,7 +697,7 @@ body.modal-open {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     padding-top: 16px;
-    padding-bottom: calc(var(--keyboard-height, 400px) + 24px);
+    padding-bottom: calc(var(--keyboard-height, 0px) + 24px);
     transition: none;
   }
 
