@@ -312,8 +312,8 @@ export default function CSVImportModal({ onClose, onComplete }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
         <div>
-          <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '2px' }}>Import from bank</h2>
-          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>Select your bank for export instructions</p>
+          <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '2px' }}>Import bills</h2>
+          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>Choose how you want to import</p>
         </div>
         <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)',
@@ -321,48 +321,63 @@ export default function CSVImportModal({ onClose, onComplete }) {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-        {/* Info banner */}
-        <div style={{ background: 'rgba(0,212,255,0.06)', border: '1px solid rgba(0,212,255,0.15)',
-          borderRadius: '12px', padding: '12px 14px', marginBottom: '16px' }}>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5, margin: 0 }}>
-            Export a CSV from your banking app or website, then upload it here. We'll detect your recurring payments automatically.
-          </p>
-          <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', margin: '6px 0 0', lineHeight: 1.4 }}>
-            🔒 Your file is processed on this device. No transaction data is sent to our servers.
-          </p>
-        </div>
 
-        {/* Bank list */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-          {BANKS.map(bank => (
-            <button key={bank.name} onClick={() => setSelectedBank(bank)} style={{
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
-              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: '12px', cursor: 'pointer', textAlign: 'left', width: '100%',
-            }}>
-              <span style={{ fontSize: '22px' }}>{bank.emoji}</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '14px', fontWeight: '600', color: '#e2e8f0', marginBottom: '2px' }}>{bank.name}</div>
-                <div style={{ fontSize: '11px', color: bank.warning ? '#f59e0b' : '#10b981' }}>
-                  {bank.warning ? '⚠️ CSV via browser · PDF in app' : '✅ CSV available in app'}
-                </div>
+        {/* Two primary options — equal prominence */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+
+          {/* Option 1 — Spreadsheet */}
+          <button onClick={() => setShowImportFlow(true)} style={{
+            display: 'flex', alignItems: 'center', gap: '14px', padding: '16px',
+            background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)',
+            borderRadius: '14px', cursor: 'pointer', textAlign: 'left', width: '100%',
+          }}>
+            <div style={{ width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
+              background: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
+              📊
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '15px', fontWeight: '700', color: '#10b981', marginBottom: '3px' }}>
+                Upload a spreadsheet or CSV
               </div>
-              <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '14px' }}>›</span>
-            </button>
-          ))}
+              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}>
+                Google Sheets, Excel, or any CSV budget file — just export as CSV and upload
+              </div>
+            </div>
+            <span style={{ color: 'rgba(16,185,129,0.5)', fontSize: '16px' }}>›</span>
+          </button>
+
+          {/* Option 2 — Bank statement */}
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: 'rgba(255,255,255,0.3)',
+              textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', textAlign: 'center' }}>
+              or import from your bank
+            </div>
+            {/* Bank list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {BANKS.map(bank => (
+                <button key={bank.name} onClick={() => setSelectedBank(bank)} style={{
+                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: '12px', cursor: 'pointer', textAlign: 'left', width: '100%',
+                }}>
+                  <span style={{ fontSize: '20px' }}>{bank.emoji}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#e2e8f0', marginBottom: '1px' }}>{bank.name}</div>
+                    <div style={{ fontSize: '11px', color: bank.warning ? '#f59e0b' : '#10b981' }}>
+                      {bank.warning ? '⚠️ CSV via browser · PDF in app' : '✅ CSV available in app'}
+                    </div>
+                  </div>
+                  <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '14px' }}>›</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* Skip straight to file picker */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '14px' }}>
-          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', textAlign: 'center', marginBottom: '10px' }}>
-            Already have your CSV file?
-          </p>
-          <button className="btn btn-primary" onClick={() => setShowImportFlow(true)}
-            style={{ width: '100%', justifyContent: 'center', fontSize: '14px', padding: '13px' }}>
-            📂 Select CSV file
-          </button>
-        </div>
-        <div style={{ height: '32px' }} />
+        <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', textAlign: 'center', lineHeight: 1.5, marginBottom: '8px' }}>
+          🔒 Your file is processed on this device. No data is sent to our servers.
+        </p>
+        <div style={{ height: '16px' }} />
       </div>
     </div>
   );

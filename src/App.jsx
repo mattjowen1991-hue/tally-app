@@ -62,7 +62,7 @@ function AppContent() {
   };
   // ── Bills state ──
   const [bills, setBills] = useState([]);
-  const [income, setIncome] = useState(1960);
+  const [income, setIncome] = useState(0);
   const [salaryCalc, setSalaryCalc] = useState({ calcEnabled: false, calcApplied: false, settings: null });
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -587,7 +587,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
           return b;
         });
         setBills(loadedBills);
-        setIncome(data.income || 1960);
+        setIncome(data.income || 0);
 
         let loadedDebts = data.debts || [];
         if (isNewMonth) {
@@ -822,7 +822,6 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
           <CSVImportModal
             onClose={() => setShowImportModal(false)}
             onComplete={({ bills: newBills, debts: newDebts, savings: newSavings, partial }) => {
-              // For partial (one-by-one) adds, merge without duplicating already-added items
               if (newBills?.length)   setBills(prev => { const ids = new Set(prev.map(x => x.id)); return [...prev, ...newBills.filter(x => !ids.has(x.id))]; });
               if (newDebts?.length)   setDebts(prev => { const ids = new Set(prev.map(x => x.id)); return [...prev, ...newDebts.filter(x => !ids.has(x.id))]; });
               if (newSavings?.length) setSavings(prev => { const ids = new Set(prev.map(x => x.id)); return [...prev, ...newSavings.filter(x => !ids.has(x.id))]; });
