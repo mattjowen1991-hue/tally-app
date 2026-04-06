@@ -378,6 +378,16 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
   const [showCalcModal, setShowCalcModal] = useState(false);
   const [newDeduction, setNewDeduction] = useState({ name: '', value: '', type: 'fixed' });
 
+  // Push history state when calc modal opens so back gesture / swipe closes it
+  useEffect(() => {
+    if (showCalcModal) {
+      window.history.pushState({ calcModal: true }, '');
+      const handlePopState = () => setShowCalcModal(false);
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+    }
+  }, [showCalcModal]);
+
   // Sync settings into salaryCalc whenever they change
   useEffect(() => {
     setSalaryCalc(s => ({ ...s, settings }));
