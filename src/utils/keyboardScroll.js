@@ -25,6 +25,6 @@ export function initKeyboardScroll() {
       if (scrollAmount > 0) {
         modal.scrollTop += scrollAmount;
       }
-    }, 350);
+    }, 500);
   }, true);
 }
