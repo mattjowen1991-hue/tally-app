@@ -1,13 +1,29 @@
 export function initKeyboardScroll() {
+  if (!window.visualViewport) return;
+
+  let recentHeight = window.visualViewport.height;
+
+  setInterval(() => {
+    const h = window.visualViewport.height;
+    if (h > recentHeight * 0.85) recentHeight = h;
+  }, 100);
+
   document.addEventListener('focusin', (e) => {
     const el = e.target;
-    console.log('[KB] focusin:', el.tagName, el.name || el.placeholder || 'no-id', 'inModal:', !!el.closest('.modal-content'));
     if (!el.closest('.modal-content')) return;
     if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return;
 
     setTimeout(() => {
-      console.log('[KB] scrollIntoView firing for:', el.tagName, el.placeholder);
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const keyboardHeight = recentHeight - window.visualViewport.height;
+      const modal = el.closest('.modal-content');
+      const elRect = el.getBoundingClientRect();
+      const visibleBottom = window.innerHeight - Math.max(keyboardHeight, 0);
+      
+      // If the element is below the visible area (behind keyboard), scroll it up
+      if (elRect.bottom > visibleBottom - 20) {
+        const scrollAmount = elRect.bottom - visibleBottom + 80;
+        modal.scrollTop += scrollAmount;
+      }
     }, 350);
   }, true);
 }
