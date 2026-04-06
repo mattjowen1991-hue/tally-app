@@ -312,3 +312,204 @@ export function detectRecurring(transactions) {
     savings: suggestions.filter(s => s.type === 'savings'),
   };
 }
+
+// ── Universal spreadsheet/budget import ──
+// Works on any CSV layout by scanning for amount/name pairs
+// regardless of column position — handles Google Sheets, Excel,
+// custom templates, and any other structured budget file.
+
+const SHEET_SKIP_NAMES = new Set([
+  'total', 'subtotal', 'income', 'expenses', 'savings', 'budget',
+  'projected', 'actual', 'difference', 'date', 'amount', 'cost',
+  'monthly cost', 'description', 'category', 'notes', 'memo',
+  'net', 'balance', 'payment', 'name', 'item', 'bill', 'type',
+  'end date', 'amount left', 'summary', 'template', 'grand total',
+  'total income', 'total expenses', 'total savings', 'net income',
+  'emergency fund', 'transfer to savings', 'credit card payments',
+]);
+
+const SHEET_SECTION_MAP = {
+  'home': 'HOME', 'housing': 'HOME', 'utilities': 'HOME', 'bills': 'HOME',
+  'transport': 'HOME', 'transportation': 'HOME', 'travel': 'HOME',
+  'entertainment': 'ENTERTAINMENT', 'leisure': 'ENTERTAINMENT', 'subscriptions': 'ENTERTAINMENT',
+  'health': 'HEALTH', 'healthcare': 'HEALTH', 'medical': 'HEALTH',
+  'insurance': 'HOME', 'food': 'HOME', 'groceries': 'HOME',
+  'personal': 'HOME', 'misc': 'HOME', 'miscellaneous': 'HOME',
+  'payments': 'HOME', 'other': 'HOME',
+};
+
+const SHEET_DEBT_SIGNALS = [
+  'loan', 'overdraft', 'credit card', 'paypal', 'klarna', 'bnpl',
+  'finance', 'clearpay', 'laybuy', 'mortgage', 'hire purchase',
+  'buy now pay later', 'barclaycard', 'capital one',
+];
+
+const SHEET_INCOME_SIGNALS = [
+  'salary', 'wages', 'income', 'dividend', 'pension',
+  'benefit', 'tax credit', 'refund', 'reimbursement',
+];
+
+function sheetLooksLikeAmount(s) {
+  if (!s) return false;
+  const clean = s.replace(/[£$€,\s]/g, '').trim();
+  if (clean === '0' || clean === '0.00' || clean === '') return false;
+  try {
+    const val = parseFloat(clean);
+    return val >= 0.50 && val <= 50000;
+  } catch { return false; }
+}
+
+function sheetParseAmount(s) {
+  if (!s) return 0;
+  try { return parseFloat(s.replace(/[£$€,\s]/g, '').trim()) || 0; }
+  catch { return 0; }
+}
+
+function sheetLooksLikeName(s) {
+  if (!s || s.trim().length < 2) return false;
+  const t = s.trim();
+  if (SHEET_SKIP_NAMES.has(t.toLowerCase())) return false;
+  if (sheetLooksLikeAmount(t)) return false;
+  if (/^\d+(\.\d+)?$/.test(t)) return false;          // pure number
+  if (/^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$/.test(t)) return false; // date
+  if (/^https?:\/\//.test(t)) return false;             // URL
+  if (t === t.toUpperCase() && t.length > 15) return false; // long ALL CAPS header
+  return true;
+}
+
+function sheetParseDay(cells) {
+  for (const cell of cells) {
+    const m = String(cell).match(/\b(\d{1,2})(st|nd|rd|th)\b/i);
+    if (m) {
+      const day = parseInt(m[1]);
+      if (day >= 1 && day <= 31) return String(day);
+    }
+  }
+  return '';
+}
+
+function hasEndDate(cells) {
+  // Payment plan indicator — has an end date (DD/MM/YYYY) in the row
+  return cells.some(c => /\d{1,2}[/-]\d{1,2}[/-]\d{4}/.test(String(c)));
+}
+
+export function detectSpreadsheetFormat(headers, rows) {
+  // Key signals of a spreadsheet/budget file vs bank CSV:
+  // 1. Many empty header columns
+  // 2. No standard bank column names (Date, Amount, Description)
+  // 3. Has recognisable section headers in data rows
+  const emptyHeaders = headers.filter(h => !h.trim()).length;
+  const hasStandardBank = headers.some(h =>
+    /^(date|booking date|transaction date|narrative|merchant)$/i.test(h.trim())
+  );
+  const allRows = rows.map(r => Object.values(r).join(' ').toLowerCase());
+  const hasSectionHeaders = allRows.some(r =>
+    Object.keys(SHEET_SECTION_MAP).some(k => r.includes(k))
+  );
+  return (emptyHeaders > 2 || !hasStandardBank) && hasSectionHeaders;
+}
+
+export function importSpreadsheet(text) {
+  const { rows } = parseCSV(text);
+  const bills = [];
+  const debts = [];
+  const seenNames = new Set();
+  let currentCategory = 'HOME';
+
+  for (const row of rows) {
+    const cells = Object.values(row).map(c => (c || '').trim());
+    const nonEmpty = cells.filter(c => c);
+
+    // Section header — single or small number of cells, no amounts, maps to a category
+    if (nonEmpty.length <= 3) {
+      for (const c of nonEmpty) {
+        const mapped = SHEET_SECTION_MAP[c.toLowerCase()];
+        if (mapped) { currentCategory = mapped; break; }
+      }
+    }
+
+    // Scan each cell for a monetary amount
+    for (let i = 0; i < cells.length; i++) {
+      if (!sheetLooksLikeAmount(cells[i])) continue;
+      const amount = sheetParseAmount(cells[i]);
+      if (amount <= 0) continue;
+
+      // Skip payment plan rows (have end dates = finance agreements, not recurring bills)
+      if (hasEndDate(cells)) continue;
+
+      // Look left for a name (up to 3 cells)
+      let name = null;
+      for (let offset = 1; offset <= 3; offset++) {
+        const idx = i - offset;
+        if (idx >= 0 && sheetLooksLikeName(cells[idx])) {
+          name = cells[idx];
+          break;
+        }
+      }
+
+      if (!name) continue;
+      const nameLower = name.toLowerCase();
+      if (seenNames.has(nameLower)) continue;
+      if (SHEET_INCOME_SIGNALS.some(s => nameLower.includes(s))) continue;
+      if (nameLower.includes('total') || nameLower.includes('summary')) continue;
+
+      seenNames.add(nameLower);
+      const day = sheetParseDay(cells);
+
+      const isDebt = SHEET_DEBT_SIGNALS.some(s => nameLower.includes(s));
+
+      const id = `sheet_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+
+      if (isDebt) {
+        debts.push({
+          id,
+          displayName: name,
+          normalisedKey: nameLower,
+          type: 'debt',
+          avgAmount: amount,
+          minAmount: amount,
+          maxAmount: amount,
+          frequency: 'monthly',
+          frequencyLabel: 'Monthly',
+          confidence: 0.9,
+          confidenceLevel: 'high',
+          explainer: `From your budget spreadsheet — £${amount.toFixed(2)}`,
+          occurrences: 1,
+          nextDueEstimate: null,
+        });
+      } else {
+        bills.push({
+          id,
+          displayName: name,
+          normalisedKey: nameLower,
+          type: 'bill',
+          avgAmount: amount,
+          minAmount: amount,
+          maxAmount: amount,
+          frequency: 'monthly',
+          frequencyLabel: 'Monthly',
+          paymentDay: day,
+          category: currentCategory,
+          confidence: 0.9,
+          confidenceLevel: 'high',
+          explainer: `From your budget spreadsheet — £${amount.toFixed(2)}/month`,
+          occurrences: 1,
+          nextDueEstimate: null,
+        });
+      }
+    }
+  }
+
+  return {
+    bills,
+    debts,
+    savings: [],
+    diagnostics: {
+      totalRows: rows.length,
+      validTransactions: bills.length + debts.length,
+      parseFailures: 0,
+      format: 'spreadsheet',
+      isSpreadsheet: true,
+    },
+  };
+}
