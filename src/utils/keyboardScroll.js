@@ -1,31 +1,51 @@
-// Scroll focused input into view when keyboard opens
-// Works on both iOS and Android Capacitor WebView
+// Push modal up above keyboard when it opens
+// Uses visualViewport API which gives the actual visible area
 
 export function initKeyboardScroll() {
-  const scrollFocusedIntoView = () => {
-    const el = document.activeElement;
-    if (!el || !['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName)) return;
+  const viewport = window.visualViewport;
+  if (!viewport) return () => {};
 
-    // Small delay to let keyboard fully open
-    setTimeout(() => {
-      const scrollParent = el.closest('.modal-content');
-      if (!scrollParent) return;
+  const onViewportChange = () => {
+    const modals = document.querySelectorAll('.modal-content');
+    if (!modals.length) return;
 
-      const elRect = el.getBoundingClientRect();
-      const parentRect = scrollParent.getBoundingClientRect();
+    // How much has the viewport shrunk? That's the keyboard height
+    const keyboardHeight = window.innerHeight - viewport.height - viewport.offsetTop;
 
-      // How far is the element below the visible area?
-      const visibleBottom = window.visualViewport
-        ? window.visualViewport.height
-        : window.innerHeight * 0.6; // fallback estimate
-
-      if (elRect.bottom > visibleBottom - 20) {
-        const scrollBy = elRect.bottom - visibleBottom + 80; // 80px breathing room
-        scrollParent.scrollTop += scrollBy;
+    modals.forEach(modal => {
+      if (keyboardHeight > 100) {
+        // Keyboard is open — push modal up
+        modal.style.transform = `translateY(-${keyboardHeight}px)`;
+        modal.style.transition = 'transform 0.25s ease';
+        modal.style.maxHeight = `${viewport.height - 8}px`;
+      } else {
+        // Keyboard closed — reset
+        modal.style.transform = 'translateY(0)';
+        modal.style.maxHeight = '';
       }
-    }, 300);
+    });
+
+    // Also scroll focused input into view within the modal
+    const el = document.activeElement;
+    if (el && ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) && keyboardHeight > 100) {
+      setTimeout(() => {
+        const modal = el.closest('.modal-content');
+        if (!modal) return;
+        const elRect = el.getBoundingClientRect();
+        const modalRect = modal.getBoundingClientRect();
+        const visibleBottom = modalRect.bottom;
+        if (elRect.bottom > visibleBottom - 20) {
+          modal.scrollTop += elRect.bottom - visibleBottom + 80;
+        }
+      }, 50);
+    }
   };
 
-  document.addEventListener('focusin', scrollFocusedIntoView);
-  return () => document.removeEventListener('focusin', scrollFocusedIntoView);
+  viewport.addEventListener('resize', onViewportChange);
+  viewport.addEventListener('scroll', onViewportChange);
+
+  return () => {
+    viewport.removeEventListener('resize', onViewportChange);
+    viewport.removeEventListener('scroll', onViewportChange);
+  };
 }
