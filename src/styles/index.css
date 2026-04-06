@@ -679,7 +679,7 @@ body.modal-open {
     overflow-y: auto;
     overscroll-behavior: none;
     padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
-    transition: transform 0.25s ease, max-height 0.25s ease;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.35s ease;
     will-change: transform;
   }
 
