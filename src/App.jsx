@@ -7,6 +7,7 @@ import useSwipe from './hooks/useSwipe';
 import haptic from './utils/haptics';
 import { ToastProvider, useToast } from './components/Toast';
 import { initTheme, toggleTheme } from './utils/theme';
+import { initKeyboardScroll } from './utils/keyboardScroll';
 import { auth, cloudData } from './utils/supabase';
 import AccountModal from './components/AccountModal';
 import SettingsModal from './components/SettingsModal';
@@ -519,6 +520,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // ── Load data ──
   useEffect(() => { loadData(); }, []);
+  useEffect(() => initKeyboardScroll(), []);
 
   const loadData = async () => {
     try {

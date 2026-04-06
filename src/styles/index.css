@@ -678,7 +678,7 @@ body.modal-open {
     right: 0;
     overflow-y: auto;
     overscroll-behavior: none;
-    padding-bottom: calc(env(safe-area-inset-bottom) + 300px);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
   }
 
   .input {
