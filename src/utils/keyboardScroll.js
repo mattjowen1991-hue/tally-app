@@ -1,29 +1,20 @@
-// Uses Capacitor Keyboard plugin events to set --keyboard-height CSS variable
-// Modal padding-bottom expands by exactly the keyboard height, no JS transforms needed
+import { Keyboard } from '@capacitor/keyboard';
+
+let keyboardHeight = 0;
+
 export function initKeyboardScroll() {
-  let cleanup = () => {};
+  window.addEventListener('focusin', (e) => {
+    if (!e.target.matches('input, textarea, [contenteditable]')) return;
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 400);
+  }, true);
 
-  const setup = async () => {
-    try {
-      const { Keyboard } = await import('@capacitor/keyboard');
+  Keyboard.addListener('keyboardDidShow', (e) => {
+    keyboardHeight = e.keyboardHeight;
+  });
 
-      const showHandler = await Keyboard.addListener('keyboardWillShow', (info) => {
-        document.documentElement.style.setProperty('--keyboard-height', `${info.keyboardHeight}px`);
-      });
-
-      const hideHandler = await Keyboard.addListener('keyboardWillHide', () => {
-        document.documentElement.style.setProperty('--keyboard-height', '0px');
-      });
-
-      cleanup = () => {
-        showHandler.remove();
-        hideHandler.remove();
-      };
-    } catch {
-      // Not in Capacitor environment — no-op
-    }
-  };
-
-  setup();
-  return () => cleanup();
+  Keyboard.addListener('keyboardDidHide', () => {
+    keyboardHeight = 0;
+  });
 }
