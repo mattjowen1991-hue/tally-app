@@ -683,15 +683,19 @@ body.modal-open {
   .modal-overlay {
     align-items: flex-end;
     justify-content: center;
-    /* Prevent modal from going behind Android status bar */
-    padding-top: env(safe-area-inset-top, 28px);
+    /* No padding-top — safe-area gap handled via margin-top on modal,
+       so 100% on the modal resolves cleanly against the full overlay height */
   }
 
   .modal-content {
     position: relative;
     max-width: 100%;
-    /* Constrain to overlay height (which shrinks with keyboard via resizes-content) */
-    max-height: 100%;
+    /* margin-top creates the physical gap below the status bar.
+       min/max-height fill exactly the remaining space (overlay height minus that gap).
+       Using calc() avoids the ambiguity of % resolving against border-box vs content-box. */
+    margin-top: env(safe-area-inset-top, 28px);
+    min-height: calc(100% - env(safe-area-inset-top, 28px));
+    max-height: calc(100% - env(safe-area-inset-top, 28px));
     width: 100%;
     border-radius: 16px 16px 0 0;
     overflow-y: auto;
