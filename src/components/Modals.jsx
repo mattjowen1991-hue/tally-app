@@ -4,7 +4,13 @@ import * as Icons from './Icons';
 import { tc } from '../utils/themeColors';
 import { DEFAULT_CATEGORIES, DEBT_TYPES, SAVINGS_CATEGORIES } from '../data/initialData';
 
-const dismissKeyboard = (e) => { if (e.key === 'Enter') e.target.blur(); };
+// Move to next text field on Enter/Next, dismiss keyboard only at last field
+const handleNext = (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    window.moveFocusToNext?.(e.target);
+  }
+};
 
 // ══════════════════════════════════════
 // Add Bill Modal
@@ -21,7 +27,7 @@ export function AddBillModal({ show, onClose, newBill, setNewBill, handleAddBill
               <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Bill Name</label>
               <input className={`input ${validationErrors['bill-name'] ? 'input-error' : ''}`} placeholder="e.g., Electric Bill" value={newBill.name}
                 onChange={(e) => { setNewBill({ ...newBill, name: e.target.value }); setValidationErrors((v) => { const n = { ...v }; delete n['bill-name']; return n; }); }}
-                onKeyDown={dismissKeyboard} />
+                onKeyDown={handleNext} />
             </div>
             <div>
               <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Category</label>
@@ -33,7 +39,7 @@ export function AddBillModal({ show, onClose, newBill, setNewBill, handleAddBill
               <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Amount</label>
               <input type="number" className={`input ${validationErrors['bill-amount'] ? 'input-error' : ''}`} placeholder="0.00" value={newBill.amount}
                 onChange={(e) => { setNewBill({ ...newBill, amount: e.target.value }); setValidationErrors((v) => { const n = { ...v }; delete n['bill-amount']; return n; }); }}
-                onKeyDown={dismissKeyboard} />
+                onKeyDown={handleNext} />
             </div>
             <div>
               <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Bill Type</label>
@@ -74,13 +80,13 @@ export function AddBillModal({ show, onClose, newBill, setNewBill, handleAddBill
             ) : newBill.frequency === 'Monthly' ? (
               <div>
                 <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Day of month</label>
-                <input type="number" className="input" placeholder="1-31" min="1" max="31" value={newBill.paymentDate} onChange={(e) => { const v = e.target.value; if (v === '') { setNewBill({ ...newBill, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setNewBill({ ...newBill, paymentDate: String(Math.min(31, Math.max(1, n))) }); }} onKeyDown={dismissKeyboard} />
+                <input type="number" className="input" placeholder="1-31" min="1" max="31" value={newBill.paymentDate} onChange={(e) => { const v = e.target.value; if (v === '') { setNewBill({ ...newBill, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setNewBill({ ...newBill, paymentDate: String(Math.min(31, Math.max(1, n))) }); }} onKeyDown={handleNext} />
               </div>
             ) : newBill.frequency === 'Quarterly' ? (
               <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Day of month</label>
-                  <input type="number" className="input" placeholder="1-31" min="1" max="31" value={newBill.paymentDate} onChange={(e) => { const v = e.target.value; if (v === '') { setNewBill({ ...newBill, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setNewBill({ ...newBill, paymentDate: String(Math.min(31, Math.max(1, n))) }); }} onKeyDown={dismissKeyboard} />
+                  <input type="number" className="input" placeholder="1-31" min="1" max="31" value={newBill.paymentDate} onChange={(e) => { const v = e.target.value; if (v === '') { setNewBill({ ...newBill, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setNewBill({ ...newBill, paymentDate: String(Math.min(31, Math.max(1, n))) }); }} onKeyDown={handleNext} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Starting month</label>
@@ -182,7 +188,7 @@ export function AddDebtModal({ show, onClose, newDebt, setNewDebt, handleAddDebt
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
               <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Name</label>
-              <input className={`input ${validationErrors?.['debt-name'] ? 'input-error' : ''}`} placeholder="e.g., Barclaycard" value={newDebt.name} onChange={(e) => { setNewDebt({ ...newDebt, name: e.target.value }); if (validationErrors?.['debt-name']) { const v = { ...validationErrors }; delete v['debt-name']; setValidationErrors(v); } }} onKeyDown={dismissKeyboard} />
+              <input className={`input ${validationErrors?.['debt-name'] ? 'input-error' : ''}`} placeholder="e.g., Barclaycard" value={newDebt.name} onChange={(e) => { setNewDebt({ ...newDebt, name: e.target.value }); if (validationErrors?.['debt-name']) { const v = { ...validationErrors }; delete v['debt-name']; setValidationErrors(v); } }} onKeyDown={handleNext} />
             </div>
             <div>
               <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Type</label>
@@ -192,7 +198,7 @@ export function AddDebtModal({ show, onClose, newDebt, setNewDebt, handleAddDebt
             </div>
             <div>
               <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Total Amount Owed</label>
-              <input type="number" className={`input ${validationErrors?.['debt-amount'] ? 'input-error' : ''}`} placeholder="0.00" value={newDebt.totalAmount} onChange={(e) => { setNewDebt({ ...newDebt, totalAmount: e.target.value }); if (validationErrors?.['debt-amount']) { const v = { ...validationErrors }; delete v['debt-amount']; setValidationErrors(v); } }} onKeyDown={dismissKeyboard} />
+              <input type="number" className={`input ${validationErrors?.['debt-amount'] ? 'input-error' : ''}`} placeholder="0.00" value={newDebt.totalAmount} onChange={(e) => { setNewDebt({ ...newDebt, totalAmount: e.target.value }); if (validationErrors?.['debt-amount']) { const v = { ...validationErrors }; delete v['debt-amount']; setValidationErrors(v); } }} onKeyDown={handleNext} />
             </div>
 
             {/* Payment Mode Selector */}
@@ -224,21 +230,21 @@ export function AddDebtModal({ show, onClose, newDebt, setNewDebt, handleAddDebt
               <>
                 <div>
                   <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Interest Rate (% APR)</label>
-                  <input type="number" className="input" placeholder="0" value={newDebt.interestRate} onChange={(e) => setNewDebt({ ...newDebt, interestRate: e.target.value })} onKeyDown={dismissKeyboard} />
+                  <input type="number" className="input" placeholder="0" value={newDebt.interestRate} onChange={(e) => setNewDebt({ ...newDebt, interestRate: e.target.value })} onKeyDown={handleNext} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Minimum Payment</label>
-                    <input type="number" className="input" placeholder="0.00" value={newDebt.minimumPayment} onChange={(e) => setNewDebt({ ...newDebt, minimumPayment: e.target.value })} onKeyDown={dismissKeyboard} />
+                    <input type="number" className="input" placeholder="0.00" value={newDebt.minimumPayment} onChange={(e) => setNewDebt({ ...newDebt, minimumPayment: e.target.value })} onKeyDown={handleNext} />
                   </div>
                   <div>
                     <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Auto Monthly</label>
-                    <input type="number" className="input" placeholder="0.00" value={newDebt.recurringPayment} onChange={(e) => setNewDebt({ ...newDebt, recurringPayment: e.target.value })} onKeyDown={dismissKeyboard} />
+                    <input type="number" className="input" placeholder="0.00" value={newDebt.recurringPayment} onChange={(e) => setNewDebt({ ...newDebt, recurringPayment: e.target.value })} onKeyDown={handleNext} />
                   </div>
                 </div>
                 <div>
                   <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Payment Day</label>
-                  <input type="number" className="input" placeholder="Day of month (1-31)" min="1" max="31" value={newDebt.paymentDate || ''} onKeyDown={dismissKeyboard} onChange={(e) => { const v = e.target.value; if (v === '') { setNewDebt({ ...newDebt, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setNewDebt({ ...newDebt, paymentDate: String(Math.min(31, Math.max(1, n))) }); }} />
+                  <input type="number" className="input" placeholder="Day of month (1-31)" min="1" max="31" value={newDebt.paymentDate || ''} onKeyDown={handleNext} onChange={(e) => { const v = e.target.value; if (v === '') { setNewDebt({ ...newDebt, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setNewDebt({ ...newDebt, paymentDate: String(Math.min(31, Math.max(1, n))) }); }} />
                 </div>
               </>
             )}
@@ -274,7 +280,7 @@ export function AddDebtModal({ show, onClose, newDebt, setNewDebt, handleAddDebt
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Number of Months</label>
-                    <input type="number" className={`input ${validationErrors?.['debt-installmentMonths'] ? 'input-error' : ''}`} placeholder="e.g., 12" value={newDebt.installmentMonths} onChange={(e) => { setNewDebt({ ...newDebt, installmentMonths: e.target.value }); if (validationErrors?.['debt-installmentMonths']) { const v = { ...validationErrors }; delete v['debt-installmentMonths']; setValidationErrors(v); } }} onKeyDown={dismissKeyboard} />
+                    <input type="number" className={`input ${validationErrors?.['debt-installmentMonths'] ? 'input-error' : ''}`} placeholder="e.g., 12" value={newDebt.installmentMonths} onChange={(e) => { setNewDebt({ ...newDebt, installmentMonths: e.target.value }); if (validationErrors?.['debt-installmentMonths']) { const v = { ...validationErrors }; delete v['debt-installmentMonths']; setValidationErrors(v); } }} onKeyDown={handleNext} />
                   </div>
                   <div>
                     <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Start Date</label>
@@ -283,7 +289,7 @@ export function AddDebtModal({ show, onClose, newDebt, setNewDebt, handleAddDebt
                 </div>
                 <div>
                   <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Interest Rate (% APR)</label>
-                  <input type="number" className="input" placeholder="0 (often 0% for finance)" value={newDebt.interestRate} onChange={(e) => setNewDebt({ ...newDebt, interestRate: e.target.value })} onKeyDown={dismissKeyboard} />
+                  <input type="number" className="input" placeholder="0 (often 0% for finance)" value={newDebt.interestRate} onChange={(e) => setNewDebt({ ...newDebt, interestRate: e.target.value })} onKeyDown={handleNext} />
                 </div>
                 {installmentMonthly > 0 && (
                   <div style={{ padding: '10px 14px', background: tc.purpleTint, borderRadius: '10px', border: '1px solid rgba(167,139,250,0.2)', fontSize: '13px', color: tc.purple }}>
@@ -307,7 +313,7 @@ export function AddDebtModal({ show, onClose, newDebt, setNewDebt, handleAddDebt
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Interest-Free Months</label>
-                    <input type="number" className={`input ${validationErrors?.['debt-bnplPromoMonths'] ? 'input-error' : ''}`} placeholder="e.g., 12" value={newDebt.bnplPromoMonths} onChange={(e) => { setNewDebt({ ...newDebt, bnplPromoMonths: e.target.value }); if (validationErrors?.['debt-bnplPromoMonths']) { const v = { ...validationErrors }; delete v['debt-bnplPromoMonths']; setValidationErrors(v); } }} onKeyDown={dismissKeyboard} />
+                    <input type="number" className={`input ${validationErrors?.['debt-bnplPromoMonths'] ? 'input-error' : ''}`} placeholder="e.g., 12" value={newDebt.bnplPromoMonths} onChange={(e) => { setNewDebt({ ...newDebt, bnplPromoMonths: e.target.value }); if (validationErrors?.['debt-bnplPromoMonths']) { const v = { ...validationErrors }; delete v['debt-bnplPromoMonths']; setValidationErrors(v); } }} onKeyDown={handleNext} />
                   </div>
                   <div>
                     <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Start Date</label>
@@ -340,11 +346,11 @@ export function AddDebtModal({ show, onClose, newDebt, setNewDebt, handleAddDebt
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <div>
                       <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Interest Rate (%)</label>
-                      <input type="number" className="input" placeholder="e.g., 29.9" value={newDebt.bnplPostInterest} onChange={(e) => setNewDebt({ ...newDebt, bnplPostInterest: e.target.value })} onKeyDown={dismissKeyboard} />
+                      <input type="number" className="input" placeholder="e.g., 29.9" value={newDebt.bnplPostInterest} onChange={(e) => setNewDebt({ ...newDebt, bnplPostInterest: e.target.value })} onKeyDown={handleNext} />
                     </div>
                     <div>
                       <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Monthly Payment</label>
-                      <input type="number" className="input" placeholder="0.00" value={newDebt.bnplPostPayment} onChange={(e) => setNewDebt({ ...newDebt, bnplPostPayment: e.target.value })} onKeyDown={dismissKeyboard} />
+                      <input type="number" className="input" placeholder="0.00" value={newDebt.bnplPostPayment} onChange={(e) => setNewDebt({ ...newDebt, bnplPostPayment: e.target.value })} onKeyDown={handleNext} />
                     </div>
                   </div>
                 </div>
@@ -375,7 +381,7 @@ export function AddSavingsModal({ show, onClose, newSavingsGoal, setNewSavingsGo
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
               <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Goal Name</label>
-              <input className={`input ${validationErrors?.['savings-name'] ? 'input-error' : ''}`} placeholder="e.g., Holiday Fund" value={newSavingsGoal.name} onChange={(e) => { setNewSavingsGoal({ ...newSavingsGoal, name: e.target.value }); if (validationErrors?.['savings-name']) { const v = { ...validationErrors }; delete v['savings-name']; setValidationErrors(v); } }} onKeyDown={dismissKeyboard} />
+              <input className={`input ${validationErrors?.['savings-name'] ? 'input-error' : ''}`} placeholder="e.g., Holiday Fund" value={newSavingsGoal.name} onChange={(e) => { setNewSavingsGoal({ ...newSavingsGoal, name: e.target.value }); if (validationErrors?.['savings-name']) { const v = { ...validationErrors }; delete v['savings-name']; setValidationErrors(v); } }} onKeyDown={handleNext} />
             </div>
             <div>
               <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Category</label>
@@ -386,16 +392,16 @@ export function AddSavingsModal({ show, onClose, newSavingsGoal, setNewSavingsGo
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Starting Amount</label>
-                <input type="number" className="input" placeholder="0.00 (optional)" value={newSavingsGoal.startingAmount} onChange={(e) => setNewSavingsGoal({ ...newSavingsGoal, startingAmount: e.target.value })} onKeyDown={dismissKeyboard} />
+                <input type="number" className="input" placeholder="0.00 (optional)" value={newSavingsGoal.startingAmount} onChange={(e) => setNewSavingsGoal({ ...newSavingsGoal, startingAmount: e.target.value })} onKeyDown={handleNext} />
               </div>
               <div>
                 <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Target Amount</label>
-                <input type="number" className="input" placeholder="0.00 (optional)" value={newSavingsGoal.targetAmount} onChange={(e) => setNewSavingsGoal({ ...newSavingsGoal, targetAmount: e.target.value })} onKeyDown={dismissKeyboard} />
+                <input type="number" className="input" placeholder="0.00 (optional)" value={newSavingsGoal.targetAmount} onChange={(e) => setNewSavingsGoal({ ...newSavingsGoal, targetAmount: e.target.value })} onKeyDown={handleNext} />
               </div>
             </div>
             <div>
               <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Monthly Auto-Save</label>
-              <input type="number" className="input" placeholder="0.00 (optional)" value={newSavingsGoal.monthlyContribution} onChange={(e) => setNewSavingsGoal({ ...newSavingsGoal, monthlyContribution: e.target.value })} onKeyDown={dismissKeyboard} />
+              <input type="number" className="input" placeholder="0.00 (optional)" value={newSavingsGoal.monthlyContribution} onChange={(e) => setNewSavingsGoal({ ...newSavingsGoal, monthlyContribution: e.target.value })} onKeyDown={handleNext} />
             </div>
             <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
               <button className="btn btn-primary" onClick={handleAddSavings} style={{ flex: 1, justifyContent: 'center' }}><Icons.Plus size={20} /> Add Goal</button>

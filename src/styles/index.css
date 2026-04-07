@@ -4,6 +4,7 @@
    ═══════════════════════════════════════════════ */
 
 :root {
+  --sat: env(safe-area-inset-top, 28px);
   --bg-primary: #0a0e27;
   --bg-secondary: #121630;
   --bg-card: rgba(25, 31, 61, 0.6);
@@ -693,7 +694,7 @@ body.modal-open {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     padding-top: 16px;
-    padding-bottom: 24px;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
     transition: none;
   }
 
