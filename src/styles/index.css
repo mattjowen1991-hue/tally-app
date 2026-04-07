@@ -685,19 +685,15 @@ body.modal-open {
   }
 
   .modal-content {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    top: 28px;
+    position: relative;
     max-width: 100%;
-    max-height: 100%;
-    border-radius: 0;
+    max-height: 92vh;
+    border-radius: 16px 16px 0 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     padding-top: 16px;
-    padding-bottom: 400px;
+    padding-bottom: 24px;
     transition: none;
   }
 
