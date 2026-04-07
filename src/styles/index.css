@@ -683,12 +683,15 @@ body.modal-open {
   .modal-overlay {
     align-items: flex-end;
     justify-content: center;
+    /* Prevent modal from going behind Android status bar */
+    padding-top: env(safe-area-inset-top, 28px);
   }
 
   .modal-content {
     position: relative;
     max-width: 100%;
-    max-height: calc(100vh - env(safe-area-inset-top, 28px));
+    /* Fill all available space in the flex container - grows upward from bottom */
+    width: 100%;
     border-radius: 16px 16px 0 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -696,7 +699,6 @@ body.modal-open {
     padding-top: 16px;
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
     transition: none;
-    align-self: flex-end;
   }
 
   .input {
