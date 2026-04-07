@@ -1,8 +1,25 @@
 import { useCurrency } from './CurrencyContext';
-import React from 'react';
+import { useState, useRef, useEffect } from 'react';
 import * as Icons from './Icons';
 import { tc } from '../utils/themeColors';
 import { DEFAULT_CATEGORIES, DEBT_TYPES, SAVINGS_CATEGORIES } from '../data/initialData';
+import haptic from '../utils/haptics';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // Move to next text field on Enter/Next, dismiss keyboard only at last field
 const handleNext = (e) => {
@@ -16,7 +33,7 @@ const handleNext = (e) => {
 // Add Bill Screen (full-page, keyboard-safe)
 // ══════════════════════════════════════
 export function AddBillScreen({ show, onClose, newBill, setNewBill, handleAddBill, categories, validationErrors, setValidationErrors, emptyBill }) {
-  const handleClose = () => { onClose(); setValidationErrors({}); setNewBill({ ...emptyBill }); };
+  const handleClose = () => { haptic.light(); onClose(); setValidationErrors({}); setNewBill({ ...emptyBill }); };
   return (
     <div className={`form-screen ${show ? 'open' : ''}`}>
       <div className="form-screen-inner">
@@ -51,8 +68,8 @@ export function AddBillScreen({ show, onClose, newBill, setNewBill, handleAddBil
           <div>
             <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Bill Type</label>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button type="button" onClick={() => setNewBill({ ...newBill, recurring: true, frequency: 'Monthly' })} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: newBill.recurring ? '2px solid var(--accent-primary)' : '1px solid var(--border)', background: newBill.recurring ? tc.infoTint : 'var(--glass)', color: newBill.recurring ? tc.info : 'var(--text-muted)', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>↻ Recurring</button>
-              <button type="button" onClick={() => setNewBill({ ...newBill, recurring: false, frequency: 'One-off' })} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: !newBill.recurring ? '2px solid var(--warning)' : '1px solid var(--border)', background: !newBill.recurring ? tc.warningTint : 'var(--glass)', color: !newBill.recurring ? tc.warning : 'var(--text-muted)', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>One-off</button>
+              <button type="button" onClick={() => { haptic.light(); setNewBill({ ...newBill, recurring: true, frequency: 'Monthly' }); }} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: newBill.recurring ? '2px solid var(--accent-primary)' : '1px solid var(--border)', background: newBill.recurring ? tc.infoTint : 'var(--glass)', color: newBill.recurring ? tc.info : 'var(--text-muted)', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>↻ Recurring</button>
+              <button type="button" onClick={() => { haptic.light(); setNewBill({ ...newBill, recurring: false, frequency: 'One-off' }); }} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: !newBill.recurring ? '2px solid var(--warning)' : '1px solid var(--border)', background: !newBill.recurring ? tc.warningTint : 'var(--glass)', color: !newBill.recurring ? tc.warning : 'var(--text-muted)', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>One-off</button>
             </div>
           </div>
           {newBill.recurring && (
@@ -121,54 +138,237 @@ export function AddBillScreen({ show, onClose, newBill, setNewBill, handleAddBil
 // ══════════════════════════════════════
 // Manage Categories Modal
 // ══════════════════════════════════════
-export function ManageCategoriesModal({ show, onClose, bills, customCategories, newCategoryName, setNewCategoryName, handleAddCategory, handleDeleteCategory }) {
-  if (!show) return null;
+// ── Drag handle icon ─────────────────────────────────────────────────────────
+// Visual-only grip dots — no interaction, purely an affordance indicator
+function GripDots() {
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: '24px' }}>
-          <h2 className="font-display" style={{ fontSize: '24px', marginBottom: '24px' }}>Manage Categories</h2>
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Add New Category</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input className="input" placeholder="e.g., GROCERIES" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { handleAddCategory(); e.target.blur(); } }} style={{ flex: 1 }} />
-              <button className="btn btn-primary" onMouseDown={(e) => { e.preventDefault(); if (!newCategoryName.trim()) return; handleAddCategory(); document.activeElement.blur(); }}><Icons.Plus size={18} /></button>
-            </div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '48px', flexShrink: 0, color: 'var(--text-muted)', opacity: 0.35, pointerEvents: 'none' }}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+        <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
+        <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+        <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+      </svg>
+    </div>
+  );
+}
+
+// ── Sortable category row ─────────────────────────────────────────────────────
+// Strategy: row has touchAction:none (required for dnd-kit's 500ms hold to work),
+// but we add native touchmove listeners that manually scroll the container
+// during the pre-activation window. Once isDragging flips true, we stop scrolling
+// and let dnd-kit own the touch entirely.
+function SortableCategoryRow({ cat, bills, isEditing, editValue, setEditValue, onStartEdit, onCommitEdit, onCancelEdit, onDelete }) {
+  const isDefault = DEFAULT_CATEGORIES.includes(cat);
+  const count = bills.filter((b) => b.category === cat).length;
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat });
+  const nodeRef = useRef(null);
+  const isDraggingRef = useRef(false);
+  isDraggingRef.current = isDragging;
+
+  // Combine dnd-kit's ref with our own
+  const setRefs = (el) => { nodeRef.current = el; setNodeRef(el); };
+
+  // Native touch listeners: manually scroll the container until dnd-kit activates.
+  // This runs outside React's event system so it doesn't conflict with dnd-kit's listeners.
+  useEffect(() => {
+    const el = nodeRef.current;
+    if (!el) return;
+    let startY = null;
+    const onTouchStart = (e) => { startY = e.touches[0].clientY; };
+    const onTouchMove = (e) => {
+      if (isDraggingRef.current || startY === null) return;
+      const container = el.closest('.form-screen-body');
+      if (!container) return;
+      const delta = startY - e.touches[0].clientY;
+      container.scrollTop += delta;
+      startY = e.touches[0].clientY;
+    };
+    const onTouchEnd = () => { startY = null; };
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: true });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, []);
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0 : 1,
+  };
+
+  return (
+    <div ref={setRefs} style={style}>
+      <div style={{ background: 'var(--glass)', borderRadius: '12px', border: `1px solid ${isEditing ? 'var(--accent)' : 'var(--border)'}`, overflow: 'hidden' }}>
+        {isEditing ? (
+          <div style={{ display: 'flex', gap: '8px', padding: '10px 12px', alignItems: 'center' }}>
+            <input className="input" value={editValue} onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onCommitEdit(); } if (e.key === 'Escape') onCancelEdit(); }}
+              autoFocus style={{ flex: 1, padding: '8px 12px', fontSize: '14px' }} />
+            <button onClick={onCommitEdit} className="btn btn-primary" style={{ padding: '8px 14px', fontSize: '13px', flexShrink: 0 }}>Save</button>
+            <button onClick={onCancelEdit} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
           </div>
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: '500' }}>DEFAULT CATEGORIES</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {DEFAULT_CATEGORIES.map((cat) => {
-                const count = bills.filter((b) => b.category === cat).length;
-                return (
-                  <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--glass)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                    <div><span style={{ fontWeight: '500', fontSize: '14px' }}>{cat}</span><span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>{count} bills</span></div>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '3px 8px', background: 'var(--glass)', borderRadius: '6px' }}>Default</span>
-                  </div>
-                );
-              })}
+        ) : (
+          <div {...listeners} {...attributes} style={{ display: 'flex', alignItems: 'center', paddingRight: '8px', touchAction: 'none', userSelect: 'none' }}>
+            <GripDots />
+            <div style={{ flex: 1, minWidth: 0, padding: '12px 0' }}>
+              <span style={{ fontWeight: '500', fontSize: '14px' }}>{cat}</span>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>{count} bills</span>
             </div>
+            {isDefault ? (
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '3px 8px', background: 'var(--bg-primary)', borderRadius: '6px', flexShrink: 0 }}>Default</span>
+            ) : (
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--accent)', padding: '3px 8px', background: 'color-mix(in srgb, var(--accent) 12%, transparent)', borderRadius: '6px', letterSpacing: '0.02em' }}>Custom</span>
+                <button onClick={(e) => { e.stopPropagation(); onStartEdit(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}><Icons.Edit size={16} /></button>
+                <button onClick={(e) => { e.stopPropagation(); onDelete(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: count > 0 ? 'var(--text-muted)' : tc.danger, padding: '4px', opacity: count > 0 ? 0.5 : 1 }}><Icons.Trash size={16} /></button>
+              </div>
+            )}
           </div>
-          {customCategories.length > 0 && (
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: '500' }}>CUSTOM CATEGORIES</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {customCategories.map((cat) => {
-                  const count = bills.filter((b) => b.category === cat).length;
-                  return (
-                    <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--glass)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                      <div><span style={{ fontWeight: '500', fontSize: '14px' }}>{cat}</span><span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>{count} bills</span></div>
-                      <button onClick={() => handleDeleteCategory(cat)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: count > 0 ? 'var(--text-muted)' : tc.danger, padding: '4px', opacity: count > 0 ? 0.5 : 1 }}><Icons.Trash size={16} /></button>
-                    </div>
-                  );
-                })}
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Ghost card shown under finger while dragging ──────────────────────────────
+function DragOverlayCard({ cat, bills }) {
+  const count = bills.filter((b) => b.category === cat).length;
+  const isDefault = DEFAULT_CATEGORIES.includes(cat);
+  return (
+    <div style={{ background: 'var(--glass)', borderRadius: '12px', border: '1px solid var(--accent)', boxShadow: '0 8px 24px rgba(0,0,0,0.18)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', paddingRight: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '44px', color: 'var(--accent)' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
+            <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+            <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+          </svg>
+        </div>
+        <div style={{ flex: 1, minWidth: 0, padding: '12px 0' }}>
+          <span style={{ fontWeight: '500', fontSize: '14px' }}>{cat}</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>{count} bills</span>
+        </div>
+        {isDefault
+          ? <span style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '3px 8px', background: 'var(--bg-primary)', borderRadius: '6px', flexShrink: 0, marginRight: '8px' }}>Default</span>
+          : <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--accent)', padding: '3px 8px', background: 'color-mix(in srgb, var(--accent) 12%, transparent)', borderRadius: '6px', flexShrink: 0, marginRight: '8px' }}>Custom</span>
+        }
+      </div>
+    </div>
+  );
+}
+
+export function ManageCategoriesModal({ show, onClose, bills, customCategories, categoryOrder, newCategoryName, setNewCategoryName, handleAddCategory, handleDeleteCategory, handleRenameCategory, handleMoveCategory }) {
+  const [categoryError, setCategoryError] = useState(false);
+  const [editingCat, setEditingCat] = useState(null);
+  const [editValue, setEditValue] = useState('');
+  const [activeDragCat, setActiveDragCat] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
+
+  const handleClose = () => { haptic.light(); onClose(); setCategoryError(false); setEditingCat(null); setPendingDelete(null); };
+  const handleAdd = () => {
+    if (!newCategoryName.trim()) { haptic.warning(); setCategoryError(true); return; }
+    haptic.light(); setCategoryError(false); handleAddCategory(); document.activeElement.blur();
+  };
+  const startEdit = (cat) => { haptic.light(); setEditingCat(cat); setEditValue(cat); };
+  const commitEdit = () => {
+    if (!editValue.trim()) { haptic.warning(); return; }
+    handleRenameCategory(editingCat, editValue); setEditingCat(null);
+  };
+  const cancelEdit = () => { haptic.light(); setEditingCat(null); };
+
+  const orderedList = categoryOrder.filter(c => DEFAULT_CATEGORIES.includes(c) || customCategories.includes(c));
+
+  // 500ms hold to activate drag. tolerance:8 means moving ≤8px during the hold
+  // keeps the timer alive (handles finger jitter). Moving more cancels it — the
+  // native touchmove listener on each row handles scrolling during that window.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { delay: 500, tolerance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 8 } }),
+  );
+
+  const handleDragStart = ({ active }) => { haptic.light(); setActiveDragCat(active.id); };
+  const handleDragEnd = ({ active, over }) => {
+    setActiveDragCat(null);
+    if (!over || active.id === over.id) return;
+    const oldIndex = orderedList.indexOf(active.id);
+    const newIndex = orderedList.indexOf(over.id);
+    const reordered = arrayMove(orderedList, oldIndex, newIndex);
+    haptic.light();
+    // Propagate new order up to App via a full replacement
+    handleMoveCategory(reordered);
+  };
+
+  return (
+    <div className={`form-screen ${show ? 'open' : ''}`}>
+      <div className="form-screen-inner">
+        <div className="form-screen-header">
+          <button onClick={handleClose} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 5l-7 7 7 7"/>
+            </svg>
+          </button>
+          <h2 className="font-display" style={{ fontSize: '20px' }}>Manage Categories</h2>
+        </div>
+        <div className="form-screen-body">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div>
+              <label style={{ display: 'block', color: categoryError ? tc.danger : 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Add New Category</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input className={`input${categoryError ? ' input-error' : ''}`} placeholder="e.g., GROCERIES" value={newCategoryName}
+                  onChange={(e) => { setNewCategoryName(e.target.value); if (categoryError) setCategoryError(false); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }} style={{ flex: 1 }} />
+                <button className="btn btn-primary" onMouseDown={(e) => { e.preventDefault(); handleAdd(); }}><Icons.Plus size={18} /></button>
               </div>
             </div>
-          )}
-          <button className="btn btn-secondary" onClick={onClose} style={{ width: '100%', justifyContent: 'center', marginTop: '8px' }}>Done</button>
+            <div>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: '500' }}>CATEGORY ORDER</div>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                <SortableContext items={orderedList} strategy={verticalListSortingStrategy}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {orderedList.map((cat) => (
+                      <SortableCategoryRow key={cat} cat={cat} bills={bills}
+                        isEditing={editingCat === cat} editValue={editValue} setEditValue={setEditValue}
+                        onStartEdit={() => startEdit(cat)} onCommitEdit={commitEdit} onCancelEdit={cancelEdit}
+                        onDelete={() => { haptic.light(); setPendingDelete(cat); }} />
+                    ))}
+                  </div>
+                </SortableContext>
+                <DragOverlay dropAnimation={{ duration: 180, easing: 'ease' }}>
+                  {activeDragCat ? <DragOverlayCard cat={activeDragCat} bills={bills} /> : null}
+                </DragOverlay>
+              </DndContext>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* In-app delete confirmation sheet */}
+      {pendingDelete && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', background: 'rgba(0,0,0,0.4)' }}
+          onClick={() => { haptic.light(); setPendingDelete(null); }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: 'var(--bg-primary)', borderRadius: '20px 20px 0 0', padding: '24px 20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)', borderTop: '1px solid var(--border)' }}>
+            <p style={{ fontWeight: '600', fontSize: '16px', marginBottom: '6px', color: 'var(--text-primary)' }}>Delete "{pendingDelete}"?</p>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>This category will be permanently removed.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button className="btn" onClick={() => { handleDeleteCategory(pendingDelete); setPendingDelete(null); }}
+                style={{ width: '100%', justifyContent: 'center', background: tc.danger, color: '#fff', border: 'none', fontWeight: '600' }}>
+                Delete
+              </button>
+              <button className="btn btn-secondary" onClick={() => { haptic.light(); setPendingDelete(null); }}
+                style={{ width: '100%', justifyContent: 'center' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -178,7 +378,7 @@ export function ManageCategoriesModal({ show, onClose, bills, customCategories, 
 // ══════════════════════════════════════
 export function AddDebtScreen({ show, onClose, newDebt, setNewDebt, handleAddDebt, emptyDebt, validationErrors, setValidationErrors }) {
   const cs = useCurrency();
-  const handleClose = () => { onClose(); setValidationErrors({}); setNewDebt({ ...emptyDebt }); };
+  const handleClose = () => { haptic.light(); onClose(); setValidationErrors({}); setNewDebt({ ...emptyDebt }); };
   const mode = newDebt.paymentMode || 'recurring';
   const total = parseFloat(newDebt.totalAmount) || 0;
   const installMonths = parseInt(newDebt.installmentMonths) || 0;
@@ -223,7 +423,7 @@ export function AddDebtScreen({ show, onClose, newDebt, setNewDebt, handleAddDeb
                 { key: 'installment', label: '▤ Installment', color: tc.purple },
                 { key: 'bnpl', label: '⏱ Pay Later', color: tc.success },
               ].map((opt) => (
-                <button key={opt.key} type="button" onClick={() => { setNewDebt({ ...newDebt, paymentMode: opt.key }); setValidationErrors({}); }}
+                <button key={opt.key} type="button" onClick={() => { haptic.light(); setNewDebt({ ...newDebt, paymentMode: opt.key }); setValidationErrors({}); }}
                   style={{ padding: '10px 8px', borderRadius: '10px', border: mode === opt.key ? `2px solid ${opt.color}` : '1px solid var(--border)', background: mode === opt.key ? `${opt.color}15` : 'var(--glass)', color: mode === opt.key ? opt.color : 'var(--text-muted)', cursor: 'pointer', fontSize: '13px', fontWeight: '500', textAlign: 'center' }}>
                   {opt.label}
                 </button>
@@ -384,7 +584,7 @@ export function AddDebtScreen({ show, onClose, newDebt, setNewDebt, handleAddDeb
 // Add Savings Screen (full-page, keyboard-safe)
 // ══════════════════════════════════════
 export function AddSavingsScreen({ show, onClose, newSavingsGoal, setNewSavingsGoal, handleAddSavings, emptySavings, validationErrors, setValidationErrors }) {
-  const handleClose = () => { onClose(); setNewSavingsGoal({ ...emptySavings }); setValidationErrors({}); };
+  const handleClose = () => { haptic.light(); onClose(); setNewSavingsGoal({ ...emptySavings }); setValidationErrors({}); };
   return (
     <div className={`form-screen ${show ? 'open' : ''}`}>
       <div className="form-screen-inner">

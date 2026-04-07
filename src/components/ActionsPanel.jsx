@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import * as Icons from './Icons';
 import { tc } from '../utils/themeColors';
+import haptic from '../utils/haptics';
 
 // ── 2024/25 UK Tax constants ──────────────────────────────────────────────────
 const UK_PERSONAL_ALLOWANCE = 12570;
@@ -151,7 +152,7 @@ function DeductionRow({ label, sublabel, enabled, onToggle, color, tip }) {
         </div>
         <div style={{ fontSize: '12px', color: tc.muted, marginTop: '2px' }}>{sublabel}</div>
       </div>
-      <button onClick={onToggle} style={{ width: '44px', height: '26px', borderRadius: '13px', border: 'none', cursor: 'pointer', background: enabled ? color : 'var(--border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0, marginLeft: '12px' }}>
+      <button onClick={() => { haptic.light(); onToggle(); }} style={{ width: '44px', height: '26px', borderRadius: '13px', border: 'none', cursor: 'pointer', background: enabled ? color : 'var(--border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0, marginLeft: '12px' }}>
         <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: enabled ? '21px' : '3px', transition: 'left 0.2s' }} />
       </button>
     </div>
@@ -159,71 +160,27 @@ function DeductionRow({ label, sublabel, enabled, onToggle, color, tip }) {
 }
 
 function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly, breakdown, totalDeductions, grossYearly, newDeduction, setNewDeduction, addCustomDeduction, removeDeduction, toggleDeduction, onApply }) {
-  const touchStartX = React.useRef(null);
-  const touchStartY = React.useRef(null);
-  const modalRef = React.useRef(null);
-
-  React.useEffect(() => {
-    if (show) {
-      document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.touchAction = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.touchAction = '';
-    };
-  }, [show]);
-
-  React.useEffect(() => {
-    if (!show || !modalRef.current) return;
-    const el = modalRef.current;
-
-    const onStart = (e) => {
-      touchStartX.current = e.touches[0].clientX;
-      touchStartY.current = e.touches[0].clientY;
-    };
-    const onEnd = (e) => {
-      if (touchStartX.current === null) return;
-      const dx = e.changedTouches[0].clientX - touchStartX.current;
-      const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
-      if (dx < -60 && dy < 80) onClose();
-      touchStartX.current = null;
-      touchStartY.current = null;
-    };
-
-    el.addEventListener('touchstart', onStart, { passive: true });
-    el.addEventListener('touchend', onEnd, { passive: true });
-    return () => {
-      el.removeEventListener('touchstart', onStart);
-      el.removeEventListener('touchend', onEnd);
-    };
-  }, [show, onClose]);
-
-  if (!show) return null;
   const gross = parseFloat(settings.gross) || 0;
   const netYearly = netMonthly * 12;
 
   return ReactDOM.createPortal(
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
-      <div ref={modalRef} style={{ position: 'relative', zIndex: 1, background: 'var(--bg-secondary)', borderRadius: '24px 24px 0 0', maxHeight: '92vh', display: 'flex', flexDirection: 'column', animation: 'slideInUp 0.25s ease' }}>
+    <div className={`form-screen ${show ? 'open' : ''}`}>
+      <div className="form-screen-inner">
 
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 20px 0', flexShrink: 0 }}>
-          <div>
-            <h2 className="font-display" style={{ fontSize: '22px', marginBottom: '2px' }}>Take-Home Calculator</h2>
-            <p style={{ fontSize: '12px', color: tc.muted }}>Estimate your monthly take-home pay</p>
-          </div>
-          <button onClick={onClose} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
-            <Icons.X size={16} />
+        <div className="form-screen-header">
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 5l-7 7 7 7"/>
+            </svg>
           </button>
+          <div>
+            <h2 className="font-display" style={{ fontSize: '20px' }}>Take-Home Calculator</h2>
+          </div>
         </div>
 
         {/* Scrollable content */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div className="form-screen-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
           {/* Mode toggle */}
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -432,7 +389,7 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
   };
 
   const removeDeduction = (id) => updateSettings({ customDeductions: settings.customDeductions.filter(d => d.id !== id) });
-  const toggleDeduction = (id) => updateSettings({ customDeductions: settings.customDeductions.map(d => d.id === id ? { ...d, enabled: !d.enabled } : d) });
+  const toggleDeduction = (id) => { haptic.light(); updateSettings({ customDeductions: settings.customDeductions.map(d => d.id === id ? { ...d, enabled: !d.enabled } : d) }); };
 
   const getBreakdown = () => {
     if (!gross) return [];
@@ -479,10 +436,12 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
   const handleCalcToggle = () => {
     if (calcEnabled) {
       // Turning off — clear applied state, unlock the field
+      haptic.light();
       setCalcEnabled(false);
       setCalcApplied(false);
     } else {
       // Turning on — open modal, but NOT applied yet
+      haptic.medium();
       setCalcEnabled(true);
       setShowCalcModal(true);
     }
@@ -593,10 +552,10 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
 
       {/* ── Action buttons ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-        <button className="btn btn-primary" onClick={() => setShowAddModal(true)} style={{ width: '100%', justifyContent: 'center' }}><Icons.Plus size={20} /> Add New Bill</button>
-        <button className="btn btn-primary" onClick={() => setShowDebtModal(true)} style={{ width: '100%', justifyContent: 'center', background: 'linear-gradient(135deg, var(--danger), var(--accent-secondary))' }}><Icons.Plus size={20} /> Add New Debt</button>
-        <button className="btn btn-primary" onClick={() => setShowSavingsModal(true)} style={{ width: '100%', justifyContent: 'center', background: 'linear-gradient(135deg, var(--success), var(--accent-primary))' }}><Icons.Plus size={20} /> Add Savings Goal</button>
-        <button className="btn btn-secondary" onClick={() => setShowCategoryModal(true)} style={{ width: '100%', justifyContent: 'center' }}>Manage Categories</button>
+        <button className="btn btn-primary" onClick={() => { haptic.medium(); setShowAddModal(true); }} style={{ width: '100%', justifyContent: 'center' }}><Icons.Plus size={20} /> Add New Bill</button>
+        <button className="btn btn-primary" onClick={() => { haptic.medium(); setShowDebtModal(true); }} style={{ width: '100%', justifyContent: 'center', background: 'linear-gradient(135deg, var(--danger), var(--accent-secondary))' }}><Icons.Plus size={20} /> Add New Debt</button>
+        <button className="btn btn-primary" onClick={() => { haptic.medium(); setShowSavingsModal(true); }} style={{ width: '100%', justifyContent: 'center', background: 'linear-gradient(135deg, var(--success), var(--accent-primary))' }}><Icons.Plus size={20} /> Add Savings Goal</button>
+        <button className="btn btn-secondary" onClick={() => { haptic.medium(); setShowCategoryModal(true); }} style={{ width: '100%', justifyContent: 'center' }}>Manage Categories</button>
       </div>
 
       {/* ── Category Summary ── */}

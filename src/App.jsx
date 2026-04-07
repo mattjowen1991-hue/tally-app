@@ -76,6 +76,7 @@ function AppContent() {
   const [newBill, setNewBill] = useState({ ...emptyBill });
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [customCategories, setCustomCategories] = useState([]);
+  const [categoryOrder, setCategoryOrder] = useState([...DEFAULT_CATEGORIES]);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [billSearch, setBillSearch] = useState('');
   const [billSort, setBillSort] = useState('default');
@@ -263,6 +264,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     if (d.debts) setDebts(d.debts);
     if (d.savings) setSavings(d.savings);
     if (d.customCategories) setCustomCategories(d.customCategories);
+    if (d.categoryOrder) setCategoryOrder(d.categoryOrder);
     if (d.monthlySnapshots) setMonthlySnapshots(d.monthlySnapshots);
     if (d.salaryCalc) setSalaryCalc(d.salaryCalc);
   };
@@ -604,18 +606,26 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
         }
         loadedSavings = loadedSavings.map((s) => ({ ...s, transactions: s.transactions || [], currentAmount: s.currentAmount || 0 }));
         setSavings(loadedSavings);
-        setCustomCategories(data.customCategories || []);
+        const loadedCustom = data.customCategories || [];
+        setCustomCategories(loadedCustom);
+        if (data.categoryOrder) {
+          // Merge: keep saved order, append any DEFAULT_CATEGORIES not yet present
+          const merged = [...data.categoryOrder, ...DEFAULT_CATEGORIES.filter(c => !data.categoryOrder.includes(c))];
+          setCategoryOrder(merged);
+        } else {
+          setCategoryOrder([...DEFAULT_CATEGORIES, ...loadedCustom]);
+        }
         if (data.salaryCalc) setSalaryCalc(data.salaryCalc);
       } else { setBills([]); setDebts([]); }
     } catch (error) { console.log('No stored data, starting fresh'); setBills([]); setDebts([]); }
   };
 
   // ── Save data ──
-  useEffect(() => { if (bills.length > 0 || debts.length > 0 || savings.length > 0 || customCategories.length > 0) saveData(); }, [bills, income, debts, savings, customCategories, salaryCalc]);
-  const saveData = async () => { try { await window.storage.set('bills-data', JSON.stringify({ bills, income: parseFloat(income) || 0, debts, savings, customCategories, monthlySnapshots, salaryCalc, lastMonth: new Date().getFullYear() + '-' + (new Date().getMonth() + 1) })); } catch (e) { console.error('Error saving:', e); } };
+  useEffect(() => { if (bills.length > 0 || debts.length > 0 || savings.length > 0 || customCategories.length > 0) saveData(); }, [bills, income, debts, savings, customCategories, categoryOrder, salaryCalc]);
+  const saveData = async () => { try { await window.storage.set('bills-data', JSON.stringify({ bills, income: parseFloat(income) || 0, debts, savings, customCategories, categoryOrder, monthlySnapshots, salaryCalc, lastMonth: new Date().getFullYear() + '-' + (new Date().getMonth() + 1) })); } catch (e) { console.error('Error saving:', e); } };
 
   // ── Calculations ──
-  const categories = [...DEFAULT_CATEGORIES, ...customCategories];
+  const categories = categoryOrder.filter(c => DEFAULT_CATEGORIES.includes(c) || customCategories.includes(c));
   const incomeNum = parseFloat(income) || 0;
   const totals = {
     projectedExpenses: bills.reduce((s, b) => s + (b.projected || 0), 0),
@@ -669,8 +679,10 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const handleTogglePaid = (id) => { setBills(bills.map((b) => (b.id !== id ? b : { ...b, paid: !b.paid, missed: false, paused: false }))); haptic.medium(); };
   const handleToggleMissed = (id) => { setBills(bills.map((b) => (b.id !== id ? b : { ...b, missed: !b.missed, paid: false, paused: false }))); haptic.warning(); };
   const handleTogglePaused = (id) => { setBills(bills.map((b) => (b.id !== id ? b : { ...b, paused: !b.paused, paid: false, missed: false }))); haptic.light(); };
-  const handleAddCategory = () => { const name = newCategoryName.trim().toUpperCase(); if (!name) return; if (categories.includes(name)) { alert('Category exists!'); return; } setCustomCategories([...customCategories, name]); setNewCategoryName(''); haptic.medium(); toast(`${name} added`, 'success'); };
-  const handleDeleteCategory = (cat) => { const associated = bills.filter((b) => b.category === cat); if (associated.length > 0) { const names = associated.map(b => `• ${b.name}`).join('\n'); alert(`Can't delete "${cat}"\n\nBills using this category:\n${names}`); return; } if (confirm(`Delete "${cat}"?`)) { setCustomCategories(customCategories.filter((c) => c !== cat)); if (selectedCategory === cat) { setSelectedCategory('HOME'); if (categoryScrollRef.current) categoryScrollRef.current.scrollTo({ left: 0, behavior: 'smooth' }); } haptic.error(); toast(`${cat} removed`, 'error'); } };
+  const handleAddCategory = () => { const name = newCategoryName.trim().toUpperCase(); if (!name) return; if (categories.includes(name)) { alert('Category exists!'); return; } setCustomCategories([...customCategories, name]); setCategoryOrder([...categoryOrder, name]); setNewCategoryName(''); haptic.medium(); toast(`${name} added`, 'success'); };
+  const handleRenameCategory = (oldName, newName) => { const name = newName.trim().toUpperCase(); if (!name || name === oldName) return; if (categories.includes(name)) { alert('Category already exists!'); return; } setCustomCategories(customCategories.map((c) => c === oldName ? name : c)); setCategoryOrder(categoryOrder.map((c) => c === oldName ? name : c)); setBills(bills.map((b) => b.category === oldName ? { ...b, category: name } : b)); if (selectedCategory === oldName) setSelectedCategory(name); haptic.light(); toast(`${oldName} renamed to ${name}`, 'success'); };
+  const handleDeleteCategory = (cat) => { const associated = bills.filter((b) => b.category === cat); if (associated.length > 0) { toast(`Can't delete "${cat}" — ${associated.length} bill${associated.length > 1 ? 's' : ''} use it`, 'error'); haptic.warning(); return; } setCustomCategories(customCategories.filter((c) => c !== cat)); setCategoryOrder(categoryOrder.filter((c) => c !== cat)); if (selectedCategory === cat) { setSelectedCategory('HOME'); if (categoryScrollRef.current) categoryScrollRef.current.scrollTo({ left: 0, behavior: 'smooth' }); } haptic.error(); toast(`${cat} removed`, 'error'); };
+  const handleMoveCategory = (reordered) => { setCategoryOrder(reordered); };
   const filteredBills = bills.filter((b) => { const catMatch = selectedCategory === 'ALL' || b.category === selectedCategory; if (!catMatch) return false; if (billSearch && !b.name.toLowerCase().includes(billSearch.toLowerCase())) return false; switch (statusFilter) { case 'PAID': return b.paid && !b.missed; case 'UNPAID': return !b.paid && !b.missed && !b.paused; case 'MISSED': return b.missed; case 'PAUSED': return b.paused; case 'RECURRING': return b.recurring; case 'ONE-OFF': return !b.recurring; default: return true; } }).sort((a, b) => { switch (billSort) { case 'name': return a.name.localeCompare(b.name); case 'amount-high': return (b.actual || 0) - (a.actual || 0); case 'amount-low': return (a.actual || 0) - (b.actual || 0); case 'status': return (a.paid === b.paid) ? 0 : a.paid ? 1 : -1; default: return 0; } });
 
   // ── Debt handlers ──
@@ -832,7 +844,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 
       {/* Modals */}
       <AddBillScreen show={showAddModal} onClose={() => setShowAddModal(false)} newBill={newBill} setNewBill={setNewBill} handleAddBill={handleAddBill} categories={categories} validationErrors={validationErrors} setValidationErrors={setValidationErrors} emptyBill={emptyBill} />
-      <ManageCategoriesModal show={showCategoryModal} onClose={() => setShowCategoryModal(false)} bills={bills} customCategories={customCategories} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} handleDeleteCategory={handleDeleteCategory} />
+      <ManageCategoriesModal show={showCategoryModal} onClose={() => setShowCategoryModal(false)} bills={bills} customCategories={customCategories} categoryOrder={categoryOrder} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} handleDeleteCategory={handleDeleteCategory} handleRenameCategory={handleRenameCategory} handleMoveCategory={handleMoveCategory} />
       <AddDebtScreen show={showDebtModal} onClose={() => setShowDebtModal(false)} newDebt={newDebt} setNewDebt={setNewDebt} handleAddDebt={handleAddDebt} emptyDebt={emptyDebt} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
       <AddSavingsScreen show={showSavingsModal} onClose={() => setShowSavingsModal(false)} newSavingsGoal={newSavingsGoal} setNewSavingsGoal={setNewSavingsGoal} handleAddSavings={handleAddSavings} emptySavings={emptySavings} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
         <AccountModal show={showAccountModal} onClose={() => setShowAccountModal(false)} user={user} onSignIn={handleSignIn} onSignUp={handleSignUp} onSignOut={handleSignOut} onResetPassword={handleResetPassword} onGoogleSignIn={handleGoogleSignIn} syncStatus={syncStatus} onSyncNow={saveToCloud} onDeleteAccount={handleDeleteAccount} onClearLocalData={handleClearLocalData} lastSynced={lastSynced} />

@@ -36,9 +36,8 @@ export const Calendar = ({ size = 24, style = {}, className = '' }) => (
 );
 
 export const Edit = ({ size = 24, style = {}, className = '' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} className={className}>
-    <path d="M14.5 4.5l5 5L7 22H2v-5L14.5 4.5z" fill="currentColor" opacity="0.12" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round"/>
-    <path d="M11.5 7.5l5 5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
   </svg>
 );
 
