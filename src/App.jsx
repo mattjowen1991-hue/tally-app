@@ -202,7 +202,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   // ── Cloud sync functions ──
   const getAppData = () => ({
     bills, income: parseFloat(income) || 0, debts, savings,
-    customCategories, monthlySnapshots, salaryCalc,
+    customCategories, categoryOrder, monthlySnapshots, salaryCalc,
     lastMonth: new Date().getFullYear() + '-' + (new Date().getMonth() + 1),
   });
 

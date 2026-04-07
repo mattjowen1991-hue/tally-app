@@ -308,3 +308,9 @@ export const Moon = ({ size = 24, style = {}, className = '' }) => (
     <path d="M12.5 6.5A6 6 0 0 0 17.5 17 6 6 0 1 1 8 7.5a6 6 0 0 0 4.5-1z" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
+
+export const Lightbulb = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <path d="M9 18h6M10 21h4M12 2a7 7 0 0 1 4 12.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26A7 7 0 0 1 12 2z"/>
+  </svg>
+);
