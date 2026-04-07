@@ -1,21 +1,15 @@
 export function initKeyboardScroll() {
   if (!window.visualViewport) return;
 
-  let raf1, raf2;
-
   document.addEventListener('focusin', (e) => {
     const el = e.target;
     if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return;
-    const modal = el.closest('.modal-content');
-    if (!modal) return;
+    if (!el.closest('.modal-content')) return;
 
-    cancelAnimationFrame(raf1);
-    cancelAnimationFrame(raf2);
-
-    raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      });
-    });
+    // Wait for interactive-widget=resizes-content to finish resizing
+    // then scroll the field to just visible above keyboard
+    setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 300);
   }, true);
 }
