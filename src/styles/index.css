@@ -690,7 +690,8 @@ body.modal-open {
   .modal-content {
     position: relative;
     max-width: 100%;
-    /* Fill all available space in the flex container - grows upward from bottom */
+    /* Constrain to overlay height (which shrinks with keyboard via resizes-content) */
+    max-height: 100%;
     width: 100%;
     border-radius: 16px 16px 0 0;
     overflow-y: auto;
