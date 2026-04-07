@@ -3,13 +3,31 @@
 export function initKeyboardScroll() {
   if (!window.visualViewport) return;
 
-  // Move focus to next text input in the modal, skipping buttons/selects/hidden
+  // Keep --vvh in sync with the visual viewport height.
+  // This drives .form-screen-inner { height: var(--vvh) } so the form content
+  // always fills exactly the space above the keyboard.
+  function syncViewportHeight() {
+    document.documentElement.style.setProperty('--vvh', window.visualViewport.height + 'px');
+  }
+  window.visualViewport.addEventListener('resize', syncViewportHeight);
+  syncViewportHeight();
+
+  // Prevent the main page from scrolling when a form-screen is open.
+  // Touches in the gap area (inside form-screen but outside form-screen-body)
+  // would otherwise propagate to the main page and cause the fixed form to drift.
+  document.addEventListener('touchmove', (e) => {
+    if (!document.querySelector('.form-screen.open')) return;
+    if (e.target.closest('.form-screen-body')) return; // allow scroll inside body
+    e.preventDefault();
+  }, { passive: false });
+
+  // Move focus to next text input in the modal, form-screen, or inline panel edit form
   window.moveFocusToNext = (currentEl) => {
-    const modal = currentEl.closest('.modal-content');
-    if (!modal) return;
+    const container = currentEl.closest('.modal-content') || currentEl.closest('.form-screen-body') || currentEl.closest('.swipe-panel');
+    if (!container) return;
 
     const focusable = Array.from(
-      modal.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea:not([disabled])')
+      container.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea:not([disabled])')
     ).filter(el => {
       if (el.offsetParent === null) return false;
       if (el.type === 'date') return false;
@@ -27,30 +45,35 @@ export function initKeyboardScroll() {
   };
 
   // Ensure focused field is visible above keyboard
-  function ensureFieldVisible(el, modal) {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const vv = window.visualViewport;
-        const modalRect = modal.getBoundingClientRect();
-        const elRect = el.getBoundingClientRect();
+  function ensureFieldVisible(el, container) {
+    const vv = window.visualViewport;
+    const containerRect = container.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
 
-        // Visible bottom in modal coordinates
-        const visibleBottomInModal = (vv.height + vv.offsetTop) - modalRect.top;
-        const elBottomInModal = elRect.bottom - modalRect.top;
+    // Keyboard top relative to container top
+    const visibleBottom = (vv.height + vv.offsetTop) - containerRect.top;
+    const elBottom = elRect.bottom - containerRect.top;
 
-        if (elBottomInModal > visibleBottomInModal - 16) {
-          modal.scrollTop += elBottomInModal - visibleBottomInModal + 80;
-        }
-      });
-    });
+    if (elBottom > visibleBottom - 16) {
+      container.scrollTop += elBottom - visibleBottom + 24;
+    }
   }
 
-  // On focus, ensure the field is visible
+  // On focus, scroll immediately then again once the keyboard has finished resizing
   document.addEventListener('focusin', (e) => {
     const el = e.target;
     if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return;
-    const modal = el.closest('.modal-content');
-    if (!modal) return;
-    ensureFieldVisible(el, modal);
+    const container = el.closest('.modal-content') || el.closest('.form-screen-body') || el.closest('.swipe-panel');
+    if (!container) return;
+
+    // First pass — keyboard may not be open yet
+    requestAnimationFrame(() => ensureFieldVisible(el, container));
+
+    // Second pass — fires once after the keyboard finishes resizing the viewport
+    function onViewportResize() {
+      window.visualViewport.removeEventListener('resize', onViewportResize);
+      requestAnimationFrame(() => ensureFieldVisible(el, container));
+    }
+    window.visualViewport.addEventListener('resize', onViewportResize);
   }, true);
 }

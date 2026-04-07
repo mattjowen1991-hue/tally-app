@@ -26,7 +26,7 @@ import DebtPanel from './components/DebtPanel';
 import SavingsPanel from './components/SavingsPanel';
 
 // Modal components
-import { AddBillModal, ManageCategoriesModal, AddDebtModal, AddSavingsModal } from './components/Modals';
+import { AddBillScreen, ManageCategoriesModal, AddDebtScreen, AddSavingsScreen } from './components/Modals';
 
 const PANEL_NAMES = ['Overview', 'Actions', 'Bills', 'Debt', 'Savings'];
 
@@ -831,10 +831,10 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
       ) : null}
 
       {/* Modals */}
-      <AddBillModal show={showAddModal} onClose={() => setShowAddModal(false)} newBill={newBill} setNewBill={setNewBill} handleAddBill={handleAddBill} categories={categories} validationErrors={validationErrors} setValidationErrors={setValidationErrors} emptyBill={emptyBill} />
+      <AddBillScreen show={showAddModal} onClose={() => setShowAddModal(false)} newBill={newBill} setNewBill={setNewBill} handleAddBill={handleAddBill} categories={categories} validationErrors={validationErrors} setValidationErrors={setValidationErrors} emptyBill={emptyBill} />
       <ManageCategoriesModal show={showCategoryModal} onClose={() => setShowCategoryModal(false)} bills={bills} customCategories={customCategories} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} handleDeleteCategory={handleDeleteCategory} />
-      <AddDebtModal show={showDebtModal} onClose={() => setShowDebtModal(false)} newDebt={newDebt} setNewDebt={setNewDebt} handleAddDebt={handleAddDebt} emptyDebt={emptyDebt} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
-      <AddSavingsModal show={showSavingsModal} onClose={() => setShowSavingsModal(false)} newSavingsGoal={newSavingsGoal} setNewSavingsGoal={setNewSavingsGoal} handleAddSavings={handleAddSavings} emptySavings={emptySavings} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
+      <AddDebtScreen show={showDebtModal} onClose={() => setShowDebtModal(false)} newDebt={newDebt} setNewDebt={setNewDebt} handleAddDebt={handleAddDebt} emptyDebt={emptyDebt} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
+      <AddSavingsScreen show={showSavingsModal} onClose={() => setShowSavingsModal(false)} newSavingsGoal={newSavingsGoal} setNewSavingsGoal={setNewSavingsGoal} handleAddSavings={handleAddSavings} emptySavings={emptySavings} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
         <AccountModal show={showAccountModal} onClose={() => setShowAccountModal(false)} user={user} onSignIn={handleSignIn} onSignUp={handleSignUp} onSignOut={handleSignOut} onResetPassword={handleResetPassword} onGoogleSignIn={handleGoogleSignIn} syncStatus={syncStatus} onSyncNow={saveToCloud} onDeleteAccount={handleDeleteAccount} onClearLocalData={handleClearLocalData} lastSynced={lastSynced} />
         <SettingsModal show={showSettingsModal} onClose={() => setShowSettingsModal(false)} theme={theme} onToggleTheme={handleToggleTheme} notificationSettings={notificationSettings} onNotificationSettingsChange={setNotificationSettings} currencyCode={currencyCode} onCurrencyChange={(code) => { setCurrencyCode(code); saveCurrencyPreference(code); }} />
         {showImportModal && (

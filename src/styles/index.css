@@ -431,8 +431,54 @@ body::after {
 
 body.modal-open {
   overflow: hidden;
-  position: fixed;
   width: 100%;
+}
+
+/* ── Full-screen form (replaces bottom-sheet modal for bill/debt/savings) ── */
+.form-screen {
+  position: fixed;
+  inset: 0;                   /* always covers full screen — no gap below keyboard */
+  overflow: hidden;
+  background: var(--bg-primary);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+/* Inner wrapper: constrains the form layout to the space above the keyboard */
+.form-screen-inner {
+  height: var(--vvh, 100vh);  /* kept in sync with visualViewport.height by JS */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.form-screen.open {
+  transform: translateX(0);
+  pointer-events: all;
+}
+
+.form-screen-header {
+  flex-shrink: 0;
+  padding: 16px 20px;
+  padding-top: calc(env(safe-area-inset-top, 28px) + 16px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-primary);
+}
+
+.form-screen-body {
+  flex: 1;
+  overflow-y: auto;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  padding: 24px 20px;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 40px);
 }
 
 .modal-content {
@@ -683,23 +729,23 @@ body.modal-open {
   .modal-overlay {
     align-items: flex-end;
     justify-content: center;
-    /* No padding-top — safe-area gap handled via margin-top on modal,
-       so 100% on the modal resolves cleanly against the full overlay height */
   }
 
   .modal-content {
-    position: relative;
-    max-width: 100%;
-    /* margin-top creates the physical gap below the status bar.
-       min/max-height fill exactly the remaining space (overlay height minus that gap).
-       Using calc() avoids the ambiguity of % resolving against border-box vs content-box. */
-    margin-top: env(safe-area-inset-top, 28px);
-    min-height: calc(100% - env(safe-area-inset-top, 28px));
-    max-height: calc(100% - env(safe-area-inset-top, 28px));
-    width: 100%;
+    /* Take the modal out of flex layout entirely.
+       position: fixed + top/bottom is the reliable way to anchor a bottom sheet:
+       - top: safe-area-inset-top  → never behind the status bar
+       - bottom: 0                  → with interactive-widget=resizes-content, this
+                                      automatically tracks the keyboard top, no JS needed */
+    position: fixed;
+    top: env(safe-area-inset-top, 28px);
+    left: 0;
+    right: 0;
+    bottom: 0;
     border-radius: 16px 16px 0 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     overscroll-behavior: contain;
     padding-top: 16px;
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
