@@ -93,7 +93,9 @@ function BillCard({
 }) {
   const isSelected = selectedIds.has(bill.id);
   const dueDate = formatDueDate(bill);
-  const variance = bill.actual - bill.projected;
+  const actualNum = parseFloat(bill.actual) || 0;
+  const projectedNum = parseFloat(bill.projected) || 0;
+  const variance = actualNum - projectedNum;
   const hasVariance = Math.abs(variance) > 0.01;
 
   // Status colours
@@ -102,7 +104,7 @@ function BillCard({
     : bill.missed
     ? { color: 'var(--danger)', tint: tc.dangerTint, tintStrong: tc.dangerTintStrong, label: 'Missed', icon: '✗', borderColor: 'var(--danger)' }
     : bill.paused
-    ? { color: 'var(--warning)', tint: tc.warningTint, tintStrong: tc.warningTintStrong, label: 'Paused', icon: '⏸', borderColor: 'var(--warning)' }
+    ? { color: 'var(--warning)', tint: tc.warningTint, tintStrong: tc.warningTintStrong, label: 'Paused', icon: <Icons.Pause size={10} style={{ verticalAlign: 'middle', marginBottom: '1px' }} />, borderColor: 'var(--warning)' }
     : null;
 
   if (editingId === bill.id) {
@@ -146,10 +148,10 @@ function BillCard({
             </div>
           ) : null}
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button className="btn btn-primary" onClick={handleEditSave} style={{ flex: 1 }}><Icons.Check size={18} /> Save</button>
-            <button className="btn btn-secondary" onClick={() => setEditingId(null)} style={{ flex: 1 }}><Icons.X size={18} /> Cancel</button>
+            <button className="btn btn-primary" onClick={() => { haptic.success(); handleEditSave(); }} style={{ flex: 1 }}><Icons.Check size={18} /> Save</button>
+            <button className="btn btn-secondary" onClick={() => { haptic.light(); setEditingId(null); }} style={{ flex: 1 }}><Icons.X size={18} /> Cancel</button>
           </div>
-          <button onClick={() => { setEditingId(null); handleDelete(bill.id); }} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `1px solid var(--danger-tint-strong)`, background: tc.dangerTintLight, color: tc.danger, cursor: 'pointer', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><Icons.Trash size={16} /> Delete Bill</button>
+          <button onClick={() => { haptic.error(); setEditingId(null); handleDelete(bill.id); }} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `1px solid var(--danger-tint-strong)`, background: tc.dangerTintLight, color: tc.danger, cursor: 'pointer', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><Icons.Trash size={16} /> Delete Bill</button>
         </div>
       </div>
     );
@@ -160,7 +162,7 @@ function BillCard({
       onTouchStart={(e) => !selectionMode && onCardTouchStart(e, bill.id)}
       onTouchMove={onCardTouchMove}
       onTouchEnd={onCardTouchEnd}
-      onClick={() => selectionMode && toggleSelect(bill.id)}
+      onClick={() => selectionMode && (haptic.light(), toggleSelect(bill.id))}
     >
       <div className="mobile-bill-card" style={{
         borderLeft: statusConfig ? `3px solid ${statusConfig.borderColor}` : undefined,
@@ -199,7 +201,7 @@ function BillCard({
                   {bill.name}
                 </span>
                 {!selectionMode && (
-                  <button onClick={() => handleEditStart(bill)} style={{ width: '22px', height: '22px', borderRadius: '5px', border: '1px solid var(--accent-primary)', background: 'var(--info-tint)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)', flexShrink: 0, transition: 'opacity 0.2s' }}>
+                  <button onClick={() => { haptic.medium(); handleEditStart(bill); }} style={{ width: '22px', height: '22px', borderRadius: '5px', border: '1px solid var(--accent-primary)', background: 'var(--info-tint)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)', flexShrink: 0, transition: 'opacity 0.2s' }}>
                     <Icons.Edit size={12} />
                   </button>
                 )}
@@ -212,7 +214,7 @@ function BillCard({
             {/* Amount — top right */}
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <div className="font-mono" style={{ fontSize: '17px', fontWeight: '700', color: statusConfig ? statusConfig.color : 'var(--text-primary)' }}>
-                {cs}{bill.actual.toFixed(2)}
+                {cs}{actualNum.toFixed(2)}
               </div>
               {hasVariance && (
                 <div style={{ fontSize: '11px', color: variance > 0 ? 'var(--danger)' : 'var(--success)', marginTop: '1px' }}>
@@ -253,7 +255,7 @@ function BillCard({
           {!selectionMode && (
             <div style={{ display: 'flex', gap: '6px', marginLeft: '46px' }}>
               <button
-                onClick={() => handleTogglePaid(bill.id)}
+                onClick={() => { bill.paid ? haptic.light() : haptic.success(); handleTogglePaid(bill.id); }}
                 style={{
                   flex: 1, padding: '7px 0', borderRadius: '8px', fontSize: '12px', fontWeight: '600',
                   border: bill.paid ? 'none' : '1.5px solid var(--border)',
@@ -265,7 +267,7 @@ function BillCard({
                 <Icons.Check size={13} /> Paid
               </button>
               <button
-                onClick={() => handleToggleMissed(bill.id)}
+                onClick={() => { bill.missed ? haptic.light() : haptic.warning(); handleToggleMissed(bill.id); }}
                 style={{
                   flex: 1, padding: '7px 0', borderRadius: '8px', fontSize: '12px', fontWeight: '600',
                   border: bill.missed ? 'none' : '1.5px solid var(--border)',
@@ -278,7 +280,7 @@ function BillCard({
               </button>
               {bill.recurring && (
                 <button
-                  onClick={() => handleTogglePaused(bill.id)}
+                  onClick={() => { haptic.light(); handleTogglePaused(bill.id); }}
                   style={{
                     flex: 1, padding: '7px 0', borderRadius: '8px', fontSize: '12px', fontWeight: '600',
                     border: bill.paused ? 'none' : '1.5px solid var(--border)',
@@ -287,7 +289,7 @@ function BillCard({
                     cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
                   }}
                 >
-                  ⏸ Pause
+                  <Icons.Pause size={13} /> Pause
                 </button>
               )}
             </div>
@@ -387,18 +389,18 @@ export default function BillsPanel({
             style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary, #fff)', paddingLeft: '40px', paddingRight: billSearch ? '82px' : '44px', fontSize: '14px', height: '100%', fontFamily: 'inherit' }}
           />
           {billSearch && (
-            <button onClick={() => setBillSearch('')} style={{ position: 'absolute', right: '42px', top: '50%', transform: 'translateY(-50%)', width: '24px', height: '24px', borderRadius: '50%', border: 'none', background: 'var(--glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', transition: 'all 0.2s' }}>
+            <button onClick={() => { haptic.light(); setBillSearch(''); }} style={{ position: 'absolute', right: '42px', top: '50%', transform: 'translateY(-50%)', width: '24px', height: '24px', borderRadius: '50%', border: 'none', background: 'var(--glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', transition: 'all 0.2s' }}>
               <Icons.X size={12} />
             </button>
           )}
-          <button onClick={() => setShowSort(!showSort)} style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', width: '32px', height: '32px', borderRadius: '8px', border: billSort !== 'default' ? '1px solid var(--accent-primary)' : '1px solid var(--border)', background: billSort !== 'default' ? 'var(--info-tint)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: billSort !== 'default' ? 'var(--accent-primary)' : 'var(--text-muted)', transition: 'all 0.2s' }}>
+          <button onClick={() => { haptic.light(); setShowSort(!showSort); }} style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', width: '32px', height: '32px', borderRadius: '8px', border: billSort !== 'default' ? '1px solid var(--accent-primary)' : '1px solid var(--border)', background: billSort !== 'default' ? 'var(--info-tint)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: billSort !== 'default' ? 'var(--accent-primary)' : 'var(--text-muted)', transition: 'all 0.2s' }}>
             <Icons.SortAsc size={16} />
           </button>
         </div>
         {showSort && (
           <div style={{ marginTop: '8px', padding: '6px', background: 'var(--bg-card, #141833)', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', gap: '6px', flexWrap: 'wrap', animation: 'slideInUp 0.2s' }}>
             {SORT_OPTIONS.map((opt) => (
-              <button key={opt.key} onClick={() => { setBillSort(opt.key); setShowSort(false); }} style={{ padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '600', border: billSort === opt.key ? '1px solid var(--accent-primary)' : '1px solid var(--border)', background: billSort === opt.key ? 'var(--info-tint-strong)' : 'var(--glass)', color: billSort === opt.key ? 'var(--accent-primary)' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' }}>
+              <button key={opt.key} onClick={() => { haptic.light(); setBillSort(opt.key); setShowSort(false); }} style={{ padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '600', border: billSort === opt.key ? '1px solid var(--accent-primary)' : '1px solid var(--border)', background: billSort === opt.key ? 'var(--info-tint-strong)' : 'var(--glass)', color: billSort === opt.key ? 'var(--accent-primary)' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' }}>
                 {opt.label}
               </button>
             ))}
@@ -408,21 +410,21 @@ export default function BillsPanel({
 
       {/* Quick Add Buttons */}
       <div className="animate-in" style={{ display: 'flex', gap: '8px', marginBottom: '8px', animationDelay: '0.65s' }}>
-        <button className="btn btn-primary" onClick={() => setShowAddModal(true)} style={{ flex: 1, justifyContent: 'center' }}>
+        <button className="btn btn-primary" onClick={() => { haptic.medium(); setShowAddModal(true); }} style={{ flex: 1, justifyContent: 'center' }}>
           <Icons.Plus size={16} /> Add Bill
         </button>
-        <button className="btn btn-secondary" onClick={() => setShowCategoryModal(true)} style={{ flex: 1, justifyContent: 'center' }}>
+        <button className="btn btn-secondary" onClick={() => { haptic.medium(); setShowCategoryModal(true); }} style={{ flex: 1, justifyContent: 'center' }}>
           Manage Categories
         </button>
       </div>
       <div className="animate-in" style={{ marginBottom: '12px', animationDelay: '0.7s' }}>
-        <button onClick={() => setShowImportModal(true)} style={{
+        <button onClick={() => { haptic.medium(); setShowImportModal(true); }} style={{
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
           background: 'rgba(0,212,255,0.06)', border: '1px solid rgba(0,212,255,0.2)',
           borderRadius: '12px', padding: '10px', cursor: 'pointer', color: 'var(--accent-primary)',
           fontSize: '13px', fontWeight: '600',
         }}>
-          Import from bank statement
+          Import bills from a file
         </button>
       </div>
 
@@ -430,12 +432,12 @@ export default function BillsPanel({
       <div className="animate-in" style={{ marginBottom: '16px', animationDelay: '0.7s' }}>
         <div ref={categoryScrollRef} className="mobile-category-scroll" style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
           {categories.map((cat) => (
-            <button key={cat} className={`btn ${selectedCategory === cat ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setSelectedCategory(cat)} style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{cat}</button>
+            <button key={cat} className={`btn ${selectedCategory === cat ? 'btn-primary' : 'btn-secondary'}`} onClick={() => { haptic.light(); setSelectedCategory(cat); }} style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{cat}</button>
           ))}
         </div>
         <div className="mobile-category-scroll" style={{ display: 'flex', gap: '6px', overflowX: 'auto', marginTop: '8px' }}>
           {STATUS_FILTERS.map((f) => (
-            <button key={f.key} onClick={() => setStatusFilter(f.key)} style={{ padding: '6px 14px', borderRadius: '20px', border: statusFilter === f.key ? '2px solid var(--accent-primary)' : '1px solid var(--border)', background: statusFilter === f.key ? 'var(--accent-primary)20' : 'var(--glass)', color: statusFilter === f.key ? 'var(--accent-primary)' : 'var(--text-muted)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap', flexShrink: 0, transition: 'all 0.2s' }}>{f.label}</button>
+            <button key={f.key} onClick={() => { haptic.light(); setStatusFilter(f.key); }} style={{ padding: '6px 14px', borderRadius: '20px', border: statusFilter === f.key ? '2px solid var(--accent-primary)' : '1px solid var(--border)', background: statusFilter === f.key ? 'var(--accent-primary)20' : 'var(--glass)', color: statusFilter === f.key ? 'var(--accent-primary)' : 'var(--text-muted)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap', flexShrink: 0, transition: 'all 0.2s' }}>{f.label}</button>
           ))}
         </div>
       </div>
@@ -446,12 +448,12 @@ export default function BillsPanel({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2 className="font-display" style={{ fontSize: '24px' }}>{selectedCategory === 'ALL' ? 'All Bills' : selectedCategory}</h2>
             {filteredBills.length > 0 && !selectionMode && (
-              <button onClick={() => setSelectionMode(true)} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Select</button>
+              <button onClick={() => { haptic.medium(); setSelectionMode(true); }} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Select</button>
             )}
             {selectionMode && (
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <button onClick={selectAll} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--accent-primary)' }}>{selectedIds.size === filteredBills.length ? 'Deselect All' : 'Select All'}</button>
-                <button onClick={exitSelection} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Cancel</button>
+                <button onClick={() => { haptic.light(); selectAll(); }} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--accent-primary)' }}>{selectedIds.size === filteredBills.length ? 'Deselect All' : 'Select All'}</button>
+                <button onClick={() => { haptic.light(); exitSelection(); }} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Cancel</button>
               </div>
             )}
           </div>
@@ -504,20 +506,25 @@ export default function BillsPanel({
         </div>
       </div>
 
+      {/* Spacer so last bill scrolls above the bulk action bar */}
+      {selectionMode && selectedIds.size > 0 && activePanel === 2 && (
+        <div style={{ height: '100px', flexShrink: 0 }} aria-hidden="true" />
+      )}
+
       {/* Bulk Action Bar */}
       {selectionMode && selectedIds.size > 0 && activePanel === 2 && ReactDOM.createPortal(
         <div style={{ position: 'fixed', bottom: '20px', left: '16px', right: '16px', padding: '12px 16px', borderRadius: '16px', background: 'var(--bg-card, #141833)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.6)', zIndex: 9999, animation: 'slideInUp 0.2s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{selectedIds.size} selected</span>
-            <button onClick={exitSelection} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>✕ Cancel</button>
+            <button onClick={() => { haptic.light(); exitSelection(); }} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>✕ Cancel</button>
           </div>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            <button onClick={() => { onBulkTogglePaid([...selectedIds]); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--success), #059669)', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: '600', minWidth: '0' }}>✓ Paid</button>
-            <button onClick={() => { onBulkToggleMissed([...selectedIds]); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--danger), #dc2626)', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: '600', minWidth: '0' }}>✗ Missed</button>
+            <button onClick={() => { haptic.success(); onBulkTogglePaid([...selectedIds]); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--success), #059669)', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: '600', minWidth: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}><Icons.Check size={14} /> Paid</button>
+            <button onClick={() => { haptic.warning(); onBulkToggleMissed([...selectedIds]); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--danger), #dc2626)', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: '600', minWidth: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}><Icons.X size={14} /> Missed</button>
             {filteredBills.some(b => selectedIds.has(b.id) && b.recurring) && (
-              <button onClick={() => { onBulkTogglePaused([...selectedIds]); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--warning), #d97706)', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: '600', minWidth: '0' }}>⏸ Pause</button>
+              <button onClick={() => { haptic.light(); onBulkTogglePaused([...selectedIds]); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--warning), #d97706)', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: '600', minWidth: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}><Icons.Pause size={14} /> Pause</button>
             )}
-            <button onClick={() => { if (confirm(`Delete ${selectedIds.size} bill${selectedIds.size > 1 ? 's' : ''}?`)) { onBulkDelete([...selectedIds]); exitSelection(); } }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', minWidth: '0' }}>🗑 Delete</button>
+            <button onClick={() => { haptic.error(); if (confirm(`Delete ${selectedIds.size} bill${selectedIds.size > 1 ? 's' : ''}?`)) { onBulkDelete([...selectedIds]); exitSelection(); } }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', minWidth: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}><Icons.Trash size={14} /> Delete</button>
           </div>
         </div>,
         document.body

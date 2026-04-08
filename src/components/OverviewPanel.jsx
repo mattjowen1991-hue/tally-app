@@ -2,6 +2,7 @@ import { useCurrency } from './CurrencyContext';
 import React, { useState } from 'react';
 import * as Icons from './Icons';
 import { tc } from '../utils/themeColors';
+import haptic from '../utils/haptics';
 
 const CHART_COLORS = ['rgba(0,212,255,0.8)', 'rgba(124,58,237,0.8)', 'rgba(245,158,11,0.8)', 'rgba(16,185,129,0.8)', 'rgba(239,68,68,0.8)', 'rgba(168,85,247,0.8)'];
 
@@ -99,7 +100,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
           {/* 1. Upcoming Bills */}
-          <div onClick={() => upcomingCount > 0 && toggleCard('upcoming')} style={{
+          <div onClick={() => upcomingCount > 0 && (haptic.light(), toggleCard('upcoming'))} style={{
             padding: '18px 20px', borderRadius: '14px',
             background: upcomingCount > 0
               ? `linear-gradient(135deg, ${tc.warningTint}, ${tc.dangerTintLight})`
@@ -149,7 +150,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
 
           {/* 2. vs Last Month */}
           {lastSnapshot ? (
-            <div onClick={() => topCatChanges.length > 0 && toggleCard('vsLastMonth')} style={{
+            <div onClick={() => topCatChanges.length > 0 && (haptic.light(), toggleCard('vsLastMonth'))} style={{
               padding: '18px 20px', borderRadius: '14px',
               background: `linear-gradient(135deg, ${tc.purpleTint}, ${tc.infoTintLight})`,
               border: `1px solid ${tc.purpleTintStrong}`,
@@ -160,7 +161,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
                   <div style={{ fontSize: '12px', color: tc.muted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>vs {formatMonth(lastSnapshot.month)}</div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
                     <div className="font-mono" style={{ fontSize: '22px', fontWeight: '700', color: spendingDiff <= 0 ? tc.success : tc.danger }}>
-                      {spendingDiff <= 0 ? '↓' : '↑'} {cs}{Math.abs(spendingDiff).toFixed(2)}
+                      {spendingDiff <= 0 ? '↓' : '↑'} {cs}{Math.abs(spendingDiff || 0).toFixed(2)}
                     </div>
                     {spendingPct !== null && (
                       <div style={{
@@ -197,9 +198,9 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
                     <div key={change.category} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderRadius: '8px', background: tc.cardDetail }}>
                       <div style={{ fontSize: '13px', fontWeight: '500', color: tc.primary }}>{change.category}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '11px', color: tc.muted }}>{cs}{change.prev.toFixed(0)} → {cs}{change.curr.toFixed(0)}</span>
+                        <span style={{ fontSize: '11px', color: tc.muted }}>{cs}{(change.prev || 0).toFixed(0)} → {cs}{(change.curr || 0).toFixed(0)}</span>
                         <span className="font-mono" style={{ fontSize: '13px', fontWeight: '600', color: change.diff > 0 ? tc.danger : tc.success }}>
-                          {change.diff > 0 ? '+' : ''}{cs}{change.diff.toFixed(0)}
+                          {change.diff > 0 ? '+' : ''}{cs}{(change.diff || 0).toFixed(0)}
                         </span>
                       </div>
                     </div>
@@ -232,7 +233,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
                   <div style={{ fontSize: '12px', color: tc.muted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Biggest change</div>
                   <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>{biggestChange.category}</div>
                   <div className="font-mono" style={{ fontSize: '18px', fontWeight: '700', color: biggestChange.diff > 0 ? tc.warning : tc.success }}>
-                    {biggestChange.diff > 0 ? '+' : '-'}{cs}{Math.abs(biggestChange.diff).toFixed(2)}
+                    {biggestChange.diff > 0 ? '+' : '-'}{cs}{Math.abs(biggestChange.diff || 0).toFixed(2)}
                   </div>
                 </div>
                 <div style={{
@@ -246,8 +247,8 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
               </div>
               <div style={{ fontSize: '13px', color: tc.secondary, marginTop: '8px' }}>
                 {biggestChange.diff > 0
-                  ? `Up from ${cs}${biggestChange.prev.toFixed(2)} last month`
-                  : `Down from ${cs}${biggestChange.prev.toFixed(2)} last month`
+                  ? `Up from ${cs}${(biggestChange.prev || 0).toFixed(2)} last month`
+                  : `Down from ${cs}${(biggestChange.prev || 0).toFixed(2)} last month`
                 }
               </div>
             </div>
@@ -265,7 +266,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
           {/* 4. Debt & Savings row */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             {/* Total Debt */}
-            <div onClick={() => debts.length > 0 && toggleCard('debt')} style={{
+            <div onClick={() => debts.length > 0 && (haptic.light(), toggleCard('debt'))} style={{
               padding: '16px', borderRadius: '14px',
               background: totalDebt > 0
                 ? `linear-gradient(135deg, ${tc.dangerTint}, ${tc.warningTintLight})`
@@ -296,7 +297,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
             </div>
 
             {/* Total Saved */}
-            <div onClick={() => savings.length > 0 && toggleCard('savings')} style={{
+            <div onClick={() => savings.length > 0 && (haptic.light(), toggleCard('savings'))} style={{
               padding: '16px', borderRadius: '14px',
               background: `linear-gradient(135deg, ${tc.successTint}, ${tc.infoTintLight})`,
               border: `1px solid ${tc.successTintStrong}`,
@@ -423,7 +424,7 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
             const catBills = bills.filter(b => b.category === cat.name && (b.actual || 0) > 0);
             return (
               <div key={cat.name}>
-                <div onClick={() => setExpandedCategory(isExpanded ? null : cat.name)} style={{ cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+                <div onClick={() => { haptic.light(); setExpandedCategory(isExpanded ? null : cat.name); }} style={{ cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: CHART_COLORS[i % CHART_COLORS.length], flexShrink: 0 }} />

@@ -1,383 +1,630 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import CSVImportFlow from './CSVImportFlow';
+import haptic from '../utils/haptics';
+
+// Swipe-back edge zone — renders an invisible 24px strip on the left edge
+// that captures touch gestures without interfering with scrollable content
+function SwipeBackEdge({ onBack }) {
+  const startX = useRef(null);
+  const startY = useRef(null);
+
+  const onTouchStart = (e) => {
+    startX.current = e.touches[0].clientX;
+    startY.current = e.touches[0].clientY;
+  };
+
+  const onTouchEnd = (e) => {
+    if (startX.current === null) return;
+    const dx = e.changedTouches[0].clientX - startX.current;
+    const dy = Math.abs(e.changedTouches[0].clientY - startY.current);
+    startX.current = null;
+    startY.current = null;
+    if (dx > 60 && dy < dx * 0.7) {
+      haptic.light();
+      onBack();
+    }
+  };
+
+  return (
+    <div
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      style={{
+        position: 'absolute', left: 0, top: 0, bottom: 0,
+        width: '24px', zIndex: 10,
+      }}
+    />
+  );
+}
 
 const BANKS = [
   {
     name: 'Monzo',
+    initials: 'Mo',
     color: '#FF3366',
-    emoji: '🔴',
-    csv: [
-      'Open the Monzo app',
-      'Tap your account at the top',
-      'Tap the download icon (top right)',
+    appExport: true,
+    csvSupport: true,
+    badge: 'In-app · Easy',
+    tagline: 'Export directly from the Monzo app',
+    steps: [
+      'Open the Monzo app and go to Home',
+      'Tap your account name at the top of the screen',
+      'Tap the download icon in the top right corner',
       'Select "Export transactions"',
       'Choose CSV format',
-      'Select date range (last 6 months)',
-      'Save to your Files app',
+      'Select your date range — last 6 months is ideal',
+      'Tap Share and save the file to your Files app',
     ],
-    pdf: null,
-    notes: 'Monzo CSV export is available directly in the app — easiest option.',
+    note: 'Monzo makes exporting really simple — you can do the whole thing from the app in under a minute.',
   },
   {
     name: 'Starling',
-    color: '#7B61FF',
-    emoji: '🟣',
-    csv: [
+    initials: 'Sl',
+    color: '#6935D3',
+    appExport: true,
+    csvSupport: true,
+    badge: 'In-app · Easy',
+    tagline: 'Export directly from the Starling app',
+    steps: [
       'Open the Starling app',
       'Tap your account',
-      'Tap the three dots menu (top right)',
+      'Tap the three-dot menu ⋮ in the top right',
       'Select "Download statement"',
       'Choose CSV format',
-      'Select date range',
-      'Save to Files',
+      'Select your date range',
+      'Save the file to your Files app',
     ],
-    pdf: [
-      'Same steps as above',
-      'Choose PDF format instead of CSV',
+    note: 'Starling supports CSV export directly from the app — no browser needed.',
+  },
+  {
+    name: 'Revolut',
+    initials: 'Rv',
+    color: '#191C1F',
+    appExport: true,
+    csvSupport: true,
+    badge: 'In-app · Easy',
+    tagline: 'Export directly from the Revolut app',
+    steps: [
+      'Open the Revolut app',
+      'Tap the Accounts icon (circle) at the top left',
+      'Tap "Documents & Statements"',
+      'Select "Account Statement"',
+      'Choose your date range',
+      'Select Excel or CSV format',
+      'Tap "Generate" and save the file to your device',
     ],
-    notes: 'Both CSV and PDF available directly in the Starling app.',
+    note: 'If you have both personal and business accounts, export each separately. Business accounts can export up to 100 days at a time.',
   },
   {
     name: 'Barclays',
+    initials: 'Ba',
     color: '#00AEEF',
-    emoji: '🔵',
-    csv: [
-      'Open barclays.co.uk in your browser (not the app)',
+    appExport: false,
+    csvSupport: true,
+    badge: 'Browser required',
+    tagline: 'Export via barclays.co.uk',
+    steps: [
+      'On your phone or computer, open barclays.co.uk in a browser',
       'Log in to Online Banking',
-      'Select your account',
-      'Scroll down and tap "View all transactions"',
+      'Select your current account',
+      'Tap "View all transactions"',
       'Set your date range and tap Search',
       'Scroll to the bottom and tap "Export All"',
-      'Select CSV format',
-      'File will download to your Downloads folder',
+      'Choose CSV format and download the file',
     ],
-    pdf: [
-      'Open the Barclays app',
-      'Go to your account',
-      'Tap Statements',
-      'Select the statement period',
-      'Tap Download — saves as PDF',
-    ],
-    notes: '⚠️ CSV export is only available via desktop browser or mobile browser (not the app). PDF is easier from the app.',
+    note: 'CSV export is only available via the Barclays website — not the mobile app. You can use your phone\'s browser if you don\'t have a computer nearby.',
     warning: true,
   },
   {
     name: 'HSBC',
+    initials: 'HS',
     color: '#DB0011',
-    emoji: '🔴',
-    csv: [
-      'Open hsbc.co.uk in your browser',
-      'Log in to Online Banking',
-      'Select your account',
-      'Tap "View transactions"',
+    appExport: false,
+    csvSupport: true,
+    badge: 'Browser required',
+    tagline: 'Export via hsbc.co.uk',
+    steps: [
+      'Go to hsbc.co.uk in your browser and log in',
+      'Select your current account',
+      'Tap "Transactions" to view your history',
       'Set your date range',
-      'Tap "Export" or "Download"',
-      'Select CSV format',
+      'Tap "Download" and select CSV format',
+      'Save the file to your device',
     ],
-    pdf: [
-      'Open the HSBC UK app',
-      'Select your account',
-      'Tap Statements',
-      'Choose your statement',
-      'Tap the download/share icon',
-    ],
-    notes: '⚠️ CSV export requires online banking via browser. PDF is available in the app.',
+    note: 'HSBC\'s CSV export is browser-only. You can use your phone\'s browser — just visit hsbc.co.uk and log in with your usual details.',
     warning: true,
   },
   {
     name: 'Lloyds',
+    initials: 'Ll',
     color: '#006A4E',
-    emoji: '🟢',
-    csv: [
-      'Open lloydsbank.com in your browser',
-      'Log in to Internet Banking',
+    appExport: false,
+    csvSupport: true,
+    badge: 'Browser required',
+    tagline: 'Export via lloydsbank.com',
+    steps: [
+      'Go to lloydsbank.com in your browser and log in',
       'Select your account',
-      'Tap "Export transactions"',
-      'Set date range',
-      'Select CSV and download',
+      'Tap "Statement options" above your transactions',
+      'Select "Export transactions"',
+      'Choose CSV format and set your date range',
+      'Note: max 3 months and 150 transactions per export',
+      'Download the file',
     ],
-    pdf: [
-      'Open the Lloyds Bank app',
-      'Tap your account',
-      'Tap Statements',
-      'Select a statement',
-      'Tap the share/download icon',
-    ],
-    notes: '⚠️ CSV requires browser. PDF available in app.',
+    note: 'Lloyds limits exports to 3 months at a time with a max of 150 transactions per file. For more history, just repeat the export with an earlier date range.',
     warning: true,
   },
   {
     name: 'NatWest',
+    initials: 'NW',
     color: '#4B1C82',
-    emoji: '🟣',
-    csv: [
-      'Open natwest.com in your browser',
-      'Log in to Online Banking',
-      'Select your account',
-      'Tap "Download transactions"',
-      'Select CSV format',
-      'Choose date range and download',
+    appExport: false,
+    csvSupport: true,
+    badge: 'Browser required',
+    tagline: 'Export via natwest.com',
+    steps: [
+      'Go to natwest.com in your browser and log in',
+      'Tap "Statements & Transactions", then "View Transactions"',
+      'Tap "Show search"',
+      'Select a date range (max 3 months) and tap Search',
+      'Tap "Export" and select CSV format',
+      'Download the file',
     ],
-    pdf: [
-      'Open the NatWest app',
-      'Tap your account',
-      'Tap Statements',
-      'Select the period',
-      'Tap Download',
-    ],
-    notes: '⚠️ CSV requires browser. PDF available in app.',
+    note: 'NatWest limits exports to 3 months per download. Use your phone\'s browser if you don\'t have a computer nearby.',
     warning: true,
   },
   {
     name: 'Santander',
+    initials: 'Sa',
     color: '#EC0000',
-    emoji: '🔴',
-    csv: [
-      'Open santander.co.uk in your browser',
-      'Log in to Online Banking',
-      'Select your account',
-      'Tap "View statements"',
-      'Select date range',
-      'Choose Export and select CSV',
+    appExport: false,
+    csvSupport: true,
+    badge: 'Browser required',
+    tagline: 'Export via santander.co.uk',
+    steps: [
+      'Go to santander.co.uk in your browser and log in',
+      'Tap "Statements & Documents"',
+      'Select your account and date range (max 12 months)',
+      'Choose CSV format',
+      'Tap "Generate Statement" and download the file',
     ],
-    pdf: [
-      'Open the Santander app',
-      'Tap your account',
-      'Tap Statements',
-      'Select a statement',
-      'Tap the download icon',
+    note: 'Santander allows up to 12 months per CSV export, with a max of 600 transactions. Browser required.',
+    warning: true,
+  },
+  {
+    name: 'Nationwide',
+    initials: 'Na',
+    color: '#112B5E',
+    appExport: false,
+    csvSupport: true,
+    badge: 'Browser required',
+    tagline: 'Export via nationwide.co.uk',
+    steps: [
+      'Go to nationwide.co.uk in your browser and log in',
+      'Select your current account',
+      'Set your date range (maximum 1 year at a time)',
+      'Tap "Download Transactions"',
+      'Select "Download CSV file"',
+      'Save the file to your device',
     ],
-    notes: '⚠️ CSV requires browser. PDF available in app.',
+    note: 'Nationwide supports CSV export via their website with a maximum range of one year per download.',
+    warning: true,
+  },
+  {
+    name: 'First Direct',
+    initials: 'FD',
+    color: '#000000',
+    appExport: false,
+    csvSupport: true,
+    badge: 'Browser required',
+    tagline: 'Export via firstdirect.com',
+    steps: [
+      'Go to firstdirect.com in your browser and log in',
+      'Go to the Transactions section',
+      'Select your date range (up to 90 days at a time)',
+      'Choose CSV format',
+      'Download the file',
+    ],
+    note: 'First Direct lets you export up to 90 days at a time, or a full year at once — going back up to 6 years. Browser only, not available in the app.',
     warning: true,
   },
   {
     name: 'Halifax',
-    color: '#009BDE',
-    emoji: '🔵',
-    csv: [
-      'Open halifax.co.uk in your browser',
-      'Log in to Online Banking',
+    initials: 'Hx',
+    color: '#0A6EBD',
+    appExport: false,
+    csvSupport: false,
+    badge: 'PDF export',
+    tagline: 'Download a PDF statement',
+    steps: [
+      'Go to halifax.co.uk in your browser and log in',
       'Select your account',
-      'Tap "Export transactions"',
-      'Choose CSV and date range',
-      'Download the file',
+      'Tap "Search transactions" and set your date range',
+      'Download your statement as a PDF',
+      'Come back to Tally and tap "Select file" below',
+      'Choose the PDF you downloaded — we\'ll extract your transactions automatically',
     ],
-    pdf: [
-      'Open the Halifax app',
-      'Tap your account',
-      'Tap Statements',
-      'Select a statement and download',
+    note: 'Halifax offers PDF statements (not CSV). No problem — Tally can read PDF bank statements directly and extract your transactions on-device.',
+  },
+  {
+    name: 'Chase UK',
+    initials: 'Ch',
+    color: '#117ACA',
+    appExport: false,
+    csvSupport: false,
+    badge: 'PDF export',
+    tagline: 'Download a PDF statement',
+    steps: [
+      'Open the Chase app or go to chase.co.uk',
+      'Log in to your account',
+      'Tap "Statements & documents"',
+      'Select the statement period you want',
+      'Download the PDF statement',
+      'Come back to Tally and tap "Select file" below',
+      'Choose the PDF you downloaded — we\'ll extract your transactions automatically',
     ],
-    notes: '⚠️ CSV requires browser. PDF available in app.',
-    warning: true,
+    note: 'Chase UK offers PDF statements. Tally can read PDF bank statements directly — just download and upload, we\'ll handle the rest.',
   },
 ];
 
-function BankGuide({ bank, onBack }) {
-  const [tab, setTab] = useState('csv');
-  const steps = tab === 'csv' ? bank.csv : bank.pdf;
+const EASY_BANKS = BANKS.filter(b => b.appExport);
+const OTHER_BANKS = BANKS.filter(b => !b.appExport);
+
+function BankAvatar({ bank, size = 40 }) {
+  return (
+    <div style={{
+      width: size, height: size,
+      borderRadius: Math.round(size * 0.28),
+      background: bank.color,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0,
+      color: '#fff',
+      fontSize: Math.round(size * 0.35),
+      fontWeight: '800',
+      letterSpacing: '-0.5px',
+      fontFamily: 'inherit',
+    }}>
+      {bank.initials}
+    </div>
+  );
+}
+
+function BadgePill({ bank }) {
+  const isEasy = bank.appExport;
+  return (
+    <span style={{
+      fontSize: '10px',
+      fontWeight: '700',
+      padding: '2px 7px',
+      borderRadius: '20px',
+      letterSpacing: '0.2px',
+      background: isEasy
+        ? 'color-mix(in srgb, var(--success) 12%, transparent)'
+        : 'color-mix(in srgb, var(--text-muted) 12%, transparent)',
+      color: isEasy ? 'var(--success)' : 'var(--text-muted)',
+      border: isEasy
+        ? '1px solid color-mix(in srgb, var(--success) 25%, transparent)'
+        : '1px solid var(--border)',
+    }}>
+      {bank.badge}
+    </span>
+  );
+}
+
+function BankGuide({ bank, onBack, onSelectFile }) {
+  const accentColor = bank.color;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer',
-          color: 'rgba(255,255,255,0.5)', fontSize: '20px', padding: '0', lineHeight: 1 }}>←</button>
-        <span style={{ fontSize: '20px' }}>{bank.emoji}</span>
-        <span style={{ fontSize: '17px', fontWeight: '700' }}>{bank.name}</span>
+      <div style={{ flexShrink: 0 }}>
+        {/* Color accent bar */}
+        <div style={{ height: '4px', background: accentColor }} />
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '14px',
+          padding: '16px 20px', borderBottom: '1px solid var(--border)',
+        }}>
+          <button onClick={() => { haptic.light(); onBack(); }} style={{
+            background: 'var(--glass)', border: '1px solid var(--border)',
+            borderRadius: '10px', width: '36px', height: '36px',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--text-muted)', fontSize: '18px', flexShrink: 0,
+          }}>←</button>
+          <BankAvatar bank={bank} size={40} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', lineHeight: 1.2 }}>
+              {bank.name}
+            </div>
+            <BadgePill bank={bank} />
+          </div>
+        </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-        {/* Tab selector */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-          <button onClick={() => setTab('csv')} style={{
-            flex: 1, padding: '8px', borderRadius: '10px', fontSize: '13px', fontWeight: '600',
-            cursor: 'pointer', border: tab === 'csv' ? '2px solid var(--accent-primary)' : '1px solid rgba(255,255,255,0.1)',
-            background: tab === 'csv' ? 'rgba(0,212,255,0.1)' : 'rgba(255,255,255,0.03)',
-            color: tab === 'csv' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.4)',
-          }}>CSV (recommended)</button>
-          {bank.pdf && (
-            <button onClick={() => setTab('pdf')} style={{
-              flex: 1, padding: '8px', borderRadius: '10px', fontSize: '13px', fontWeight: '600',
-              cursor: 'pointer', border: tab === 'pdf' ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.1)',
-              background: tab === 'pdf' ? 'rgba(245,158,11,0.1)' : 'rgba(255,255,255,0.03)',
-              color: tab === 'pdf' ? '#f59e0b' : 'rgba(255,255,255,0.4)',
-            }}>PDF</button>
-          )}
+      {/* Scrollable content */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+
+        {/* How it works explainer */}
+        <div style={{
+          background: 'var(--glass)', border: '1px solid var(--border)',
+          borderRadius: '14px', padding: '14px 16px', marginBottom: '20px',
+        }}>
+          <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+            How it works
+          </div>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+            Export your recent transactions from your bank ({bank.csvSupport ? 'CSV' : 'PDF'} format). Then come back to Tally and upload the file — we'll scan it and suggest any recurring bills we spot automatically.
+          </p>
         </div>
 
-        {/* Warning */}
-        {bank.warning && tab === 'csv' && (
-          <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)',
-            borderRadius: '10px', padding: '10px 12px', fontSize: '12px', color: '#f59e0b', marginBottom: '14px' }}>
-            {bank.notes}
+        {/* Browser warning */}
+        {bank.warning && (
+          <div style={{
+            background: 'color-mix(in srgb, var(--warning) 10%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--warning) 25%, transparent)',
+            borderRadius: '12px', padding: '12px 14px', marginBottom: '20px',
+            display: 'flex', gap: '10px', alignItems: 'flex-start',
+          }}>
+            <span style={{ fontSize: '16px', flexShrink: 0 }}>⚠️</span>
+            <p style={{ fontSize: '13px', color: 'var(--warning)', margin: 0, lineHeight: 1.5 }}>
+              {bank.name} requires you to use a <strong>web browser</strong> (not the app) to export transactions. Open your phone\'s browser and go to {bank.tagline.split('via ')[1] || 'their website'}.
+            </p>
           </div>
         )}
-        {!bank.warning && (
-          <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)',
-            borderRadius: '10px', padding: '10px 12px', fontSize: '12px', color: '#10b981', marginBottom: '14px' }}>
-            {bank.notes}
+
+        {/* PDF info note — banks that don't support CSV */}
+        {!bank.csvSupport && (
+          <div style={{
+            background: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent)',
+            borderRadius: '12px', padding: '12px 14px', marginBottom: '20px',
+            display: 'flex', gap: '10px', alignItems: 'flex-start',
+          }}>
+            <span style={{ fontSize: '16px', flexShrink: 0 }}>📄</span>
+            <p style={{ fontSize: '13px', color: 'var(--accent-primary)', margin: 0, lineHeight: 1.5 }}>
+              {bank.name} provides PDF statements. Tally can read these directly — just download and upload, no conversion needed.
+            </p>
           </div>
         )}
 
         {/* Steps */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {steps?.map((step, i) => (
-            <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-              <div style={{ width: '24px', height: '24px', borderRadius: '50%', flexShrink: 0,
-                background: 'rgba(0,212,255,0.15)', border: '1px solid rgba(0,212,255,0.2)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '11px', fontWeight: '700', color: 'var(--accent-primary)' }}>
-                {i + 1}
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '14px' }}>
+            Step-by-step guide
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {bank.steps.map((step, i) => (
+              <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <div style={{
+                  width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
+                  background: accentColor,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '12px', fontWeight: '800', color: '#fff',
+                }}>
+                  {i + 1}
+                </div>
+                <div style={{
+                  flex: 1, fontSize: '14px', color: 'var(--text-primary)',
+                  lineHeight: 1.55, paddingTop: '4px',
+                }}>
+                  {step}
+                </div>
               </div>
-              <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5, margin: 0, paddingTop: '2px' }}>
-                {step}
-              </p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        {tab === 'csv' && (
-          <div style={{ marginTop: '20px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: '10px', padding: '12px 14px' }}>
-            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', margin: 0, lineHeight: 1.5 }}>
-              Once you have the CSV file, come back to Tally and tap "Select CSV file" to upload it.
-            </p>
-          </div>
-        )}
-        {tab === 'pdf' && (
-          <div style={{ marginTop: '20px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)',
-            borderRadius: '10px', padding: '12px 14px' }}>
-            <p style={{ fontSize: '12px', color: '#f59e0b', margin: 0, lineHeight: 1.5 }}>
-              PDF import coming soon. For now, please use the CSV format to import your transactions.
-            </p>
-          </div>
-        )}
-        <div style={{ height: '32px' }} />
+        {/* Note */}
+        <div style={{
+          background: 'var(--glass)', border: '1px solid var(--border)',
+          borderRadius: '12px', padding: '12px 14px',
+        }}>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.6 }}>
+            💡 {bank.note}
+          </p>
+        </div>
+
+        <div style={{ height: '20px' }} />
+      </div>
+
+      {/* Sticky bottom CTA */}
+      <div style={{
+        padding: '14px 20px',
+        paddingBottom: 'calc(env(safe-area-inset-bottom) + 14px)',
+        borderTop: '1px solid var(--border)',
+        flexShrink: 0,
+        background: 'var(--bg-primary)',
+      }}>
+        <button
+          className="btn btn-primary"
+          onClick={() => { haptic.medium(); onSelectFile(); }}
+          style={{ width: '100%', justifyContent: 'center', fontSize: '15px', padding: '14px' }}
+        >
+          I have my file — select {bank.csvSupport ? 'CSV' : 'PDF'} →
+        </button>
       </div>
     </div>
   );
 }
 
-export default function CSVImportModal({ onClose, onComplete }) {
+function BankRow({ bank, onSelect }) {
+  return (
+    <button onClick={() => { haptic.light(); onSelect(bank); }} style={{
+      display: 'flex', alignItems: 'center', gap: '14px',
+      padding: '12px 14px',
+      background: 'var(--bg-card)',
+      border: '1px solid var(--border)',
+      borderRadius: '14px',
+      cursor: 'pointer', textAlign: 'left', width: '100%',
+      transition: 'all 0.15s',
+    }}>
+      <BankAvatar bank={bank} size={40} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '3px' }}>
+          {bank.name}
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{bank.tagline}</div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
+        <BadgePill bank={bank} />
+        <span style={{ color: 'var(--text-muted)', fontSize: '16px' }}>›</span>
+      </div>
+    </button>
+  );
+}
+
+export default function CSVImportModal({ onClose, onComplete, bills = [], categories = [], onAddCategory }) {
   const [selectedBank, setSelectedBank] = useState(null);
   const [showImportFlow, setShowImportFlow] = useState(false);
+  const [skipIntro, setSkipIntro] = useState(false);
 
+  const openImportFlow = (fromBankGuide = false) => {
+    setSkipIntro(fromBankGuide);
+    setShowImportFlow(true);
+  };
+
+  // ── Import flow (file pick + analysis) — NO swipe-back (too risky mid-import) ──
   if (showImportFlow) {
     return (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'var(--bg-primary)',
-        display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}>
         <div style={{ paddingTop: 'env(safe-area-inset-top)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', padding: '12px 20px',
-            borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <button onClick={() => setShowImportFlow(false)} style={{ background: 'none', border: 'none',
-              cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: '20px', padding: '0', marginRight: '12px' }}>←</button>
-            <span style={{ fontSize: '16px', fontWeight: '600' }}>Select CSV file</span>
+          <div style={{ display: 'flex', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border)' }}>
+            <button onClick={() => { haptic.light(); setShowImportFlow(false); }} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--text-muted)', fontSize: '20px', padding: '0', marginRight: '12px',
+            }}>←</button>
+            <span style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)' }}>Select file</span>
           </div>
         </div>
         <div style={{ flex: 1, overflow: 'hidden' }}>
           <CSVImportFlow
             onComplete={onComplete}
             onSkip={onClose}
+            skipIntro={skipIntro}
+            existingBills={bills}
+            categories={categories}
+            onAddCategory={onAddCategory}
           />
         </div>
       </div>
     );
   }
 
+  // ── Bank guide ──
   if (selectedBank) {
     return (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'var(--bg-primary)',
-        display: 'flex', flexDirection: 'column', paddingTop: 'env(safe-area-inset-top)' }}>
-        <BankGuide bank={selectedBank} onBack={() => setSelectedBank(null)} />
-        {/* Import button fixed at bottom */}
-        <div style={{ padding: '12px 20px', paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)',
-          borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-          <button className="btn btn-primary" onClick={() => setShowImportFlow(true)}
-            style={{ width: '100%', justifyContent: 'center', fontSize: '15px', padding: '14px' }}>
-            I have my CSV — Select file →
-          </button>
-        </div>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', paddingTop: 'env(safe-area-inset-top)' }}>
+        <SwipeBackEdge onBack={() => setSelectedBank(null)} />
+        <BankGuide
+          bank={selectedBank}
+          onBack={() => setSelectedBank(null)}
+          onSelectFile={() => openImportFlow(true)}
+        />
       </div>
     );
   }
 
-  // Main screen — bank picker
+  // ── Main hub ──
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'var(--bg-primary)',
-      display: 'flex', flexDirection: 'column', paddingTop: 'env(safe-area-inset-top)' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', paddingTop: 'env(safe-area-inset-top)' }}>
+      <SwipeBackEdge onBack={onClose} />
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
         <div>
-          <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '2px' }}>Import bills</h2>
-          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>Choose how you want to import</p>
+          <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '2px' }}>Import Bills</h2>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Add bills automatically from your bank data</p>
         </div>
-        <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)',
-          fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        <button onClick={() => { haptic.light(); onClose(); }} style={{
+          background: 'var(--glass)', border: '1px solid var(--border)',
+          borderRadius: '50%', width: '34px', height: '34px',
+          cursor: 'pointer', color: 'var(--text-muted)',
+          fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>✕</button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
 
-        {/* Two primary options — equal prominence */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-
-          {/* Option 1 — Spreadsheet */}
-          <button onClick={() => setShowImportFlow(true)} style={{
-            display: 'flex', alignItems: 'center', gap: '14px', padding: '16px',
-            background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)',
-            borderRadius: '14px', cursor: 'pointer', textAlign: 'left', width: '100%',
+        {/* Upload a file (primary option) */}
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '10px' }}>
+            Already have a file?
+          </div>
+          <button onClick={() => { haptic.medium(); openImportFlow(false); }} style={{
+            display: 'flex', alignItems: 'center', gap: '16px',
+            width: '100%', padding: '16px',
+            background: 'color-mix(in srgb, var(--success) 8%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--success) 25%, transparent)',
+            borderRadius: '16px', cursor: 'pointer', textAlign: 'left',
           }}>
-            <div style={{ width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
-              background: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              📊
-            </div>
+            <div style={{
+              width: '48px', height: '48px', borderRadius: '14px', flexShrink: 0,
+              background: 'color-mix(in srgb, var(--success) 15%, transparent)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px',
+            }}>📄</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '15px', fontWeight: '700', color: '#10b981', marginBottom: '3px' }}>
-                Upload a spreadsheet or CSV
+              <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--success)', marginBottom: '4px' }}>
+                Upload a file
               </div>
-              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}>
-                Google Sheets, Excel, or any CSV budget file — just export as CSV and upload
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                CSV, spreadsheet, or PDF bank statement — we'll handle the rest.
               </div>
             </div>
-            <span style={{ color: 'rgba(16,185,129,0.5)', fontSize: '16px' }}>›</span>
+            <span style={{ color: 'var(--success)', fontSize: '18px', opacity: 0.6, flexShrink: 0 }}>›</span>
           </button>
+        </div>
 
-          {/* Option 2 — Bank statement */}
-          <div>
-            <div style={{ fontSize: '11px', fontWeight: '700', color: 'rgba(255,255,255,0.3)',
-              textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', textAlign: 'center' }}>
-              or import from your bank
+        {/* Divider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>or follow a guide</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+        </div>
+
+        {/* Easy banks — in-app export */}
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+              Easy — export from the app
             </div>
-            {/* Bank list */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {BANKS.map(bank => (
-                <button key={bank.name} onClick={() => setSelectedBank(bank)} style={{
-                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
-                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
-                  borderRadius: '12px', cursor: 'pointer', textAlign: 'left', width: '100%',
-                }}>
-                  <span style={{ fontSize: '20px' }}>{bank.emoji}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#e2e8f0', marginBottom: '1px' }}>{bank.name}</div>
-                    <div style={{ fontSize: '11px', color: bank.warning ? '#f59e0b' : '#10b981' }}>
-                      {bank.warning ? '⚠️ CSV via browser · PDF in app' : '✅ CSV available in app'}
-                    </div>
-                  </div>
-                  <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '14px' }}>›</span>
-                </button>
-              ))}
-            </div>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {EASY_BANKS.map(bank => (
+              <BankRow key={bank.name} bank={bank} onSelect={setSelectedBank} />
+            ))}
           </div>
         </div>
 
-        <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', textAlign: 'center', lineHeight: 1.5, marginBottom: '8px' }}>
-          🔒 Your file is processed on this device. No data is sent to our servers.
-        </p>
-        <div style={{ height: '16px' }} />
+        {/* Other banks — browser required */}
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+              Browser or website required
+            </div>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {OTHER_BANKS.map(bank => (
+              <BankRow key={bank.name} bank={bank} onSelect={setSelectedBank} />
+            ))}
+          </div>
+        </div>
+
+        {/* Privacy note */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: '6px', padding: '12px',
+          background: 'var(--glass)', border: '1px solid var(--border)',
+          borderRadius: '12px',
+        }}>
+          <span style={{ fontSize: '14px' }}>🔒</span>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
+            Your file is processed <strong style={{ color: 'var(--text-secondary)' }}>on this device only</strong>. No transaction data is ever sent to our servers.
+          </p>
+        </div>
+
+        <div style={{ height: '20px' }} />
       </div>
     </div>
   );

@@ -18,6 +18,32 @@ import { CurrencyProvider } from './components/CurrencyContext';
 import { getSymbol, loadCurrencyPreference, saveCurrencyPreference, CURRENCIES } from './utils/currency';
 import { StatusBar, Style } from '@capacitor/status-bar';
 
+// Error boundary to catch render crashes and show diagnostics instead of white screen
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null, info: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { this.setState({ info }); console.error('ErrorBoundary caught:', error, info); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: '40px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 40px)', fontFamily: 'monospace', fontSize: '13px', color: '#e2e8f0', background: '#0f172a', minHeight: '100vh' }}>
+          <h2 style={{ color: '#f43f5e', marginBottom: '16px' }}>Something went wrong</h2>
+          <p style={{ color: '#94a3b8', marginBottom: '12px' }}>Tap below to copy the error, then restart the app.</p>
+          <div style={{ background: '#1e293b', borderRadius: '8px', padding: '12px', marginBottom: '16px', wordBreak: 'break-word', maxHeight: '300px', overflow: 'auto' }}>
+            <div style={{ color: '#fb923c', marginBottom: '8px' }}>{this.state.error?.toString()}</div>
+            <div style={{ color: '#64748b', fontSize: '11px' }}>{this.state.info?.componentStack?.substring(0, 500)}</div>
+          </div>
+          <button onClick={() => { navigator.clipboard?.writeText(this.state.error?.toString() + '\n' + this.state.info?.componentStack); }}
+            style={{ padding: '12px 20px', borderRadius: '10px', background: '#3b82f6', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '14px', marginRight: '10px' }}>Copy Error</button>
+          <button onClick={() => this.setState({ error: null, info: null })}
+            style={{ padding: '12px 20px', borderRadius: '10px', background: '#334155', color: '#e2e8f0', border: 'none', cursor: 'pointer', fontSize: '14px' }}>Try Again</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // Panel components
 import OverviewPanel from './components/OverviewPanel';
 import ActionsPanel from './components/ActionsPanel';
@@ -32,9 +58,11 @@ const PANEL_NAMES = ['Overview', 'Actions', 'Bills', 'Debt', 'Savings'];
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <ToastProvider>
       <AppContent />
     </ToastProvider>
+    </ErrorBoundary>
   );
 }
 
@@ -852,10 +880,51 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
         {showImportModal && (
           <CSVImportModal
             onClose={() => setShowImportModal(false)}
+            bills={bills}
+            categories={categories}
+            onAddCategory={(name) => {
+              const upper = name.trim().toUpperCase();
+              if (!upper || categories.includes(upper)) return false;
+              setCustomCategories(prev => [...prev, upper]);
+              setCategoryOrder(prev => [...prev, upper]);
+              return true;
+            }}
             onComplete={({ bills: newBills, debts: newDebts, savings: newSavings, partial }) => {
-              if (newBills?.length)   setBills(prev => { const ids = new Set(prev.map(x => x.id)); return [...prev, ...newBills.filter(x => !ids.has(x.id))]; });
-              if (newDebts?.length)   setDebts(prev => { const ids = new Set(prev.map(x => x.id)); return [...prev, ...newDebts.filter(x => !ids.has(x.id))]; });
-              if (newSavings?.length) setSavings(prev => { const ids = new Set(prev.map(x => x.id)); return [...prev, ...newSavings.filter(x => !ids.has(x.id))]; });
+              // Ensure every imported bill has numeric projected/actual
+              const ensureBillNumeric = (b) => ({
+                ...b,
+                projected: parseFloat(b.projected) || parseFloat(b.actual) || parseFloat(b.amount) || 0,
+                actual: parseFloat(b.actual) || parseFloat(b.projected) || parseFloat(b.amount) || 0,
+              });
+              // Ensure every imported debt has numeric fields matching DebtPanel schema
+              const ensureDebtNumeric = (d) => ({
+                ...d,
+                totalAmount: parseFloat(d.totalAmount) || 0,
+                originalAmount: parseFloat(d.originalAmount) || parseFloat(d.totalAmount) || 0,
+                interestRate: parseFloat(d.interestRate) || 0,
+                minimumPayment: parseFloat(d.minimumPayment) || 0,
+                recurringPayment: parseFloat(d.recurringPayment) || 0,
+                installmentMonths: parseInt(d.installmentMonths) || 0,
+                bnplPromoMonths: parseInt(d.bnplPromoMonths) || 0,
+                bnplPostInterest: parseFloat(d.bnplPostInterest) || 0,
+                bnplPostPayment: parseFloat(d.bnplPostPayment) || 0,
+                payments: d.payments || [],
+              });
+              // Bills
+              const safeBills = (newBills || []).map(ensureBillNumeric);
+              if (safeBills.length) setBills(prev => { const ids = new Set(prev.map(x => x.id)); return [...prev, ...safeBills.filter(x => !ids.has(x.id))]; });
+              // Debts — now properly formed with full schema from DebtSuggestionCard
+              const safeDebts = (newDebts || []).map(ensureDebtNumeric);
+              if (safeDebts.length) setDebts(prev => { const ids = new Set(prev.map(x => x.id)); return [...prev, ...safeDebts.filter(x => !ids.has(x.id))]; });
+              // Savings — now properly formed with full schema from SavingsSuggestionCard
+              const safeSavings = (newSavings || []).map(s => ({
+                ...s,
+                currentAmount: parseFloat(s.currentAmount) || 0,
+                targetAmount: parseFloat(s.targetAmount) || 0,
+                monthlyContribution: parseFloat(s.monthlyContribution) || 0,
+                transactions: s.transactions || [],
+              }));
+              if (safeSavings.length) setSavings(prev => { const ids = new Set(prev.map(x => x.id)); return [...prev, ...safeSavings.filter(x => !ids.has(x.id))]; });
               if (!partial) setShowImportModal(false);
             }}
           />
