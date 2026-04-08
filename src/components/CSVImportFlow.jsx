@@ -230,8 +230,37 @@ function ConfidenceBadge({ level }) {
 
 const LABEL_STYLE = { display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '6px', fontWeight: '500' };
 
+const TYPE_OPTIONS = [
+  { key: 'bill', label: 'Bill', color: 'var(--accent-primary)' },
+  { key: 'debt', label: 'Debt', color: 'var(--danger)' },
+  { key: 'savings', label: 'Savings', color: 'var(--success)' },
+];
+
+function TypeSwitcher({ value, onChange }) {
+  return (
+    <div style={{ marginBottom: '10px' }}>
+      <label style={LABEL_STYLE}>Import as</label>
+      <div style={{ display: 'flex', gap: '6px' }}>
+        {TYPE_OPTIONS.map(opt => (
+          <button key={opt.key} type="button" onClick={() => { haptic.light(); onChange(opt.key); }}
+            style={{
+              flex: 1, padding: '8px', borderRadius: '10px', fontSize: '12px', fontWeight: '600',
+              cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s',
+              border: value === opt.key ? `2px solid ${opt.color}` : '1px solid var(--border)',
+              background: value === opt.key ? `color-mix(in srgb, ${opt.color} 10%, transparent)` : 'var(--glass)',
+              color: value === opt.key ? opt.color : 'var(--text-muted)',
+            }}>
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // cardState: 'pending' | 'added' | 'skipped'
 function SuggestionCard({ suggestion, checked, cardState = 'pending', categories = DEFAULT_CATS, initialCategory, initialFrequency, onToggle, onEditName, onEditAmount, onEditCategory, onEditFrequency, onAddCategory, onAddOne, onSkipOne, onUndoOne }) {
+  const [localType, setLocalType] = useState(suggestion.type || 'bill');
   const [editingName, setEditingName] = useState(false);
   const [editingAmount, setEditingAmount] = useState(false);
   const [showNewCatInput, setShowNewCatInput] = useState(false);
@@ -239,12 +268,25 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
   const [localName, setLocalName] = useState(suggestion.displayName);
   const [localAmount, setLocalAmount] = useState(suggestion.avgAmount.toFixed(2));
   const [localCategory, setLocalCategory] = useState(initialCategory || guessCategory(suggestion.displayName, categories));
+  // Bill form state
   const [localRecurring, setLocalRecurring] = useState(true);
   const [localFrequency, setLocalFrequency] = useState(initialFrequency || FREQ_MAP[suggestion.frequency] || 'Monthly');
   const [localPaymentDate, setLocalPaymentDate] = useState(suggestion.paymentDay || '');
   const [localPaymentDay, setLocalPaymentDay] = useState('');
   const [localStartDate, setLocalStartDate] = useState('');
   const [localStartMonth, setLocalStartMonth] = useState('');
+  // Debt form state
+  const [debtType, setDebtType] = useState('Credit Card');
+  const [debtPaymentMode, setDebtPaymentMode] = useState('recurring');
+  const [debtInterestRate, setDebtInterestRate] = useState('');
+  const [debtMinPayment, setDebtMinPayment] = useState('');
+  const [debtRecurringPayment, setDebtRecurringPayment] = useState(suggestion.avgAmount.toFixed(2));
+  const [debtPaymentDate, setDebtPaymentDate] = useState('');
+  // Savings form state
+  const [savingsCategory, setSavingsCategory] = useState('Emergency');
+  const [savingsStarting, setSavingsStarting] = useState('');
+  const [savingsTarget, setSavingsTarget] = useState('');
+  const [savingsMonthly, setSavingsMonthly] = useState(suggestion.avgAmount.toFixed(2));
 
   const commitName = () => { setEditingName(false); onEditName(suggestion.id, localName); };
   const commitAmount = () => { setEditingAmount(false); onEditAmount(suggestion.id, parseFloat(localAmount) || suggestion.avgAmount); };
@@ -257,6 +299,7 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
     <div style={{
       background: isAdded ? 'color-mix(in srgb, var(--success) 6%, transparent)' : isSkipped ? 'var(--glass)' : checked ? 'color-mix(in srgb, var(--accent-primary) 5%, transparent)' : 'var(--glass)',
       border: `1px solid ${isAdded ? 'color-mix(in srgb, var(--success) 25%, transparent)' : isSkipped ? 'var(--border)' : checked ? 'color-mix(in srgb, var(--accent-primary) 20%, transparent)' : 'var(--border)'}`,
+      borderLeft: isAdded ? '3px solid var(--success)' : isSkipped ? undefined : `3px solid ${localType === 'debt' ? 'var(--danger)' : localType === 'savings' ? 'var(--success)' : 'var(--accent-primary)'}`,
       borderRadius: '12px', padding: '12px 14px', marginBottom: '8px', transition: 'all 0.2s',
       opacity: isSkipped ? 0.4 : 1,
     }}>
@@ -304,6 +347,9 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
             {isSkipped && <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)' }}>Skipped</span>}
           </div>
 
+          {/* Type switcher */}
+          {pending && <TypeSwitcher value={localType} onChange={setLocalType} />}
+
           {/* Amount */}
           <div style={{ marginBottom: pending ? '10px' : '4px' }}>
             <label style={LABEL_STYLE}>Amount</label>
@@ -325,8 +371,8 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
             )}
           </div>
 
-          {/* Form fields — bills only, pending only */}
-          {pending && suggestion.type === 'bill' && (
+          {/* Form fields — conditional on localType */}
+          {pending && localType === 'bill' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
 
               {/* Category */}
@@ -470,15 +516,120 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
             </div>
           )}
 
+          {/* Debt form */}
+          {pending && localType === 'debt' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
+              <div>
+                <label style={LABEL_STYLE}>Total Amount Owed</label>
+                <div className="input">{'\u00A3'}{parseFloat(localAmount).toFixed(2)}</div>
+              </div>
+              <div>
+                <label style={LABEL_STYLE}>Debt Type</label>
+                <select className="input" value={debtType} onChange={e => { haptic.light(); setDebtType(e.target.value); }}>
+                  {DEBT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={LABEL_STYLE}>Payment Structure</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                  {[
+                    { key: 'recurring', label: '↻ Recurring', color: 'var(--accent-primary)' },
+                    { key: 'one-off', label: '◎ One-off', color: 'var(--warning)' },
+                    { key: 'installment', label: '▤ Installment', color: '#a78bfa' },
+                    { key: 'bnpl', label: '⏱ Pay Later', color: 'var(--success)' },
+                  ].map(opt => (
+                    <button key={opt.key} type="button" onClick={() => { haptic.light(); setDebtPaymentMode(opt.key); }}
+                      style={{ padding: '10px 8px', borderRadius: '10px', fontSize: '13px', fontWeight: '500', cursor: 'pointer', textAlign: 'center',
+                        border: debtPaymentMode === opt.key ? `2px solid ${opt.color}` : '1px solid var(--border)',
+                        background: debtPaymentMode === opt.key ? `color-mix(in srgb, ${opt.color} 8%, transparent)` : 'var(--glass)',
+                        color: debtPaymentMode === opt.key ? opt.color : 'var(--text-muted)',
+                      }}>{opt.label}</button>
+                  ))}
+                </div>
+              </div>
+              {debtPaymentMode === 'recurring' && (
+                <>
+                  <div>
+                    <label style={LABEL_STYLE}>Interest Rate (% APR)</label>
+                    <input type="number" className="input" placeholder="0" value={debtInterestRate} onChange={e => setDebtInterestRate(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={LABEL_STYLE}>Minimum Payment</label>
+                      <input type="number" className="input" placeholder="0.00" value={debtMinPayment} onChange={e => setDebtMinPayment(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                    </div>
+                    <div>
+                      <label style={LABEL_STYLE}>Auto Monthly</label>
+                      <input type="number" className="input" placeholder="0.00" value={debtRecurringPayment} onChange={e => setDebtRecurringPayment(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={LABEL_STYLE}>Payment Day</label>
+                    <input type="number" className="input" placeholder="Day of month (1-31)" min="1" max="31" value={debtPaymentDate}
+                      onChange={e => { const v = e.target.value; if (v === '') { setDebtPaymentDate(''); return; } const n = parseInt(v); if (!isNaN(n)) setDebtPaymentDate(String(Math.min(31, Math.max(1, n)))); }}
+                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Savings form */}
+          {pending && localType === 'savings' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
+              <div>
+                <label style={LABEL_STYLE}>Category</label>
+                <select className="input" value={savingsCategory} onChange={e => { haptic.light(); setSavingsCategory(e.target.value); }}>
+                  {SAVINGS_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={LABEL_STYLE}>Starting Amount</label>
+                  <input type="number" className="input" placeholder="0.00 (optional)" value={savingsStarting} onChange={e => setSavingsStarting(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                </div>
+                <div>
+                  <label style={LABEL_STYLE}>Target Amount</label>
+                  <input type="number" className="input" placeholder="0.00 (optional)" value={savingsTarget} onChange={e => setSavingsTarget(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                </div>
+              </div>
+              <div>
+                <label style={LABEL_STYLE}>Monthly Auto-Save</label>
+                <input type="number" className="input" placeholder="0.00 (optional)" value={savingsMonthly} onChange={e => setSavingsMonthly(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+              </div>
+            </div>
+          )}
+
           {/* Per-card action buttons */}
           {pending && (
             <div style={{ display: 'flex', gap: '6px' }}>
-              <button onClick={() => { haptic.success(); onAddOne(suggestion.id, { name: localName, amount: parseFloat(localAmount) || suggestion.avgAmount, category: localCategory, recurring: localRecurring, frequency: localRecurring ? localFrequency : '', paymentDate: localPaymentDate, paymentDay: localPaymentDay, startDate: localStartDate, startMonth: localStartMonth }); }}
+              <button onClick={() => {
+                haptic.success();
+                if (localType === 'debt') {
+                  onAddOne(suggestion.id, {
+                    name: localName, totalAmount: parseFloat(localAmount) || 0, amount: parseFloat(localAmount) || 0,
+                    type: debtType, paymentMode: debtPaymentMode,
+                    interestRate: parseFloat(debtInterestRate) || 0, minimumPayment: parseFloat(debtMinPayment) || 0,
+                    recurringPayment: parseFloat(debtRecurringPayment) || 0, paymentDate: debtPaymentDate,
+                    _typeOverride: 'debt',
+                  });
+                } else if (localType === 'savings') {
+                  onAddOne(suggestion.id, {
+                    name: localName, amount: parseFloat(savingsMonthly) || suggestion.avgAmount,
+                    category: savingsCategory, startingAmount: parseFloat(savingsStarting) || 0,
+                    targetAmount: parseFloat(savingsTarget) || 0, monthlyContribution: parseFloat(savingsMonthly) || 0,
+                    _typeOverride: 'savings',
+                  });
+                } else {
+                  onAddOne(suggestion.id, { name: localName, amount: parseFloat(localAmount) || suggestion.avgAmount, category: localCategory, recurring: localRecurring, frequency: localRecurring ? localFrequency : '', paymentDate: localPaymentDate, paymentDay: localPaymentDay, startDate: localStartDate, startMonth: localStartMonth, _typeOverride: 'bill' });
+                }
+              }}
                 style={{ flex: 1, padding: '7px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '600',
-                  cursor: 'pointer', background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
-                  border: '1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent)',
-                  color: 'var(--accent-primary)' }}>
-                + Add this one
+                  cursor: 'pointer',
+                  background: localType === 'debt' ? 'linear-gradient(135deg, var(--danger), #dc2626)' : localType === 'savings' ? 'linear-gradient(135deg, var(--success), #059669)' : 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
+                  border: localType === 'bill' ? '1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent)' : 'none',
+                  color: localType === 'bill' ? 'var(--accent-primary)' : '#fff' }}>
+                + Add {localType === 'debt' ? 'debt' : localType === 'savings' ? 'savings goal' : 'this one'}
               </button>
               <button onClick={() => { haptic.light(); onSkipOne(suggestion.id); }}
                 style={{ padding: '7px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '600',
@@ -507,6 +658,7 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
 // ── Debt Suggestion Card ──
 // Mini Add Debt form per imported debt item — matches the real Add Debt screen fields
 function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onToggle, onAddOne, onSkipOne, onUndoOne }) {
+  const [localType, setLocalType] = useState(suggestion.type || 'debt');
   const [localName, setLocalName] = useState(suggestion.displayName);
   const [editingName, setEditingName] = useState(false);
   const [localAmount, setLocalAmount] = useState(suggestion.avgAmount.toFixed(2));
@@ -524,6 +676,16 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
   const [bnplStartDate, setBnplStartDate] = useState('');
   const [bnplPostInterest, setBnplPostInterest] = useState('');
   const [bnplPostPayment, setBnplPostPayment] = useState('');
+  // Bill form state (if user switches type to bill)
+  const [billCategory, setBillCategory] = useState('HOME');
+  const [billRecurring, setBillRecurring] = useState(true);
+  const [billFrequency, setBillFrequency] = useState('Monthly');
+  const [billPaymentDate, setBillPaymentDate] = useState('');
+  // Savings form state (if user switches type to savings)
+  const [savCat, setSavCat] = useState('Emergency');
+  const [savStarting, setSavStarting] = useState('');
+  const [savTarget, setSavTarget] = useState('');
+  const [savMonthly, setSavMonthly] = useState(suggestion.avgAmount.toFixed(2));
 
   const isAdded = cardState === 'added';
   const isSkipped = cardState === 'skipped';
@@ -539,6 +701,7 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
     onAddOne(suggestion.id, {
       name: localName,
       totalAmount: parseFloat(localAmount) || 0,
+      amount: parseFloat(localAmount) || 0,
       type: debtType,
       paymentMode,
       interestRate: parseFloat(interestRate) || 0,
@@ -552,6 +715,7 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
       bnplStartDate,
       bnplPostInterest: parseFloat(bnplPostInterest) || 0,
       bnplPostPayment: parseFloat(bnplPostPayment) || 0,
+      _typeOverride: localType,
     });
   };
 
@@ -559,7 +723,7 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
     <div style={{
       background: isAdded ? 'color-mix(in srgb, var(--success) 6%, transparent)' : isSkipped ? 'var(--glass)' : 'var(--bg-card, var(--glass))',
       border: `1px solid ${isAdded ? 'color-mix(in srgb, var(--success) 25%, transparent)' : isSkipped ? 'var(--border)' : 'var(--border)'}`,
-      borderLeft: isAdded ? '3px solid var(--success)' : isSkipped ? undefined : '3px solid var(--danger)',
+      borderLeft: isAdded ? '3px solid var(--success)' : isSkipped ? undefined : `3px solid ${localType === 'bill' ? 'var(--accent-primary)' : localType === 'savings' ? 'var(--success)' : 'var(--danger)'}`,
       borderRadius: '12px', padding: '12px 14px', marginBottom: '8px', transition: 'all 0.2s',
       opacity: isSkipped ? 0.4 : 1,
     }}>
@@ -608,6 +772,59 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
           {pending && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px', marginBottom: '12px' }}>
 
+              {/* Type switcher */}
+              <TypeSwitcher value={localType} onChange={setLocalType} />
+
+              {/* Bill form (if user switches from debt to bill) */}
+              {localType === 'bill' && (
+                <>
+                  <div>
+                    <label style={LABEL_STYLE}>Amount</label>
+                    <div className="input">£{parseFloat(localAmount).toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <label style={LABEL_STYLE}>Category</label>
+                    <select className="input" value={billCategory} onChange={e => { haptic.light(); setBillCategory(e.target.value); }}>
+                      {DEFAULT_CATS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={LABEL_STYLE}>Frequency</label>
+                    <select className="input" value={billFrequency} onChange={e => { haptic.light(); setBillFrequency(e.target.value); }}>
+                      <option value="Weekly">Weekly</option><option value="Fortnightly">Fortnightly</option>
+                      <option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option><option value="Yearly">Yearly</option>
+                    </select>
+                  </div>
+                  {billFrequency === 'Monthly' && (
+                    <div>
+                      <label style={LABEL_STYLE}>Day of month</label>
+                      <input type="number" className="input" placeholder="1-31" min="1" max="31" value={billPaymentDate}
+                        onChange={e => { const v = e.target.value; if (v === '') { setBillPaymentDate(''); return; } const n = parseInt(v); if (!isNaN(n)) setBillPaymentDate(String(Math.min(31, Math.max(1, n)))); }}
+                        onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Savings form (if user switches from debt to savings) */}
+              {localType === 'savings' && (
+                <>
+                  <div>
+                    <label style={LABEL_STYLE}>Category</label>
+                    <select className="input" value={savCat} onChange={e => { haptic.light(); setSavCat(e.target.value); }}>
+                      {SAVINGS_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div><label style={LABEL_STYLE}>Starting Amount</label><input type="number" className="input" placeholder="0.00" value={savStarting} onChange={e => setSavStarting(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} /></div>
+                    <div><label style={LABEL_STYLE}>Target Amount</label><input type="number" className="input" placeholder="0.00" value={savTarget} onChange={e => setSavTarget(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} /></div>
+                  </div>
+                  <div><label style={LABEL_STYLE}>Monthly Auto-Save</label><input type="number" className="input" placeholder="0.00" value={savMonthly} onChange={e => setSavMonthly(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} /></div>
+                </>
+              )}
+
+              {/* Debt form (default for this card) */}
+              {localType === 'debt' && (<div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {/* Total Amount Owed */}
               <div>
                 <label style={LABEL_STYLE}>Total Amount Owed</label>
@@ -760,17 +977,30 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
                   </div>
                 </>
               )}
+            </div>)}
+
             </div>
           )}
 
           {/* Action buttons */}
           {pending && (
             <div style={{ display: 'flex', gap: '6px' }}>
-              <button onClick={handleAdd}
+              <button onClick={() => {
+                haptic.success();
+                if (localType === 'bill') {
+                  onAddOne(suggestion.id, { name: localName, amount: parseFloat(localAmount) || 0, category: billCategory, recurring: billRecurring, frequency: billFrequency, paymentDate: billPaymentDate, _typeOverride: 'bill' });
+                } else if (localType === 'savings') {
+                  onAddOne(suggestion.id, { name: localName, amount: parseFloat(savMonthly) || 0, category: savCat, startingAmount: parseFloat(savStarting) || 0, targetAmount: parseFloat(savTarget) || 0, monthlyContribution: parseFloat(savMonthly) || 0, _typeOverride: 'savings' });
+                } else {
+                  handleAdd();
+                }
+              }}
                 style={{ flex: 1, padding: '10px 10px', borderRadius: '10px', fontSize: '13px', fontWeight: '600',
-                  cursor: 'pointer', background: 'linear-gradient(135deg, var(--danger), #dc2626)',
-                  border: 'none', color: '#fff' }}>
-                + Add debt
+                  cursor: 'pointer',
+                  background: localType === 'debt' ? 'linear-gradient(135deg, var(--danger), #dc2626)' : localType === 'savings' ? 'linear-gradient(135deg, var(--success), #059669)' : 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
+                  border: localType === 'bill' ? '1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent)' : 'none',
+                  color: localType === 'bill' ? 'var(--accent-primary)' : '#fff' }}>
+                + Add {localType === 'debt' ? 'debt' : localType === 'savings' ? 'savings goal' : 'bill'}
               </button>
               <button onClick={() => { haptic.light(); onSkipOne(suggestion.id); }}
                 style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: '600',
@@ -797,12 +1027,18 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
 // ── Savings Suggestion Card ──
 // Mini Add Savings form per imported savings item — matches the real Add Savings screen
 function SavingsSuggestionCard({ suggestion, checked, cardState = 'pending', onToggle, onAddOne, onSkipOne, onUndoOne }) {
+  const [localType, setLocalType] = useState(suggestion.type || 'savings');
   const [localName, setLocalName] = useState(suggestion.displayName);
   const [editingName, setEditingName] = useState(false);
   const [savingsCategory, setSavingsCategory] = useState('Emergency');
   const [startingAmount, setStartingAmount] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [monthlyContribution, setMonthlyContribution] = useState(suggestion.avgAmount.toFixed(2));
+  // Bill/Debt state (if user switches type)
+  const [billCategory, setBillCategory] = useState('HOME');
+  const [billFrequency, setBillFrequency] = useState('Monthly');
+  const [billPaymentDate, setBillPaymentDate] = useState('');
+  const [debtType, setDebtType] = useState('Credit Card');
 
   const isAdded = cardState === 'added';
   const isSkipped = cardState === 'skipped';
@@ -812,10 +1048,12 @@ function SavingsSuggestionCard({ suggestion, checked, cardState = 'pending', onT
     haptic.success();
     onAddOne(suggestion.id, {
       name: localName,
+      amount: parseFloat(monthlyContribution) || suggestion.avgAmount,
       category: savingsCategory,
       startingAmount: parseFloat(startingAmount) || 0,
       targetAmount: parseFloat(targetAmount) || 0,
       monthlyContribution: parseFloat(monthlyContribution) || 0,
+      _typeOverride: localType,
     });
   };
 
@@ -823,7 +1061,7 @@ function SavingsSuggestionCard({ suggestion, checked, cardState = 'pending', onT
     <div style={{
       background: isAdded ? 'color-mix(in srgb, var(--success) 6%, transparent)' : isSkipped ? 'var(--glass)' : 'var(--bg-card, var(--glass))',
       border: `1px solid ${isAdded ? 'color-mix(in srgb, var(--success) 25%, transparent)' : isSkipped ? 'var(--border)' : 'var(--border)'}`,
-      borderLeft: isAdded ? '3px solid var(--success)' : isSkipped ? undefined : '3px solid var(--success)',
+      borderLeft: isAdded ? '3px solid var(--success)' : isSkipped ? undefined : `3px solid ${localType === 'bill' ? 'var(--accent-primary)' : localType === 'debt' ? 'var(--danger)' : 'var(--success)'}`,
       borderRadius: '12px', padding: '12px 14px', marginBottom: '8px', transition: 'all 0.2s',
       opacity: isSkipped ? 0.4 : 1,
     }}>
@@ -872,45 +1110,82 @@ function SavingsSuggestionCard({ suggestion, checked, cardState = 'pending', onT
           {pending && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px', marginBottom: '12px' }}>
 
-              {/* Category */}
+              {/* Type switcher */}
+              <TypeSwitcher value={localType} onChange={setLocalType} />
+
+              {/* Bill form (if user switches from savings to bill) */}
+              {localType === 'bill' && (
+                <>
+                  <div><label style={LABEL_STYLE}>Category</label>
+                    <select className="input" value={billCategory} onChange={e => { haptic.light(); setBillCategory(e.target.value); }}>
+                      {DEFAULT_CATS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select></div>
+                  <div><label style={LABEL_STYLE}>Frequency</label>
+                    <select className="input" value={billFrequency} onChange={e => { haptic.light(); setBillFrequency(e.target.value); }}>
+                      <option value="Weekly">Weekly</option><option value="Fortnightly">Fortnightly</option>
+                      <option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option><option value="Yearly">Yearly</option>
+                    </select></div>
+                  {billFrequency === 'Monthly' && (<div><label style={LABEL_STYLE}>Day of month</label>
+                    <input type="number" className="input" placeholder="1-31" min="1" max="31" value={billPaymentDate}
+                      onChange={e => { const v = e.target.value; if (v === '') { setBillPaymentDate(''); return; } const n = parseInt(v); if (!isNaN(n)) setBillPaymentDate(String(Math.min(31, Math.max(1, n)))); }}
+                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} /></div>)}
+                </>
+              )}
+
+              {/* Debt form (if user switches from savings to debt) */}
+              {localType === 'debt' && (
+                <>
+                  <div><label style={LABEL_STYLE}>Total Amount Owed</label>
+                    <div className="input">£{suggestion.avgAmount.toFixed(2)}</div></div>
+                  <div><label style={LABEL_STYLE}>Debt Type</label>
+                    <select className="input" value={debtType} onChange={e => { haptic.light(); setDebtType(e.target.value); }}>
+                      {DEBT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select></div>
+                </>
+              )}
+
+              {/* Savings form (default for this card) */}
+              {localType === 'savings' && (<>
               <div>
                 <label style={LABEL_STYLE}>Category</label>
                 <select className="input" value={savingsCategory} onChange={e => { haptic.light(); setSavingsCategory(e.target.value); }}>
                   {SAVINGS_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-
-              {/* Starting + Target amounts */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={LABEL_STYLE}>Starting Amount</label>
+                <div><label style={LABEL_STYLE}>Starting Amount</label>
                   <input type="number" className="input" placeholder="0.00 (optional)" value={startingAmount}
-                    onChange={e => setStartingAmount(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
-                </div>
-                <div>
-                  <label style={LABEL_STYLE}>Target Amount</label>
+                    onChange={e => setStartingAmount(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} /></div>
+                <div><label style={LABEL_STYLE}>Target Amount</label>
                   <input type="number" className="input" placeholder="0.00 (optional)" value={targetAmount}
-                    onChange={e => setTargetAmount(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
-                </div>
+                    onChange={e => setTargetAmount(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} /></div>
               </div>
-
-              {/* Monthly auto-save */}
-              <div>
-                <label style={LABEL_STYLE}>Monthly Auto-Save</label>
+              <div><label style={LABEL_STYLE}>Monthly Auto-Save</label>
                 <input type="number" className="input" placeholder="0.00 (optional)" value={monthlyContribution}
-                  onChange={e => setMonthlyContribution(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
-              </div>
+                  onChange={e => setMonthlyContribution(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} /></div>
+              </>)}
             </div>
           )}
 
           {/* Action buttons */}
           {pending && (
             <div style={{ display: 'flex', gap: '6px' }}>
-              <button onClick={handleAdd}
+              <button onClick={() => {
+                haptic.success();
+                if (localType === 'bill') {
+                  onAddOne(suggestion.id, { name: localName, amount: suggestion.avgAmount, category: billCategory, recurring: true, frequency: billFrequency, paymentDate: billPaymentDate, _typeOverride: 'bill' });
+                } else if (localType === 'debt') {
+                  onAddOne(suggestion.id, { name: localName, totalAmount: suggestion.avgAmount, amount: suggestion.avgAmount, type: debtType, paymentMode: 'recurring', recurringPayment: suggestion.avgAmount, _typeOverride: 'debt' });
+                } else {
+                  handleAdd();
+                }
+              }}
                 style={{ flex: 1, padding: '10px 10px', borderRadius: '10px', fontSize: '13px', fontWeight: '600',
-                  cursor: 'pointer', background: 'linear-gradient(135deg, var(--success), #059669)',
-                  border: 'none', color: '#fff' }}>
-                + Add savings goal
+                  cursor: 'pointer',
+                  background: localType === 'debt' ? 'linear-gradient(135deg, var(--danger), #dc2626)' : localType === 'savings' ? 'linear-gradient(135deg, var(--success), #059669)' : 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
+                  border: localType === 'bill' ? '1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent)' : 'none',
+                  color: localType === 'bill' ? 'var(--accent-primary)' : '#fff' }}>
+                + Add {localType === 'debt' ? 'debt' : localType === 'savings' ? 'savings goal' : 'bill'}
               </button>
               <button onClick={() => { haptic.light(); onSkipOne(suggestion.id); }}
                 style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: '600',
@@ -958,6 +1233,7 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
   const [edits, setEdits] = useState({});
   const [expanded, setExpanded] = useState({ bills: true, debts: true, savings: true });
   const [showLow, setShowLow] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'added' | 'skipped'
   // Local categories list — grows when user creates new categories during import
   const [localCategories, setLocalCategories] = useState(categoriesProp);
   const categories = localCategories;
@@ -1093,11 +1369,12 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
   }, []);
 
   function buildItem(s, config) {
-    const { name, amount, category, recurring = true, frequency = 'Monthly', paymentDate = '', paymentDay = '', startDate = '', startMonth = '' } = config || {};
+    const { name, amount, category, recurring = true, frequency = 'Monthly', paymentDate = '', paymentDay = '', startDate = '', startMonth = '', _typeOverride } = config || {};
     const billName = name || s.displayName;
     const billAmount = parseFloat(amount ?? s.avgAmount) || 0;
     const billId = s.id || `import_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const itemType = s.type || 'bill';
+    // _typeOverride from the TypeSwitcher takes priority over the suggestion's detected type
+    const itemType = _typeOverride || s.type || 'bill';
     if (itemType === 'bill') return {
       id: billId,
       type: 'bill',
@@ -1229,12 +1506,26 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
   const allSuggestions = [...suggestions.bills, ...suggestions.debts, ...suggestions.savings];
   const pendingCount  = allSuggestions.filter(s => cardStates[s.id] !== 'added' && cardStates[s.id] !== 'skipped').length;
   const addedCount    = addedItems.length;
+  const skippedCount  = allSuggestions.filter(s => cardStates[s.id] === 'skipped').length;
   const checkedPending = allSuggestions.filter(s => checked[s.id] && cardStates[s.id] !== 'added' && cardStates[s.id] !== 'skipped').length;
+
+  // Filter items by status for rendering
+  const filterByStatus = (items) => {
+    if (statusFilter === 'all') return items;
+    return items.filter(s => {
+      const state = cardStates[s.id] || 'pending';
+      if (statusFilter === 'pending') return state !== 'added' && state !== 'skipped';
+      if (statusFilter === 'added') return state === 'added';
+      if (statusFilter === 'skipped') return state === 'skipped';
+      return true;
+    });
+  };
   const highCount     = allSuggestions.filter(s => s.confidenceLevel === 'high' && cardStates[s.id] !== 'added' && cardStates[s.id] !== 'skipped').length;
   const total         = allSuggestions.length;
 
   const renderSuggestions = (items) => {
-    const visible = showLow ? items : items.filter(s => s.confidenceLevel !== 'low');
+    const filtered = filterByStatus(items);
+    const visible = showLow ? filtered : filtered.filter(s => s.confidenceLevel !== 'low');
     return visible.map(s => (
       <SuggestionCard key={s.id} suggestion={s}
         checked={!!checked[s.id]}
@@ -1256,7 +1547,8 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
   };
 
   const renderDebtSuggestions = (items) => {
-    const visible = showLow ? items : items.filter(s => s.confidenceLevel !== 'low');
+    const filtered = filterByStatus(items);
+    const visible = showLow ? filtered : filtered.filter(s => s.confidenceLevel !== 'low');
     return visible.map(s => (
       <DebtSuggestionCard key={s.id} suggestion={s}
         checked={!!checked[s.id]}
@@ -1270,7 +1562,8 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
   };
 
   const renderSavingsSuggestions = (items) => {
-    const visible = showLow ? items : items.filter(s => s.confidenceLevel !== 'low');
+    const filtered = filterByStatus(items);
+    const visible = showLow ? filtered : filtered.filter(s => s.confidenceLevel !== 'low');
     return visible.map(s => (
       <SavingsSuggestionCard key={s.id} suggestion={s}
         checked={!!checked[s.id]}
@@ -1495,39 +1788,58 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
             </div>
           </div>
 
-          {/* Status + select all row */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              {addedCount > 0 && (
-                <span style={{ fontSize: '13px', color: 'var(--success)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Icons.Check size={14} /> {addedCount} added
-                </span>
-              )}
-              {checkedPending > 0 && (
-                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                  {checkedPending} selected
-                </span>
-              )}
-              {addedCount === 0 && checkedPending === 0 && (
-                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                  Review and configure each item
-                </span>
+          {/* Status filter tabs */}
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+              {[
+                { key: 'all', label: 'All', count: total },
+                { key: 'pending', label: 'Pending', count: pendingCount, color: 'var(--accent-primary)' },
+                { key: 'added', label: 'Added', count: addedCount, color: 'var(--success)' },
+                { key: 'skipped', label: 'Skipped', count: skippedCount, color: 'var(--text-muted)' },
+              ].map(tab => (
+                <button key={tab.key} onClick={() => { haptic.light(); setStatusFilter(tab.key); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '5px',
+                    padding: '7px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '600',
+                    cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, transition: 'all 0.15s',
+                    border: statusFilter === tab.key ? `2px solid ${tab.color || 'var(--accent-primary)'}` : '1px solid var(--border)',
+                    background: statusFilter === tab.key ? `color-mix(in srgb, ${tab.color || 'var(--accent-primary)'} 10%, transparent)` : 'var(--glass)',
+                    color: statusFilter === tab.key ? (tab.color || 'var(--accent-primary)') : 'var(--text-muted)',
+                  }}>
+                  {tab.label}
+                  <span style={{
+                    fontSize: '11px', fontWeight: '700',
+                    padding: '1px 6px', borderRadius: '10px',
+                    background: statusFilter === tab.key ? `color-mix(in srgb, ${tab.color || 'var(--accent-primary)'} 15%, transparent)` : 'var(--glass)',
+                  }}>{tab.count}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Select all + selected count */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {checkedPending > 0 && (
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {checkedPending} selected
+                  </span>
+                )}
+              </div>
+              {highCount > 0 && statusFilter !== 'added' && statusFilter !== 'skipped' && (
+                <button onClick={() => { acceptAll(); }} style={{ fontSize: '12px', fontWeight: '600', color: 'var(--accent-primary)',
+                  background: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent)',
+                  borderRadius: '20px', padding: '5px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  Select all ({highCount})
+                </button>
               )}
             </div>
-            {highCount > 0 && (
-              <button onClick={() => { acceptAll(); }} style={{ fontSize: '12px', fontWeight: '600', color: 'var(--accent-primary)',
-                background: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)',
-                border: '1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent)',
-                borderRadius: '20px', padding: '6px 14px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                Select all ({highCount})
-              </button>
-            )}
           </div>
         </div>
 
         {/* Section cards */}
         <div style={{ padding: '0 20px' }}>
-          {suggestions.bills.length > 0 && (
+          {suggestions.bills.length > 0 && (statusFilter === 'all' || filterByStatus(suggestions.bills).length > 0) && (
             <div style={{ marginBottom: '12px' }}>
               {/* Section card header */}
               <div onClick={() => { haptic.light(); setExpanded(e => ({ ...e, bills: !e.bills })); }} style={{
@@ -1544,7 +1856,7 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>Bills</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '1px' }}>{suggestions.bills.length} item{suggestions.bills.length !== 1 ? 's' : ''} detected</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '1px' }}>{filterByStatus(suggestions.bills).length}{statusFilter !== 'all' ? ` / ${suggestions.bills.length}` : ''} item{suggestions.bills.length !== 1 ? 's' : ''}{statusFilter !== 'all' ? ` · ${statusFilter}` : ' detected'}</div>
                 </div>
                 <Icons.ChevronDown size={16} style={{ color: 'var(--text-muted)', transition: 'transform 0.2s',
                   transform: expanded.bills ? 'rotate(180deg)' : 'none' }} />
@@ -1560,7 +1872,7 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
             </div>
           )}
 
-          {suggestions.debts.length > 0 && (
+          {suggestions.debts.length > 0 && (statusFilter === 'all' || filterByStatus(suggestions.debts).length > 0) && (
             <div style={{ marginBottom: '12px' }}>
               <div onClick={() => { haptic.light(); setExpanded(e => ({ ...e, debts: !e.debts })); }} style={{
                 display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
@@ -1576,7 +1888,7 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>Debts</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '1px' }}>{suggestions.debts.length} item{suggestions.debts.length !== 1 ? 's' : ''} detected</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '1px' }}>{filterByStatus(suggestions.debts).length}{statusFilter !== 'all' ? ` / ${suggestions.debts.length}` : ''} item{suggestions.debts.length !== 1 ? 's' : ''}{statusFilter !== 'all' ? ` · ${statusFilter}` : ' detected'}</div>
                 </div>
                 <Icons.ChevronDown size={16} style={{ color: 'var(--text-muted)', transition: 'transform 0.2s',
                   transform: expanded.debts ? 'rotate(180deg)' : 'none' }} />
@@ -1592,7 +1904,7 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
             </div>
           )}
 
-          {suggestions.savings.length > 0 && (
+          {suggestions.savings.length > 0 && (statusFilter === 'all' || filterByStatus(suggestions.savings).length > 0) && (
             <div style={{ marginBottom: '12px' }}>
               <div onClick={() => { haptic.light(); setExpanded(e => ({ ...e, savings: !e.savings })); }} style={{
                 display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
@@ -1608,7 +1920,7 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>Savings</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '1px' }}>{suggestions.savings.length} item{suggestions.savings.length !== 1 ? 's' : ''} detected</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '1px' }}>{filterByStatus(suggestions.savings).length}{statusFilter !== 'all' ? ` / ${suggestions.savings.length}` : ''} item{suggestions.savings.length !== 1 ? 's' : ''}{statusFilter !== 'all' ? ` · ${statusFilter}` : ' detected'}</div>
                 </div>
                 <Icons.ChevronDown size={16} style={{ color: 'var(--text-muted)', transition: 'transform 0.2s',
                   transform: expanded.savings ? 'rotate(180deg)' : 'none' }} />

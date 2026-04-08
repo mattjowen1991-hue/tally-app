@@ -422,7 +422,7 @@ export default function BillsPanel({
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
           background: 'rgba(0,212,255,0.06)', border: '1px solid rgba(0,212,255,0.2)',
           borderRadius: '12px', padding: '10px', cursor: 'pointer', color: 'var(--accent-primary)',
-          fontSize: '13px', fontWeight: '600',
+          fontSize: '13px', fontWeight: '600', WebkitTapHighlightColor: 'transparent',
         }}>
           Import bills from a file
         </button>

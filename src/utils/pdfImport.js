@@ -525,17 +525,105 @@ const BUDGET_SECTION_MAP = {
   'home': 'HOME', 'housing': 'HOME', 'utilities': 'HOME', 'bills': 'HOME',
   'transport': 'TRANSPORTATION', 'transportation': 'TRANSPORTATION',
   'credit card': 'CREDIT CARDS', 'credit card payments': 'CREDIT CARDS',
+  'credit cards & overdrafts': 'DEBT', 'credit cards': 'DEBT', 'overdrafts': 'DEBT',
+  'debts': 'DEBT', 'debt': 'DEBT',
+  'savings': 'SAVINGS', 'saving': 'SAVINGS', 'savings goals': 'SAVINGS',
+  'investments': 'SAVINGS', 'investment': 'SAVINGS',
   'entertainment': 'ENTERTAINMENT', 'leisure': 'ENTERTAINMENT', 'subscriptions': 'ENTERTAINMENT',
   'health': 'HEALTH', 'healthcare': 'HEALTH', 'medical': 'HEALTH',
   'payments': 'PAYMENTS', 'insurance': 'PAYMENTS',
 };
 
+// Debt signals — brand names and specific debt product terms.
+// Uses word-boundary-aware matching to avoid false positives (e.g. "balloon" matching "loan").
+const BUDGET_DEBT_EXACT = [
+  // Brand names — exact substring match is safe (these are unambiguous)
+  'klarna', 'clearpay', 'laybuy', 'zilch', 'splitit',
+  'barclaycard', 'mbna', 'vanquis', 'aqua card', 'capital one',
+  'newday', 'ocean card', 'marbles card', 'fluid card',
+  'amigo loans', 'provident', 'morses club', 'wonga', 'quickquid',
+  'zopa', 'lendable', 'everyday loans', 'bamboo loans',
+  'hitachi finance', 'novuna', 'creation finance', 'snap finance',
+  'v12 finance', 'dividebuy', 'ikano finance', 'stepone finance',
+  'very catalogue', 'littlewoods', 'studio catalogue',
+  'brighthouse', 'paypal credit', 'paypal pay in',
+];
+// These require word boundary matching — "loan" should match "Loan Repayment" but not "balloon"
+const BUDGET_DEBT_WORDS = [
+  'loan', 'overdraft', 'credit card', 'bnpl', 'hire purchase',
+  'buy now pay later', 'pay later', 'pay in 3', 'pay in 4',
+  'store card', 'store credit', 'catalogue credit', 'catalog credit',
+  'debt repayment', 'debt payment', 'debt management',
+  'finance agreement', 'finance payment', 'car finance', 'vehicle finance',
+  'arrears', 'balance transfer',
+];
+
+// Savings signals — same dual approach
+const BUDGET_SAVINGS_EXACT = [
+  'moneybox', 'chip savings', 'plum', 'nutmeg', 'wealthify',
+  'vanguard', 'hargreaves lansdown', 'interactive investor',
+  'freetrade', 'trading 212', 'aj bell', 'investengine',
+  'pensionbee', 'cushon', 'dodl', 'ns&i',
+];
+const BUDGET_SAVINGS_WORDS = [
+  'savings', 'saver', 'isa', 'lisa', 'premium bonds',
+  'emergency fund', 'rainy day fund', 'sinking fund',
+  'holiday fund', 'christmas fund',
+  'investment', 'pension contribution', 'pension top-up',
+  'savings goal', 'savings pot',
+];
+
+// Items that are NEVER debts — even if they appear in a debt section
+const NOT_DEBT_SIGNALS = [
+  // Utilities
+  'electric', 'gas', 'water', 'broadband', 'internet', 'wifi', 'fibre',
+  'tv licence', 'tv license', 'council tax', 'rent', 'mortgage payment',
+  // Telecoms
+  'mobile', 'phone', 'airtime', 'device plan',
+  // Subscriptions
+  'netflix', 'disney', 'spotify', 'amazon prime', 'apple', 'sky',
+  'gym', 'playstation', 'xbox', 'nintendo', 'youtube',
+  'adobe', 'microsoft', 'google', 'icloud', 'dropbox',
+  // Insurance
+  'insurance', 'life cover', 'breakdown', 'pet healthcare',
+  // Food and household
+  'milk', 'food', 'shopping', 'groceries', 'takeaway', 'fuel', 'petrol',
+  // Services
+  'cleaning', 'window cleaning', 'gardener', 'gardening', 'childcare', 'nursery',
+  // Generic subscriptions/services (common false positives)
+  'simmer', 'claude', 'ai', 'subscription',
+];
+
+function matchesDebt(name) {
+  const lower = name.toLowerCase();
+  // First check NOT_DEBT exclusions — these override everything
+  if (NOT_DEBT_SIGNALS.some(s => lower.includes(s))) return false;
+  // Exact brand match
+  if (BUDGET_DEBT_EXACT.some(s => lower.includes(s))) return true;
+  // Word boundary match for generic terms
+  return BUDGET_DEBT_WORDS.some(term => {
+    const regex = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    return regex.test(name);
+  });
+}
+
+function matchesSavings(name) {
+  const lower = name.toLowerCase();
+  // Exact platform match
+  if (BUDGET_SAVINGS_EXACT.some(s => lower.includes(s))) return true;
+  // Word boundary match
+  return BUDGET_SAVINGS_WORDS.some(term => {
+    const regex = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    return regex.test(name);
+  });
+}
+
 const BUDGET_SKIP = new Set([
-  'total', 'subtotal', 'income', 'expenses', 'savings', 'budget',
+  'total', 'subtotal', 'income', 'expenses', 'budget',
   'projected', 'actual', 'difference', 'date', 'amount', 'cost',
   'description', 'category', 'notes', 'net', 'balance', 'payment plans',
   'total income', 'total expenses', 'net income', 'budget summary',
-  'emergency fund', 'transfer to savings', 'credit cards & overdrafts',
+  'emergency fund', 'transfer to savings',
   'salary / wages', 'interest income', 'dividends', 'refunds / reimbursements',
   'business', 'other', 'pension', 'misc.', 'investments', 'education',
   'personal monthly budget template', 'end date', 'monthly cost', 'amount left',
@@ -545,16 +633,20 @@ const BUDGET_INCOME = ['salary', 'wages', 'income', 'dividend', 'pension', 'refu
 
 function parseBudgetLines(lines) {
   const bills = [];
+  const debts = [];
+  const savings = [];
   const seenNames = new Set();
   let currentCategory = 'HOME';
+  let inDebtSection = false;
+  let inSavingsSection = false;
   let pendingName = null; // Name carried from end of previous line
 
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.length < 3) continue;
 
-    // Look for amounts
-    const amountRegex = /(\d{1,3}(?:,\d{3})*\.\d{2})/g;
+    // Look for amounts — match with decimals (25.00, 117.6) or whole numbers 2+ digits (200, 5200)
+    const amountRegex = /(\d{1,3}(?:,\d{3})*\.\d{1,2}|\d{2,}(?:,\d{3})*)\b/g;
     const amounts = [];
     let m;
     while ((m = amountRegex.exec(trimmed)) !== null) {
@@ -566,7 +658,13 @@ function parseBudgetLines(lines) {
       const lower = trimmed.toLowerCase().replace(/\s+/g, ' ');
       let isSection = false;
       for (const [key, cat] of Object.entries(BUDGET_SECTION_MAP)) {
-        if (lower === key) { currentCategory = cat; isSection = true; break; }
+        if (lower === key) {
+          currentCategory = cat;
+          inDebtSection = (cat === 'DEBT');
+          inSavingsSection = (cat === 'SAVINGS');
+          isSection = true;
+          break;
+        }
       }
       // If not a section header, it might be a name waiting for amounts on the next line
       if (!isSection && /[a-zA-Z]{2,}/.test(trimmed) && !BUDGET_SKIP.has(lower) && !BUDGET_INCOME.some(s => lower.includes(s))) {
@@ -605,6 +703,8 @@ function parseBudgetLines(lines) {
     const nameLower = name.toLowerCase().replace(/\s+/g, ' ');
     if (BUDGET_SECTION_MAP[nameLower]) {
       currentCategory = BUDGET_SECTION_MAP[nameLower];
+      inDebtSection = (BUDGET_SECTION_MAP[nameLower] === 'DEBT');
+      inSavingsSection = (BUDGET_SECTION_MAP[nameLower] === 'SAVINGS');
       if (trailingName) pendingName = trailingName;
       continue;
     }
@@ -622,26 +722,41 @@ function parseBudgetLines(lines) {
     // Carry trailing name for next line
     if (trailingName) pendingName = trailingName;
 
-    bills.push({
-      id: `pdf_budget_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+    // Classify: content-first, section as weak signal.
+    // The item's own name takes priority — "Milk" is never a debt even in a debt section.
+    const nameIsDebt = matchesDebt(name);
+    const nameIsSavings = !nameIsDebt && matchesSavings(name);
+    // Section is only used when the name doesn't give a clear signal AND isn't excluded
+    const isDebt = nameIsDebt || (inDebtSection && !NOT_DEBT_SIGNALS.some(s => name.toLowerCase().includes(s)));
+    const isSavings = !isDebt && (nameIsSavings || (inSavingsSection && !NOT_DEBT_SIGNALS.some(s => name.toLowerCase().includes(s))));
+    const itemType = isDebt ? 'debt' : isSavings ? 'savings' : 'bill';
+
+    const item = {
+      id: `pdf_budget_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       displayName: name,
       normalisedKey: normaliseMerchant(name),
-      type: 'bill',
+      type: itemType,
       avgAmount: amount,
       minAmount: amount,
       maxAmount: amount,
       frequency: 'monthly',
       frequencyLabel: 'Monthly',
-      category: currentCategory,
+      category: isDebt ? 'CREDIT CARDS' : isSavings ? 'Emergency' : currentCategory,
       confidence: 0.85,
       confidenceLevel: 'high',
-      explainer: `From your budget — £${amount.toFixed(2)}/month`,
+      explainer: isDebt ? `From your budget — £${amount.toFixed(2)} owed`
+        : isSavings ? `From your budget — £${amount.toFixed(2)}/month savings`
+        : `From your budget — £${amount.toFixed(2)}/month`,
       occurrences: 1,
       nextDueEstimate: null,
-    });
+    };
+
+    if (isDebt) debts.push(item);
+    else if (isSavings) savings.push(item);
+    else bills.push(item);
   }
 
-  return bills;
+  return { bills, debts, savings };
 }
 
 // ── Main export ──
@@ -661,10 +776,13 @@ export async function importPDF(pdfData) {
   // A budget PDF might have a few dates in metadata that the bank parser picks up,
   // but the budget parser will find far more items. Vice versa for real bank statements.
   const transactions = parseTransactions(lines);
-  const budgetBills = parseBudgetLines(lines);
+  const budgetResult = parseBudgetLines(lines);
+  const budgetBills = budgetResult.bills;
+  const budgetDebts = budgetResult.debts;
+  const budgetSavings = budgetResult.savings;
 
   const bankCount = transactions.length;
-  const budgetCount = budgetBills.length;
+  const budgetCount = budgetBills.length + budgetDebts.length + budgetSavings.length;
 
   // Use the parser that found more results
   if (bankCount > 0 && bankCount >= budgetCount) {
@@ -688,8 +806,8 @@ export async function importPDF(pdfData) {
   if (budgetCount > 0) {
     return {
       bills: budgetBills,
-      debts: [],
-      savings: [],
+      debts: budgetDebts,
+      savings: budgetSavings,
       diagnostics: {
         totalRows: lines.length,
         validTransactions: budgetCount,

@@ -30,8 +30,8 @@ function SwipeBackEdge({ onBack }) {
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
       style={{
-        position: 'absolute', left: 0, top: 0, bottom: 0,
-        width: '24px', zIndex: 10,
+        position: 'fixed', left: 0, top: 0, bottom: 0,
+        width: '28px', zIndex: 10000,
       }}
     />
   );
@@ -483,10 +483,11 @@ export default function CSVImportModal({ onClose, onComplete, bills = [], catego
     setShowImportFlow(true);
   };
 
-  // ── Import flow (file pick + analysis) — NO swipe-back (too risky mid-import) ──
+  // ── Import flow (file pick + analysis) ──
   if (showImportFlow) {
     return (
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}>
+        <SwipeBackEdge onBack={() => { haptic.light(); setShowImportFlow(false); }} />
         <div style={{ paddingTop: 'env(safe-area-inset-top)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border)' }}>
             <button onClick={() => { haptic.light(); setShowImportFlow(false); }} style={{
