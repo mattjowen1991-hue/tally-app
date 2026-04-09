@@ -424,7 +424,7 @@ export default function BillsPanel({
           borderRadius: '12px', padding: '10px', cursor: 'pointer', color: 'var(--accent-primary)',
           fontSize: '13px', fontWeight: '600', WebkitTapHighlightColor: 'transparent',
         }}>
-          Import bills from a file
+          Import data from a file
         </button>
       </div>
 

@@ -236,6 +236,58 @@ const TYPE_OPTIONS = [
   { key: 'savings', label: 'Savings', color: 'var(--success)' },
 ];
 
+function SectionToolbar({ statusFilter, setStatusFilter, sortOrder, setSortOrder, items, cardStates }) {
+  const pend = items.filter(s => cardStates[s.id] !== 'added' && cardStates[s.id] !== 'skipped').length;
+  const added = items.filter(s => cardStates[s.id] === 'added').length;
+  const skipped = items.filter(s => cardStates[s.id] === 'skipped').length;
+  return (
+    <div style={{ padding: '10px 4px 6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        {[
+          { key: 'all', label: 'All', count: items.length },
+          { key: 'pending', label: 'Pending', count: pend, color: 'var(--accent-primary)' },
+          { key: 'added', label: 'Added', count: added, color: 'var(--success)' },
+          { key: 'skipped', label: 'Skipped', count: skipped },
+        ].map(tab => {
+          const active = statusFilter === tab.key;
+          return (
+            <button key={tab.key} onClick={() => { haptic.light(); setStatusFilter(tab.key); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '4px',
+                padding: '5px 10px', borderRadius: '16px', fontSize: '11px', fontWeight: '600',
+                cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, transition: 'all 0.15s',
+                border: active ? `1.5px solid ${tab.color || 'var(--accent-primary)'}` : '1px solid var(--border)',
+                background: active ? `color-mix(in srgb, ${tab.color || 'var(--accent-primary)'} 10%, transparent)` : 'var(--glass)',
+                color: active ? (tab.color || 'var(--accent-primary)') : 'var(--text-muted)',
+              }}>
+              {tab.label} <span style={{ fontWeight: '700' }}>{tab.count}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        {[
+          { key: 'a-z', label: 'A → Z' },
+          { key: 'z-a', label: 'Z → A' },
+          { key: 'amount-asc', label: 'Amount ↑' },
+          { key: 'amount-desc', label: 'Amount ↓' },
+        ].map(opt => (
+          <button key={opt.key} onClick={() => { haptic.light(); setSortOrder(opt.key); }}
+            style={{
+              padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: '600',
+              cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, transition: 'all 0.15s',
+              border: sortOrder === opt.key ? '1.5px solid var(--accent-primary)' : '1px solid var(--border)',
+              background: sortOrder === opt.key ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'var(--glass)',
+              color: sortOrder === opt.key ? 'var(--accent-primary)' : 'var(--text-muted)',
+            }}>
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TypeSwitcher({ value, onChange }) {
   return (
     <div style={{ marginBottom: '10px' }}>
@@ -261,6 +313,7 @@ function TypeSwitcher({ value, onChange }) {
 // cardState: 'pending' | 'added' | 'skipped'
 function SuggestionCard({ suggestion, checked, cardState = 'pending', categories = DEFAULT_CATS, initialCategory, initialFrequency, onToggle, onEditName, onEditAmount, onEditCategory, onEditFrequency, onAddCategory, onAddOne, onSkipOne, onUndoOne }) {
   const [localType, setLocalType] = useState(suggestion.type || 'bill');
+  const [expandedAfterAction, setExpandedAfterAction] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [editingAmount, setEditingAmount] = useState(false);
   const [showNewCatInput, setShowNewCatInput] = useState(false);
@@ -294,14 +347,15 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
   const isAdded   = cardState === 'added';
   const isSkipped = cardState === 'skipped';
   const pending   = !isAdded && !isSkipped;
+  const showForm  = pending || expandedAfterAction;
 
   return (
     <div style={{
       background: isAdded ? 'color-mix(in srgb, var(--success) 6%, transparent)' : isSkipped ? 'var(--glass)' : checked ? 'color-mix(in srgb, var(--accent-primary) 5%, transparent)' : 'var(--glass)',
       border: `1px solid ${isAdded ? 'color-mix(in srgb, var(--success) 25%, transparent)' : isSkipped ? 'var(--border)' : checked ? 'color-mix(in srgb, var(--accent-primary) 20%, transparent)' : 'var(--border)'}`,
-      borderLeft: isAdded ? '3px solid var(--success)' : isSkipped ? undefined : `3px solid ${localType === 'debt' ? 'var(--danger)' : localType === 'savings' ? 'var(--success)' : 'var(--accent-primary)'}`,
+      borderLeft: (isAdded && !expandedAfterAction) ? '3px solid var(--success)' : isSkipped ? undefined : `3px solid ${localType === 'debt' ? 'var(--danger)' : localType === 'savings' ? 'var(--success)' : 'var(--accent-primary)'}`,
       borderRadius: '12px', padding: '12px 14px', marginBottom: '8px', transition: 'all 0.2s',
-      opacity: isSkipped ? 0.4 : 1,
+      opacity: isSkipped && !expandedAfterAction ? 0.55 : 1,
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
 
@@ -318,7 +372,7 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
         {isAdded && (
           <div style={{ width: '22px', height: '22px', borderRadius: '6px', flexShrink: 0, marginTop: '1px',
             background: 'rgba(16,185,129,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '12px', color: '#10b981' }}>\u2713</div>
+            fontSize: '12px', color: '#10b981' }}>{'\u2713'}</div>
         )}
 
         {/* Content */}
@@ -344,14 +398,14 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
             {pending && <ConfidenceBadge level={suggestion.confidenceLevel} />}
             {isAdded && <span style={{ fontSize: '10px', fontWeight: '700', color: '#10b981',
               background: 'rgba(16,185,129,0.15)', padding: '2px 7px', borderRadius: '10px' }}>Added</span>}
-            {isSkipped && <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)' }}>Skipped</span>}
+            {isSkipped && <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', background: 'var(--glass)', border: '1px solid var(--border)', padding: '2px 7px', borderRadius: '10px' }}>Skipped</span>}
           </div>
 
           {/* Type switcher */}
-          {pending && <TypeSwitcher value={localType} onChange={setLocalType} />}
+          {showForm && <TypeSwitcher value={localType} onChange={setLocalType} />}
 
           {/* Amount */}
-          <div style={{ marginBottom: pending ? '10px' : '4px' }}>
+          <div style={{ marginBottom: showForm ? '10px' : '4px' }}>
             <label style={LABEL_STYLE}>Amount</label>
             {editingAmount && pending ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -372,7 +426,7 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
           </div>
 
           {/* Form fields — conditional on localType */}
-          {pending && localType === 'bill' && (
+          {showForm && localType === 'bill' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
 
               {/* Category */}
@@ -517,7 +571,7 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
           )}
 
           {/* Debt form */}
-          {pending && localType === 'debt' && (
+          {showForm && localType === 'debt' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
               <div>
                 <label style={LABEL_STYLE}>Total Amount Owed</label>
@@ -575,7 +629,7 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
           )}
 
           {/* Savings form */}
-          {pending && localType === 'savings' && (
+          {showForm && localType === 'savings' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
               <div>
                 <label style={LABEL_STYLE}>Category</label>
@@ -601,10 +655,11 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
           )}
 
           {/* Per-card action buttons */}
-          {pending && (
+          {showForm && (
             <div style={{ display: 'flex', gap: '6px' }}>
               <button onClick={() => {
                 haptic.success();
+                if (expandedAfterAction) setExpandedAfterAction(false);
                 if (localType === 'debt') {
                   onAddOne(suggestion.id, {
                     name: localName, totalAmount: parseFloat(localAmount) || 0, amount: parseFloat(localAmount) || 0,
@@ -629,7 +684,7 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
                   background: localType === 'debt' ? 'linear-gradient(135deg, var(--danger), #dc2626)' : localType === 'savings' ? 'linear-gradient(135deg, var(--success), #059669)' : 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
                   border: localType === 'bill' ? '1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent)' : 'none',
                   color: localType === 'bill' ? 'var(--accent-primary)' : '#fff' }}>
-                + Add {localType === 'debt' ? 'debt' : localType === 'savings' ? 'savings goal' : 'this one'}
+                {expandedAfterAction ? '✓ Update' : `+ Add ${localType === 'debt' ? 'debt' : localType === 'savings' ? 'savings goal' : 'this one'}`}
               </button>
               <button onClick={() => { haptic.light(); onSkipOne(suggestion.id); }}
                 style={{ padding: '7px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '600',
@@ -640,13 +695,25 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
             </div>
           )}
 
-          {/* Undo */}
-          {(isAdded || isSkipped) && (
-            <button onClick={() => { haptic.light(); onUndoOne(suggestion.id); }}
-              style={{ marginTop: '4px', padding: '3px 0', background: 'none', border: 'none',
-                cursor: 'pointer', color: 'var(--text-muted)', fontSize: '11px', textDecoration: 'underline' }}>
-              {isAdded ? 'Undo add' : 'Undo skip'}
-            </button>
+          {/* Added/Skipped action bar */}
+          {(isAdded || isSkipped) && !expandedAfterAction && (
+            <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+              {isAdded && (
+                <button onClick={() => { haptic.light(); setExpandedAfterAction(true); }}
+                  style={{ flex: 1, padding: '8px', borderRadius: '8px', fontSize: '12px', fontWeight: '600',
+                    cursor: 'pointer', background: 'var(--glass)', border: '1px solid var(--border)',
+                    color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                  <Icons.Edit size={13} /> Edit
+                </button>
+              )}
+              <button onClick={() => { haptic.light(); onUndoOne(suggestion.id); setExpandedAfterAction(false); }}
+                style={{ flex: 1, padding: '8px', borderRadius: '8px', fontSize: '12px', fontWeight: '600',
+                  cursor: 'pointer', background: 'var(--glass)', border: '1px solid var(--border)',
+                  color: isAdded ? 'var(--warning)' : 'var(--accent-primary)',
+                  ...(isSkipped ? { background: 'color-mix(in srgb, var(--accent-primary) 15%, transparent)', border: '1.5px solid var(--accent-primary)' } : {}) }}>
+                {isAdded ? 'Remove' : 'Restore'}
+              </button>
+            </div>
           )}
 
         </div>
@@ -659,6 +726,7 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
 // Mini Add Debt form per imported debt item — matches the real Add Debt screen fields
 function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onToggle, onAddOne, onSkipOne, onUndoOne }) {
   const [localType, setLocalType] = useState(suggestion.type || 'debt');
+  const [expandedAfterAction, setExpandedAfterAction] = useState(false);
   const [localName, setLocalName] = useState(suggestion.displayName);
   const [editingName, setEditingName] = useState(false);
   const [localAmount, setLocalAmount] = useState(suggestion.avgAmount.toFixed(2));
@@ -690,6 +758,7 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
   const isAdded = cardState === 'added';
   const isSkipped = cardState === 'skipped';
   const pending = !isAdded && !isSkipped;
+  const showForm = pending || expandedAfterAction;
   const totalAmount = parseFloat(localAmount) || 0;
   const installMonths = parseInt(installmentMonths) || 0;
   const installmentMonthly = installMonths > 0 && totalAmount > 0 ? Math.ceil((totalAmount / installMonths) * 100) / 100 : 0;
@@ -723,9 +792,9 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
     <div style={{
       background: isAdded ? 'color-mix(in srgb, var(--success) 6%, transparent)' : isSkipped ? 'var(--glass)' : 'var(--bg-card, var(--glass))',
       border: `1px solid ${isAdded ? 'color-mix(in srgb, var(--success) 25%, transparent)' : isSkipped ? 'var(--border)' : 'var(--border)'}`,
-      borderLeft: isAdded ? '3px solid var(--success)' : isSkipped ? undefined : `3px solid ${localType === 'bill' ? 'var(--accent-primary)' : localType === 'savings' ? 'var(--success)' : 'var(--danger)'}`,
+      borderLeft: (isAdded && !expandedAfterAction) ? '3px solid var(--success)' : isSkipped ? undefined : `3px solid ${localType === 'bill' ? 'var(--accent-primary)' : localType === 'savings' ? 'var(--success)' : 'var(--danger)'}`,
       borderRadius: '12px', padding: '12px 14px', marginBottom: '8px', transition: 'all 0.2s',
-      opacity: isSkipped ? 0.4 : 1,
+      opacity: isSkipped && !expandedAfterAction ? 0.55 : 1,
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
 
@@ -766,10 +835,10 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
               border: '1px solid color-mix(in srgb, var(--danger) 25%, transparent)' }}>DEBT</span>}
             {isAdded && <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--success)',
               background: 'color-mix(in srgb, var(--success) 15%, transparent)', padding: '2px 7px', borderRadius: '10px' }}>Added</span>}
-            {isSkipped && <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Skipped</span>}
+            {isSkipped && <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', background: 'var(--glass)', border: '1px solid var(--border)', padding: '2px 7px', borderRadius: '10px' }}>Skipped</span>}
           </div>
 
-          {pending && (
+          {showForm && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px', marginBottom: '12px' }}>
 
               {/* Type switcher */}
@@ -983,10 +1052,11 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
           )}
 
           {/* Action buttons */}
-          {pending && (
+          {showForm && (
             <div style={{ display: 'flex', gap: '6px' }}>
               <button onClick={() => {
                 haptic.success();
+                if (expandedAfterAction) setExpandedAfterAction(false);
                 if (localType === 'bill') {
                   onAddOne(suggestion.id, { name: localName, amount: parseFloat(localAmount) || 0, category: billCategory, recurring: billRecurring, frequency: billFrequency, paymentDate: billPaymentDate, _typeOverride: 'bill' });
                 } else if (localType === 'savings') {
@@ -1000,23 +1070,37 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
                   background: localType === 'debt' ? 'linear-gradient(135deg, var(--danger), #dc2626)' : localType === 'savings' ? 'linear-gradient(135deg, var(--success), #059669)' : 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
                   border: localType === 'bill' ? '1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent)' : 'none',
                   color: localType === 'bill' ? 'var(--accent-primary)' : '#fff' }}>
-                + Add {localType === 'debt' ? 'debt' : localType === 'savings' ? 'savings goal' : 'bill'}
+                {expandedAfterAction ? '✓ Update' : `+ Add ${localType === 'debt' ? 'debt' : localType === 'savings' ? 'savings goal' : 'bill'}`}
               </button>
-              <button onClick={() => { haptic.light(); onSkipOne(suggestion.id); }}
-                style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: '600',
-                  cursor: 'pointer', background: 'var(--glass)', border: '1px solid var(--border)',
-                  color: 'var(--text-muted)' }}>
-                Skip
-              </button>
+              {!expandedAfterAction && (
+                <button onClick={() => { haptic.light(); onSkipOne(suggestion.id); }}
+                  style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: '600',
+                    cursor: 'pointer', background: 'var(--glass)', border: '1px solid var(--border)',
+                    color: 'var(--text-muted)' }}>
+                  Skip
+                </button>
+              )}
             </div>
           )}
 
-          {(isAdded || isSkipped) && (
-            <button onClick={() => { haptic.light(); onUndoOne(suggestion.id); }}
-              style={{ marginTop: '4px', padding: '3px 0', background: 'none', border: 'none',
-                cursor: 'pointer', color: 'var(--text-muted)', fontSize: '11px', textDecoration: 'underline' }}>
-              {isAdded ? 'Undo add' : 'Undo skip'}
-            </button>
+          {(isAdded || isSkipped) && !expandedAfterAction && (
+            <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+              {isAdded && (
+                <button onClick={() => { haptic.light(); setExpandedAfterAction(true); }}
+                  style={{ flex: 1, padding: '8px', borderRadius: '8px', fontSize: '12px', fontWeight: '600',
+                    cursor: 'pointer', background: 'var(--glass)', border: '1px solid var(--border)',
+                    color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                  <Icons.Edit size={13} /> Edit
+                </button>
+              )}
+              <button onClick={() => { haptic.light(); onUndoOne(suggestion.id); setExpandedAfterAction(false); }}
+                style={{ flex: 1, padding: '8px', borderRadius: '8px', fontSize: '12px', fontWeight: '600',
+                  cursor: 'pointer', background: 'var(--glass)', border: '1px solid var(--border)',
+                  color: isAdded ? 'var(--warning)' : 'var(--accent-primary)',
+                  ...(isSkipped ? { background: 'color-mix(in srgb, var(--accent-primary) 15%, transparent)', border: '1.5px solid var(--accent-primary)' } : {}) }}>
+                {isAdded ? 'Remove' : 'Restore'}
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -1028,6 +1112,7 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
 // Mini Add Savings form per imported savings item — matches the real Add Savings screen
 function SavingsSuggestionCard({ suggestion, checked, cardState = 'pending', onToggle, onAddOne, onSkipOne, onUndoOne }) {
   const [localType, setLocalType] = useState(suggestion.type || 'savings');
+  const [expandedAfterAction, setExpandedAfterAction] = useState(false);
   const [localName, setLocalName] = useState(suggestion.displayName);
   const [editingName, setEditingName] = useState(false);
   const [savingsCategory, setSavingsCategory] = useState('Emergency');
@@ -1043,9 +1128,11 @@ function SavingsSuggestionCard({ suggestion, checked, cardState = 'pending', onT
   const isAdded = cardState === 'added';
   const isSkipped = cardState === 'skipped';
   const pending = !isAdded && !isSkipped;
+  const showForm = pending || expandedAfterAction;
 
   const handleAdd = () => {
     haptic.success();
+    if (expandedAfterAction) setExpandedAfterAction(false);
     onAddOne(suggestion.id, {
       name: localName,
       amount: parseFloat(monthlyContribution) || suggestion.avgAmount,
@@ -1061,9 +1148,9 @@ function SavingsSuggestionCard({ suggestion, checked, cardState = 'pending', onT
     <div style={{
       background: isAdded ? 'color-mix(in srgb, var(--success) 6%, transparent)' : isSkipped ? 'var(--glass)' : 'var(--bg-card, var(--glass))',
       border: `1px solid ${isAdded ? 'color-mix(in srgb, var(--success) 25%, transparent)' : isSkipped ? 'var(--border)' : 'var(--border)'}`,
-      borderLeft: isAdded ? '3px solid var(--success)' : isSkipped ? undefined : `3px solid ${localType === 'bill' ? 'var(--accent-primary)' : localType === 'debt' ? 'var(--danger)' : 'var(--success)'}`,
+      borderLeft: (isAdded && !expandedAfterAction) ? '3px solid var(--success)' : isSkipped ? undefined : `3px solid ${localType === 'bill' ? 'var(--accent-primary)' : localType === 'debt' ? 'var(--danger)' : 'var(--success)'}`,
       borderRadius: '12px', padding: '12px 14px', marginBottom: '8px', transition: 'all 0.2s',
-      opacity: isSkipped ? 0.4 : 1,
+      opacity: isSkipped && !expandedAfterAction ? 0.55 : 1,
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
 
@@ -1104,10 +1191,10 @@ function SavingsSuggestionCard({ suggestion, checked, cardState = 'pending', onT
               border: '1px solid color-mix(in srgb, var(--success) 25%, transparent)' }}>SAVINGS</span>}
             {isAdded && <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--success)',
               background: 'color-mix(in srgb, var(--success) 15%, transparent)', padding: '2px 7px', borderRadius: '10px' }}>Added</span>}
-            {isSkipped && <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Skipped</span>}
+            {isSkipped && <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', background: 'var(--glass)', border: '1px solid var(--border)', padding: '2px 7px', borderRadius: '10px' }}>Skipped</span>}
           </div>
 
-          {pending && (
+          {showForm && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px', marginBottom: '12px' }}>
 
               {/* Type switcher */}
@@ -1168,10 +1255,11 @@ function SavingsSuggestionCard({ suggestion, checked, cardState = 'pending', onT
           )}
 
           {/* Action buttons */}
-          {pending && (
+          {showForm && (
             <div style={{ display: 'flex', gap: '6px' }}>
               <button onClick={() => {
                 haptic.success();
+                if (expandedAfterAction) setExpandedAfterAction(false);
                 if (localType === 'bill') {
                   onAddOne(suggestion.id, { name: localName, amount: suggestion.avgAmount, category: billCategory, recurring: true, frequency: billFrequency, paymentDate: billPaymentDate, _typeOverride: 'bill' });
                 } else if (localType === 'debt') {
@@ -1185,23 +1273,37 @@ function SavingsSuggestionCard({ suggestion, checked, cardState = 'pending', onT
                   background: localType === 'debt' ? 'linear-gradient(135deg, var(--danger), #dc2626)' : localType === 'savings' ? 'linear-gradient(135deg, var(--success), #059669)' : 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
                   border: localType === 'bill' ? '1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent)' : 'none',
                   color: localType === 'bill' ? 'var(--accent-primary)' : '#fff' }}>
-                + Add {localType === 'debt' ? 'debt' : localType === 'savings' ? 'savings goal' : 'bill'}
+                {expandedAfterAction ? '✓ Update' : `+ Add ${localType === 'debt' ? 'debt' : localType === 'savings' ? 'savings goal' : 'bill'}`}
               </button>
-              <button onClick={() => { haptic.light(); onSkipOne(suggestion.id); }}
-                style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: '600',
-                  cursor: 'pointer', background: 'var(--glass)', border: '1px solid var(--border)',
-                  color: 'var(--text-muted)' }}>
-                Skip
-              </button>
+              {!expandedAfterAction && (
+                <button onClick={() => { haptic.light(); onSkipOne(suggestion.id); }}
+                  style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: '600',
+                    cursor: 'pointer', background: 'var(--glass)', border: '1px solid var(--border)',
+                    color: 'var(--text-muted)' }}>
+                  Skip
+                </button>
+              )}
             </div>
           )}
 
-          {(isAdded || isSkipped) && (
-            <button onClick={() => { haptic.light(); onUndoOne(suggestion.id); }}
-              style={{ marginTop: '4px', padding: '3px 0', background: 'none', border: 'none',
-                cursor: 'pointer', color: 'var(--text-muted)', fontSize: '11px', textDecoration: 'underline' }}>
-              {isAdded ? 'Undo add' : 'Undo skip'}
-            </button>
+          {(isAdded || isSkipped) && !expandedAfterAction && (
+            <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+              {isAdded && (
+                <button onClick={() => { haptic.light(); setExpandedAfterAction(true); }}
+                  style={{ flex: 1, padding: '8px', borderRadius: '8px', fontSize: '12px', fontWeight: '600',
+                    cursor: 'pointer', background: 'var(--glass)', border: '1px solid var(--border)',
+                    color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                  <Icons.Edit size={13} /> Edit
+                </button>
+              )}
+              <button onClick={() => { haptic.light(); onUndoOne(suggestion.id); setExpandedAfterAction(false); }}
+                style={{ flex: 1, padding: '8px', borderRadius: '8px', fontSize: '12px', fontWeight: '600',
+                  cursor: 'pointer', background: 'var(--glass)', border: '1px solid var(--border)',
+                  color: isAdded ? 'var(--warning)' : 'var(--accent-primary)',
+                  ...(isSkipped ? { background: 'color-mix(in srgb, var(--accent-primary) 15%, transparent)', border: '1.5px solid var(--accent-primary)' } : {}) }}>
+                {isAdded ? 'Remove' : 'Restore'}
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -1233,7 +1335,11 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
   const [edits, setEdits] = useState({});
   const [expanded, setExpanded] = useState({ bills: true, debts: true, savings: true });
   const [showLow, setShowLow] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'added' | 'skipped'
+  // Per-section filter and sort state
+  const [sectionFilters, setSectionFilters] = useState({ bills: 'all', debts: 'all', savings: 'all' });
+  const [sectionSorts, setSectionSorts] = useState({ bills: 'a-z', debts: 'a-z', savings: 'a-z' });
+  const setFilterFor = (section) => (val) => setSectionFilters(prev => ({ ...prev, [section]: val }));
+  const setSortFor = (section) => (val) => setSectionSorts(prev => ({ ...prev, [section]: val }));
   // Local categories list — grows when user creates new categories during import
   const [localCategories, setLocalCategories] = useState(categoriesProp);
   const categories = localCategories;
@@ -1348,6 +1454,21 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
     const s = allS.find(x => x.id === id);
     if (!s) return;
     const item = buildItem(s, config);
+
+    // Move the suggestion to the correct section if the user changed its type
+    const newType = config?._typeOverride || s.type || 'bill';
+    if (newType !== (s.type || 'bill')) {
+      setSuggestions(prev => {
+        const remove = (arr) => arr.filter(x => x.id !== id);
+        const movedItem = { ...s, type: newType };
+        return {
+          bills: newType === 'bill' ? [...remove(prev.bills), movedItem] : remove(prev.bills),
+          debts: newType === 'debt' ? [...remove(prev.debts), movedItem] : remove(prev.debts),
+          savings: newType === 'savings' ? [...remove(prev.savings), movedItem] : remove(prev.savings),
+        };
+      });
+    }
+
     setAddedItems(prev => [...prev.filter(x => x.id !== id), item]);
     setCardStates(prev => ({ ...prev, [id]: 'added' }));
     onComplete({ bills: [...addedItems.filter(x => x.type === 'bill'), ...(item.type === 'bill' ? [item] : [])],
@@ -1510,23 +1631,38 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
   const checkedPending = allSuggestions.filter(s => checked[s.id] && cardStates[s.id] !== 'added' && cardStates[s.id] !== 'skipped').length;
 
   // Filter items by status for rendering
-  const filterByStatus = (items) => {
-    if (statusFilter === 'all') return items;
+  const filterByStatus = (items, section) => {
+    const filter = sectionFilters[section] || 'all';
+    if (filter === 'all') return items;
     return items.filter(s => {
       const state = cardStates[s.id] || 'pending';
-      if (statusFilter === 'pending') return state !== 'added' && state !== 'skipped';
-      if (statusFilter === 'added') return state === 'added';
-      if (statusFilter === 'skipped') return state === 'skipped';
+      if (filter === 'pending') return state !== 'added' && state !== 'skipped';
+      if (filter === 'added') return state === 'added';
+      if (filter === 'skipped') return state === 'skipped';
       return true;
     });
   };
+
+  const sortItems = (items, section) => {
+    const order = sectionSorts[section] || 'a-z';
+    const arr = [...items];
+    switch (order) {
+      case 'a-z': return arr.sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { numeric: true, sensitivity: 'base' }));
+      case 'z-a': return arr.sort((a, b) => b.displayName.localeCompare(a.displayName, undefined, { numeric: true, sensitivity: 'base' }));
+      case 'amount-asc': return arr.sort((a, b) => a.avgAmount - b.avgAmount);
+      case 'amount-desc': return arr.sort((a, b) => b.avgAmount - a.avgAmount);
+      default: return arr;
+    }
+  };
+
   const highCount     = allSuggestions.filter(s => s.confidenceLevel === 'high' && cardStates[s.id] !== 'added' && cardStates[s.id] !== 'skipped').length;
   const total         = allSuggestions.length;
 
   const renderSuggestions = (items) => {
-    const filtered = filterByStatus(items);
+    const filtered = filterByStatus(items, 'bills');
     const visible = showLow ? filtered : filtered.filter(s => s.confidenceLevel !== 'low');
-    return visible.map(s => (
+    const sorted = sortItems(visible, 'bills');
+    return sorted.map(s => (
       <SuggestionCard key={s.id} suggestion={s}
         checked={!!checked[s.id]}
         cardState={cardStates[s.id] || 'pending'}
@@ -1547,9 +1683,10 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
   };
 
   const renderDebtSuggestions = (items) => {
-    const filtered = filterByStatus(items);
+    const filtered = filterByStatus(items, 'debts');
     const visible = showLow ? filtered : filtered.filter(s => s.confidenceLevel !== 'low');
-    return visible.map(s => (
+    const sorted = sortItems(visible, 'debts');
+    return sorted.map(s => (
       <DebtSuggestionCard key={s.id} suggestion={s}
         checked={!!checked[s.id]}
         cardState={cardStates[s.id] || 'pending'}
@@ -1562,9 +1699,10 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
   };
 
   const renderSavingsSuggestions = (items) => {
-    const filtered = filterByStatus(items);
+    const filtered = filterByStatus(items, 'savings');
     const visible = showLow ? filtered : filtered.filter(s => s.confidenceLevel !== 'low');
-    return visible.map(s => (
+    const sorted = sortItems(visible, 'savings');
+    return sorted.map(s => (
       <SavingsSuggestionCard key={s.id} suggestion={s}
         checked={!!checked[s.id]}
         cardState={cardStates[s.id] || 'pending'}
@@ -1732,7 +1870,7 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
   if (stage === 'suggestions') return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-      {/* Scrollable content — everything scrolls together */}
+      {/* Scrollable content */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
 
         {/* Hero summary card */}
@@ -1788,58 +1926,11 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
             </div>
           </div>
 
-          {/* Status filter tabs */}
-          <div style={{ marginBottom: '12px' }}>
-            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
-              {[
-                { key: 'all', label: 'All', count: total },
-                { key: 'pending', label: 'Pending', count: pendingCount, color: 'var(--accent-primary)' },
-                { key: 'added', label: 'Added', count: addedCount, color: 'var(--success)' },
-                { key: 'skipped', label: 'Skipped', count: skippedCount, color: 'var(--text-muted)' },
-              ].map(tab => (
-                <button key={tab.key} onClick={() => { haptic.light(); setStatusFilter(tab.key); }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '5px',
-                    padding: '7px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '600',
-                    cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, transition: 'all 0.15s',
-                    border: statusFilter === tab.key ? `2px solid ${tab.color || 'var(--accent-primary)'}` : '1px solid var(--border)',
-                    background: statusFilter === tab.key ? `color-mix(in srgb, ${tab.color || 'var(--accent-primary)'} 10%, transparent)` : 'var(--glass)',
-                    color: statusFilter === tab.key ? (tab.color || 'var(--accent-primary)') : 'var(--text-muted)',
-                  }}>
-                  {tab.label}
-                  <span style={{
-                    fontSize: '11px', fontWeight: '700',
-                    padding: '1px 6px', borderRadius: '10px',
-                    background: statusFilter === tab.key ? `color-mix(in srgb, ${tab.color || 'var(--accent-primary)'} 15%, transparent)` : 'var(--glass)',
-                  }}>{tab.count}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Select all + selected count */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px' }}>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                {checkedPending > 0 && (
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {checkedPending} selected
-                  </span>
-                )}
-              </div>
-              {highCount > 0 && statusFilter !== 'added' && statusFilter !== 'skipped' && (
-                <button onClick={() => { acceptAll(); }} style={{ fontSize: '12px', fontWeight: '600', color: 'var(--accent-primary)',
-                  background: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)',
-                  border: '1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent)',
-                  borderRadius: '20px', padding: '5px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                  Select all ({highCount})
-                </button>
-              )}
-            </div>
-          </div>
         </div>
 
         {/* Section cards */}
         <div style={{ padding: '0 20px' }}>
-          {suggestions.bills.length > 0 && (statusFilter === 'all' || filterByStatus(suggestions.bills).length > 0) && (
+          {suggestions.bills.length > 0 && (
             <div style={{ marginBottom: '12px' }}>
               {/* Section card header */}
               <div onClick={() => { haptic.light(); setExpanded(e => ({ ...e, bills: !e.bills })); }} style={{
@@ -1856,7 +1947,7 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>Bills</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '1px' }}>{filterByStatus(suggestions.bills).length}{statusFilter !== 'all' ? ` / ${suggestions.bills.length}` : ''} item{suggestions.bills.length !== 1 ? 's' : ''}{statusFilter !== 'all' ? ` · ${statusFilter}` : ' detected'}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '1px' }}>{suggestions.bills.length} item{suggestions.bills.length !== 1 ? 's' : ''} detected</div>
                 </div>
                 <Icons.ChevronDown size={16} style={{ color: 'var(--text-muted)', transition: 'transform 0.2s',
                   transform: expanded.bills ? 'rotate(180deg)' : 'none' }} />
@@ -1866,13 +1957,14 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
                   borderRight: '1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent)',
                   borderBottom: '1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent)',
                   borderRadius: '0 0 14px 14px', paddingLeft: '10px', paddingRight: '10px' }}>
+                  <SectionToolbar statusFilter={sectionFilters.bills} setStatusFilter={setFilterFor('bills')} sortOrder={sectionSorts.bills} setSortOrder={setSortFor('bills')} items={suggestions.bills} cardStates={cardStates} />
                   {renderSuggestions(suggestions.bills)}
                 </div>
               )}
             </div>
           )}
 
-          {suggestions.debts.length > 0 && (statusFilter === 'all' || filterByStatus(suggestions.debts).length > 0) && (
+          {suggestions.debts.length > 0 && (
             <div style={{ marginBottom: '12px' }}>
               <div onClick={() => { haptic.light(); setExpanded(e => ({ ...e, debts: !e.debts })); }} style={{
                 display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
@@ -1888,7 +1980,7 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>Debts</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '1px' }}>{filterByStatus(suggestions.debts).length}{statusFilter !== 'all' ? ` / ${suggestions.debts.length}` : ''} item{suggestions.debts.length !== 1 ? 's' : ''}{statusFilter !== 'all' ? ` · ${statusFilter}` : ' detected'}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '1px' }}>{suggestions.debts.length} item{suggestions.debts.length !== 1 ? 's' : ''} detected</div>
                 </div>
                 <Icons.ChevronDown size={16} style={{ color: 'var(--text-muted)', transition: 'transform 0.2s',
                   transform: expanded.debts ? 'rotate(180deg)' : 'none' }} />
@@ -1898,13 +1990,14 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
                   borderRight: '1px solid color-mix(in srgb, var(--danger) 20%, transparent)',
                   borderBottom: '1px solid color-mix(in srgb, var(--danger) 20%, transparent)',
                   borderRadius: '0 0 14px 14px', paddingLeft: '10px', paddingRight: '10px' }}>
+                  <SectionToolbar statusFilter={sectionFilters.debts} setStatusFilter={setFilterFor('debts')} sortOrder={sectionSorts.debts} setSortOrder={setSortFor('debts')} items={suggestions.debts} cardStates={cardStates} />
                   {renderDebtSuggestions(suggestions.debts)}
                 </div>
               )}
             </div>
           )}
 
-          {suggestions.savings.length > 0 && (statusFilter === 'all' || filterByStatus(suggestions.savings).length > 0) && (
+          {suggestions.savings.length > 0 && (
             <div style={{ marginBottom: '12px' }}>
               <div onClick={() => { haptic.light(); setExpanded(e => ({ ...e, savings: !e.savings })); }} style={{
                 display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
@@ -1920,7 +2013,7 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>Savings</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '1px' }}>{filterByStatus(suggestions.savings).length}{statusFilter !== 'all' ? ` / ${suggestions.savings.length}` : ''} item{suggestions.savings.length !== 1 ? 's' : ''}{statusFilter !== 'all' ? ` · ${statusFilter}` : ' detected'}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '1px' }}>{suggestions.savings.length} item{suggestions.savings.length !== 1 ? 's' : ''} detected</div>
                 </div>
                 <Icons.ChevronDown size={16} style={{ color: 'var(--text-muted)', transition: 'transform 0.2s',
                   transform: expanded.savings ? 'rotate(180deg)' : 'none' }} />
@@ -1930,6 +2023,7 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
                   borderRight: '1px solid color-mix(in srgb, var(--success) 20%, transparent)',
                   borderBottom: '1px solid color-mix(in srgb, var(--success) 20%, transparent)',
                   borderRadius: '0 0 14px 14px', paddingLeft: '10px', paddingRight: '10px' }}>
+                  <SectionToolbar statusFilter={sectionFilters.savings} setStatusFilter={setFilterFor('savings')} sortOrder={sectionSorts.savings} setSortOrder={setSortFor('savings')} items={suggestions.savings} cardStates={cardStates} />
                   {renderSavingsSuggestions(suggestions.savings)}
                 </div>
               )}

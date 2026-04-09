@@ -855,7 +855,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
               <OverviewPanel totals={totals} incomeNum={incomeNum} categoryTotals={categoryTotals} isMobile={isMobile} monthlySnapshots={monthlySnapshots} totalDebt={totalDebt} totalSaved={totalSaved} insights={insights} bills={bills} debts={debts} savings={savings} />
             </div>
             <div className={`swipe-panel ${activePanel === 1 ? 'panel-active' : ''}`}>
-              <ActionsPanel income={income} setIncome={setIncome} categoryTotals={categoryTotals} setShowAddModal={setShowAddModal} setShowDebtModal={setShowDebtModal} setShowSavingsModal={setShowSavingsModal} setShowCategoryModal={setShowCategoryModal} salaryCalc={salaryCalc} setSalaryCalc={setSalaryCalc} />
+              <ActionsPanel income={income} setIncome={setIncome} categoryTotals={categoryTotals} setShowAddModal={setShowAddModal} setShowDebtModal={setShowDebtModal} setShowSavingsModal={setShowSavingsModal} setShowCategoryModal={setShowCategoryModal} setShowImportModal={setShowImportModal} salaryCalc={salaryCalc} setSalaryCalc={setSalaryCalc} />
             </div>
             <div className={`swipe-panel ${activePanel === 2 ? 'panel-active' : ''}`}>
               <BillsPanel categories={['ALL', ...categories]} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} statusFilter={statusFilter} setStatusFilter={setStatusFilter} filteredBills={filteredBills} editingId={editingId} editForm={editForm} setEditForm={setEditForm} handleEditStart={handleEditStart} handleEditSave={handleEditSave} handleDelete={handleDelete} handleTogglePaid={handleTogglePaid} handleToggleMissed={handleToggleMissed} handleTogglePaused={handleTogglePaused} setEditingId={setEditingId} categoryScrollRef={categoryScrollRef} billSearch={billSearch} setBillSearch={setBillSearch} billSort={billSort} setBillSort={setBillSort} onBulkDelete={handleBulkDeleteBills} onBulkTogglePaid={handleBulkTogglePaid} onBulkToggleMissed={handleBulkToggleMissed} onBulkTogglePaused={handleBulkTogglePaused} activePanel={activePanel} setShowAddModal={setShowAddModal} setShowCategoryModal={setShowCategoryModal} setShowImportModal={setShowImportModal} />
@@ -910,13 +910,9 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
                 bnplPostPayment: parseFloat(d.bnplPostPayment) || 0,
                 payments: d.payments || [],
               });
-              // Bills
+              // Collect all incoming IDs per type so we can cross-remove
               const safeBills = (newBills || []).map(ensureBillNumeric);
-              if (safeBills.length) setBills(prev => { const ids = new Set(prev.map(x => x.id)); return [...prev, ...safeBills.filter(x => !ids.has(x.id))]; });
-              // Debts — now properly formed with full schema from DebtSuggestionCard
               const safeDebts = (newDebts || []).map(ensureDebtNumeric);
-              if (safeDebts.length) setDebts(prev => { const ids = new Set(prev.map(x => x.id)); return [...prev, ...safeDebts.filter(x => !ids.has(x.id))]; });
-              // Savings — now properly formed with full schema from SavingsSuggestionCard
               const safeSavings = (newSavings || []).map(s => ({
                 ...s,
                 currentAmount: parseFloat(s.currentAmount) || 0,
@@ -924,7 +920,31 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
                 monthlyContribution: parseFloat(s.monthlyContribution) || 0,
                 transactions: s.transactions || [],
               }));
-              if (safeSavings.length) setSavings(prev => { const ids = new Set(prev.map(x => x.id)); return [...prev, ...safeSavings.filter(x => !ids.has(x.id))]; });
+              const billIds = new Set(safeBills.map(x => x.id));
+              const debtIds = new Set(safeDebts.map(x => x.id));
+              const savingsIds = new Set(safeSavings.map(x => x.id));
+
+              // Bills: add new, replace existing, remove any that moved to debts/savings
+              if (safeBills.length) setBills(prev => {
+                const without = prev.filter(x => !billIds.has(x.id));
+                return [...without, ...safeBills];
+              });
+              // Remove from bills if item moved to debts or savings
+              if (debtIds.size || savingsIds.size) setBills(prev => prev.filter(x => !debtIds.has(x.id) && !savingsIds.has(x.id)));
+
+              // Debts: add new, replace existing, remove any that moved to bills/savings
+              if (safeDebts.length) setDebts(prev => {
+                const without = prev.filter(x => !debtIds.has(x.id));
+                return [...without, ...safeDebts];
+              });
+              if (billIds.size || savingsIds.size) setDebts(prev => prev.filter(x => !billIds.has(x.id) && !savingsIds.has(x.id)));
+
+              // Savings: add new, replace existing, remove any that moved to bills/debts
+              if (safeSavings.length) setSavings(prev => {
+                const without = prev.filter(x => !savingsIds.has(x.id));
+                return [...without, ...safeSavings];
+              });
+              if (billIds.size || debtIds.size) setSavings(prev => prev.filter(x => !billIds.has(x.id) && !debtIds.has(x.id)));
               if (!partial) setShowImportModal(false);
             }}
           />

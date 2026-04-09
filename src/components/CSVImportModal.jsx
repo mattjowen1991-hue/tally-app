@@ -4,37 +4,62 @@ import haptic from '../utils/haptics';
 
 // Swipe-back edge zone — renders an invisible 24px strip on the left edge
 // that captures touch gestures without interfering with scrollable content
-function SwipeBackEdge({ onBack }) {
-  const startX = useRef(null);
-  const startY = useRef(null);
+// Hook for back navigation in the import modal.
+// Uses Android's native back gesture/button via Capacitor's App plugin +
+// swipe detection from a zone just inside the system gesture area (30-120px).
+function useBackNavigation(onBack) {
+  const cbRef = useRef(onBack);
+  cbRef.current = onBack;
 
-  const onTouchStart = (e) => {
-    startX.current = e.touches[0].clientX;
-    startY.current = e.touches[0].clientY;
-  };
+  // Listen for Android back button / gesture
+  React.useEffect(() => {
+    let cleanup;
+    import('@capacitor/app').then(({ App }) => {
+      const listener = App.addListener('backButton', () => {
+        cbRef.current();
+      });
+      cleanup = () => listener.then ? listener.then(l => l.remove()) : listener.remove();
+    }).catch(() => {});
 
-  const onTouchEnd = (e) => {
-    if (startX.current === null) return;
-    const dx = e.changedTouches[0].clientX - startX.current;
-    const dy = Math.abs(e.changedTouches[0].clientY - startY.current);
-    startX.current = null;
-    startY.current = null;
-    if (dx > 60 && dy < dx * 0.7) {
-      haptic.light();
-      onBack();
-    }
-  };
+    return () => { if (cleanup) cleanup(); };
+  }, []);
 
-  return (
-    <div
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-      style={{
-        position: 'fixed', left: 0, top: 0, bottom: 0,
-        width: '28px', zIndex: 10000,
-      }}
-    />
-  );
+  // Also detect swipe from left zone (30-150px — outside the 20px system gesture area)
+  React.useEffect(() => {
+    let startX = null;
+    let startY = null;
+
+    const onStart = (e) => {
+      const x = e.touches[0].clientX;
+      // Start zone: 30-150px from left (avoids system back gesture in 0-20px)
+      if (x < 30 || x > 150) return;
+      startX = x;
+      startY = e.touches[0].clientY;
+    };
+
+    const onEnd = (e) => {
+      if (startX === null) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = Math.abs(e.changedTouches[0].clientY - startY);
+      startX = null;
+      startY = null;
+      if (dx > 80 && dy < dx * 0.7) {
+        haptic.light();
+        cbRef.current();
+      }
+    };
+
+    const onCancel = () => { startX = null; startY = null; };
+
+    document.addEventListener('touchstart', onStart, { passive: true });
+    document.addEventListener('touchend', onEnd, { passive: true });
+    document.addEventListener('touchcancel', onCancel, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', onStart);
+      document.removeEventListener('touchend', onEnd);
+      document.removeEventListener('touchcancel', onCancel);
+    };
+  }, []);
 }
 
 const BANKS = [
@@ -478,6 +503,13 @@ export default function CSVImportModal({ onClose, onComplete, bills = [], catego
   const [showImportFlow, setShowImportFlow] = useState(false);
   const [skipIntro, setSkipIntro] = useState(false);
 
+  // Back navigation — disabled during import flow (safety net for unsaved work)
+  const swipeBackAction = useRef(null);
+  if (showImportFlow) swipeBackAction.current = null; // disabled — use back arrow only
+  else if (selectedBank) swipeBackAction.current = () => setSelectedBank(null);
+  else swipeBackAction.current = onClose;
+  useBackNavigation(() => { if (swipeBackAction.current) swipeBackAction.current(); });
+
   const openImportFlow = (fromBankGuide = false) => {
     setSkipIntro(fromBankGuide);
     setShowImportFlow(true);
@@ -487,7 +519,6 @@ export default function CSVImportModal({ onClose, onComplete, bills = [], catego
   if (showImportFlow) {
     return (
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}>
-        <SwipeBackEdge onBack={() => { haptic.light(); setShowImportFlow(false); }} />
         <div style={{ paddingTop: 'env(safe-area-inset-top)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border)' }}>
             <button onClick={() => { haptic.light(); setShowImportFlow(false); }} style={{
@@ -515,7 +546,6 @@ export default function CSVImportModal({ onClose, onComplete, bills = [], catego
   if (selectedBank) {
     return (
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', paddingTop: 'env(safe-area-inset-top)' }}>
-        <SwipeBackEdge onBack={() => setSelectedBank(null)} />
         <BankGuide
           bank={selectedBank}
           onBack={() => setSelectedBank(null)}
@@ -528,13 +558,12 @@ export default function CSVImportModal({ onClose, onComplete, bills = [], catego
   // ── Main hub ──
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', paddingTop: 'env(safe-area-inset-top)' }}>
-      <SwipeBackEdge onBack={onClose} />
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
         <div>
-          <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '2px' }}>Import Bills</h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Add bills automatically from your bank data</p>
+          <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '2px' }}>Import Data</h2>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Bulk import bills, debts & savings</p>
         </div>
         <button onClick={() => { haptic.light(); onClose(); }} style={{
           background: 'var(--glass)', border: '1px solid var(--border)',

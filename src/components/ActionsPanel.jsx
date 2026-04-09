@@ -417,7 +417,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
 }
 
 // ── Main panel ────────────────────────────────────────────────────────────────
-export default function ActionsPanel({ income, setIncome, categoryTotals, setShowAddModal, setShowDebtModal, setShowSavingsModal, setShowCategoryModal, salaryCalc, setSalaryCalc }) {
+export default function ActionsPanel({ income, setIncome, categoryTotals, setShowAddModal, setShowDebtModal, setShowSavingsModal, setShowCategoryModal, setShowImportModal, salaryCalc, setSalaryCalc }) {
   const cs = useCurrency();
 
   // Derived state from lifted salaryCalc prop
@@ -649,6 +649,31 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
         <button className="btn btn-primary" onClick={() => { haptic.medium(); setShowDebtModal(true); }} style={{ width: '100%', justifyContent: 'center', background: 'linear-gradient(135deg, var(--danger), var(--accent-secondary))' }}><Icons.Plus size={20} /> Add New Debt</button>
         <button className="btn btn-primary" onClick={() => { haptic.medium(); setShowSavingsModal(true); }} style={{ width: '100%', justifyContent: 'center', background: 'linear-gradient(135deg, var(--success), var(--accent-primary))' }}><Icons.Plus size={20} /> Add Savings Goal</button>
         <button className="btn btn-secondary" onClick={() => { haptic.medium(); setShowCategoryModal(true); }} style={{ width: '100%', justifyContent: 'center' }}>Manage Categories</button>
+      </div>
+
+      {/* ── Import Data ── */}
+      <div style={{ marginBottom: '20px' }}>
+        <button onClick={() => { haptic.medium(); setShowImportModal(true); }} style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: '14px', padding: '16px',
+          background: 'linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 10%, transparent), color-mix(in srgb, var(--success) 8%, transparent))',
+          border: '1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent)',
+          borderRadius: '14px', cursor: 'pointer', textAlign: 'left',
+        }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '12px', flexShrink: 0,
+            background: 'linear-gradient(135deg, var(--accent-primary), var(--success))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icons.Upload size={20} style={{ color: '#fff' }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '3px' }}>
+              Import Data
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+              Bulk import bills, debts & savings from a CSV, PDF or bank statement
+            </div>
+          </div>
+          <span style={{ color: 'var(--accent-primary)', fontSize: '18px', opacity: 0.6, flexShrink: 0 }}>›</span>
+        </button>
       </div>
 
       {/* ── Category Summary ── */}
