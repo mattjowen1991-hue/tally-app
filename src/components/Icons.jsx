@@ -96,10 +96,18 @@ export const ChevronDown = ({ size = 16, style = {}, className = '' }) => (
 );
 
 export const Settings = ({ size = 24, style = {}, className = '' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} className={className}>
-    <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.2"/>
-    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.75"/>
-    <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+);
+
+export const SlidersH = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <line x1="21" y1="4" x2="14" y2="4"/><line x1="10" y1="4" x2="3" y2="4"/>
+    <line x1="21" y1="12" x2="12" y2="12"/><line x1="8" y1="12" x2="3" y2="12"/>
+    <line x1="21" y1="20" x2="16" y2="20"/><line x1="12" y1="20" x2="3" y2="20"/>
+    <circle cx="12" cy="4" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="14" cy="20" r="2"/>
   </svg>
 );
 
@@ -160,24 +168,19 @@ export const CategoryHome = ({ size = 24, style = {}, className = '' }) => (
 );
 
 export const CategoryTransport = ({ size = 24, style = {}, className = '' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} className={className}>
-    <rect x="2" y="6" width="20" height="12" rx="4" fill="currentColor" opacity="0.2"/>
-    <rect x="2" y="6" width="20" height="12" rx="4" stroke="currentColor" strokeWidth="1.75"/>
-    <path d="M6 18v2M18 18v2" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
-    <path d="M2 12h20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.5"/>
-    <circle cx="7" cy="15" r="1.25" fill="currentColor"/>
-    <circle cx="12" cy="15" r="1.25" fill="currentColor"/>
-    <circle cx="17" cy="15" r="1.25" fill="currentColor"/>
-    <path d="M7 9h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <path d="M5 17h14a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2h-1l-1.5-3.5A1 1 0 0 0 15.58 5H8.42a1 1 0 0 0-.92.6L6 9H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2z" fill="currentColor" opacity="0.15"/>
+    <path d="M5 17h14a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2h-1l-1.5-3.5A1 1 0 0 0 15.58 5H8.42a1 1 0 0 0-.92.6L6 9H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2z"/>
+    <circle cx="7.5" cy="17" r="2"/><circle cx="16.5" cy="17" r="2"/>
   </svg>
 );
 
 export const CategoryFood = ({ size = 24, style = {}, className = '' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} className={className}>
-    <path d="M12 2C7 2 3 6 3 11h18C21 6 17 2 12 2z" fill="currentColor" opacity="0.2"/>
-    <path d="M12 2C7 2 3 6 3 11h18C21 6 17 2 12 2z" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round"/>
-    <rect x="3" y="11" width="18" height="3" rx="1.5" fill="currentColor" opacity="0.3" stroke="currentColor" strokeWidth="1.5"/>
-    <path d="M9 14v6M12 14v6M15 14v6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <path d="M18 8h1a4 4 0 0 1 0 8h-1" opacity="0.4"/>
+    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" fill="currentColor" opacity="0.15"/>
+    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+    <line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>
   </svg>
 );
 
@@ -215,20 +218,22 @@ export const CategoryCreditCard = ({ size = 24, style = {}, className = '' }) =>
 );
 
 export const CategorySubscription = ({ size = 24, style = {}, className = '' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} className={className}>
-    <circle cx="12" cy="12" r="9" fill="currentColor" opacity="0.15" stroke="currentColor" strokeWidth="1.75"/>
-    <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M8 3.5A9 9 0 0 1 21 12" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" opacity="0.5"/>
-    <path d="M21 3.5v4.5h-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"/>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <path d="M17 2.1l4 4-4 4" opacity="0.5"/>
+    <path d="M3 12.2v-2a4 4 0 0 1 4-4h12.8" opacity="0.5"/>
+    <path d="M7 21.9l-4-4 4-4" opacity="0.5"/>
+    <path d="M21 11.8v2a4 4 0 0 1-4 4H4.2" opacity="0.5"/>
+    <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.15"/>
+    <circle cx="12" cy="12" r="3"/>
   </svg>
 );
 
 export const CategorySavings = ({ size = 24, style = {}, className = '' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} className={className}>
-    <path d="M20 14c0 3.87-3.58 7-8 7s-8-3.13-8-7c0-2.5 1.38-4.7 3.5-6.02L9 4h6l1.5 3.98C18.62 9.3 20 11.5 20 14z" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round"/>
-    <path d="M17 14a5 5 0 0 1-5 5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" opacity="0.5"/>
-    <circle cx="16" cy="9" r="1" fill="currentColor"/>
-    <path d="M9 4h6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" opacity="0.4"/>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <path d="M19 5c-1.5 0-2.8 1.4-3 2l-3.5 1H9a3 3 0 0 0 0 6h.5l-1 2.5a2 2 0 0 0 1.8 2.8h.2a2 2 0 0 0 1.9-1.3l.9-2.5H14l2 3.5a2 2 0 0 0 1.7 1h.3a2 2 0 0 0 1.7-3l-1.7-3V8c0-1.7-1.3-3-3-3z" fill="currentColor" opacity="0.15"/>
+    <path d="M19 5c-1.5 0-2.8 1.4-3 2l-3.5 1H9a3 3 0 0 0 0 6h.5l-1 2.5a2 2 0 0 0 1.8 2.8h.2a2 2 0 0 0 1.9-1.3l.9-2.5H14l2 3.5a2 2 0 0 0 1.7 1h.3a2 2 0 0 0 1.7-3l-1.7-3V8c0-1.7-1.3-3-3-3z"/>
+    <line x1="2" y1="10" x2="5.5" y2="10" opacity="0.5"/>
+    <circle cx="16" cy="9" r="0.5" fill="currentColor" stroke="none"/>
   </svg>
 );
 
@@ -247,11 +252,10 @@ export const CategoryEducation = ({ size = 24, style = {}, className = '' }) => 
 );
 
 export const CategoryOther = ({ size = 24, style = {}, className = '' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} className={className}>
-    <rect x="3" y="3" width="7.5" height="7.5" rx="2.5" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="1.75"/>
-    <rect x="13.5" y="3" width="7.5" height="7.5" rx="2.5" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="1.75"/>
-    <rect x="3" y="13.5" width="7.5" height="7.5" rx="2.5" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="1.75"/>
-    <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2.5" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="1.75"/>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <circle cx="12" cy="12" r="1" fill="currentColor"/>
+    <circle cx="19" cy="12" r="1" fill="currentColor"/>
+    <circle cx="5" cy="12" r="1" fill="currentColor"/>
   </svg>
 );
 
@@ -361,6 +365,87 @@ export const PartyPopper = ({ size = 24, style = {}, className = '' }) => (
     <circle cx="8" cy="16" r="0.5" fill="currentColor"/>
     <circle cx="17" cy="11" r="0.5" fill="currentColor"/>
     <circle cx="11" cy="7" r="0.5" fill="currentColor"/>
+  </svg>
+);
+
+export const Banknote = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <rect x="2" y="6" width="20" height="12" rx="2" fill="currentColor" opacity="0.15"/>
+    <rect x="2" y="6" width="20" height="12" rx="2"/>
+    <circle cx="12" cy="12" r="2.5"/>
+    <path d="M6 12h.01M18 12h.01"/>
+  </svg>
+);
+
+export const Plane = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" fill="currentColor" opacity="0.15"/>
+    <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
+  </svg>
+);
+
+export const ShoppingBag = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" fill="currentColor" opacity="0.15"/>
+    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <path d="M16 10a4 4 0 0 1-8 0"/>
+  </svg>
+);
+
+export const GraduationCap = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <path d="M12 3L2 8l10 5 10-5-10-5z" fill="currentColor" opacity="0.15"/>
+    <path d="M12 3L2 8l10 5 10-5-10-5z"/>
+    <path d="M6 10.6V16c0 1.66 2.69 3 6 3s6-1.34 6-3v-5.4"/>
+    <path d="M22 8v5"/>
+  </svg>
+);
+
+export const Umbrella = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <path d="M23 12a11.05 11.05 0 0 0-22 0" fill="currentColor" opacity="0.15"/>
+    <path d="M23 12a11.05 11.05 0 0 0-22 0"/>
+    <path d="M12 12v8a2 2 0 0 0 4 0"/>
+    <line x1="12" y1="2" x2="12" y2="3"/>
+  </svg>
+);
+
+export const TrendingChart = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+    <polyline points="16 7 22 7 22 13"/>
+    <line x1="2" y1="20" x2="22" y2="20" opacity="0.3"/>
+  </svg>
+);
+
+export const Handshake = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0A5.4 5.4 0 0 0 3.58 12L12 20.42 20.42 12a5.4 5.4 0 0 0 0-7.42z" fill="currentColor" opacity="0.1"/>
+    <path d="M11 17l-1.5 1.5a2.5 2.5 0 0 1-3.5-3.5L7.5 13"/>
+    <path d="M13 7l1.5-1.5a2.5 2.5 0 0 1 3.5 3.5L16.5 11"/>
+    <line x1="8" y1="16" x2="16" y2="8"/>
+  </svg>
+);
+
+export const Sunset = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <path d="M12 10V2"/>
+    <path d="M4.93 10.93l1.41 1.41"/>
+    <path d="M2 18h2"/>
+    <path d="M20 18h2"/>
+    <path d="M19.07 10.93l-1.41 1.41"/>
+    <path d="M22 22H2"/>
+    <path d="M16 18a4 4 0 0 0-8 0"/>
+    <path d="M8 6l4 4 4-4" opacity="0.5"/>
+  </svg>
+);
+
+export const Clock = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.15"/>
+    <circle cx="12" cy="12" r="10"/>
+    <polyline points="12 6 12 12 16 14"/>
   </svg>
 );
 

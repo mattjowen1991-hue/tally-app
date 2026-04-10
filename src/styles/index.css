@@ -4,6 +4,7 @@
    ═══════════════════════════════════════════════ */
 
 :root {
+  color-scheme: dark;
   --sat: env(safe-area-inset-top, 28px);
   --bg-primary: #0a0e27;
   --bg-secondary: #121630;
@@ -67,6 +68,7 @@
 }
 
 [data-theme="light"] {
+  color-scheme: light;
   --bg-primary: #f1f5f9;
   --bg-secondary: #ffffff;
   --bg-card: rgba(255, 255, 255, 0.85);

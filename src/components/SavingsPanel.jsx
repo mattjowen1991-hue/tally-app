@@ -5,13 +5,13 @@ import { tc } from '../utils/themeColors';
 import { SAVINGS_CATEGORIES } from '../data/initialData';
 
 const SAVINGS_CATEGORY_ICONS = {
-  'Emergency': Icons.CategoryInsurance,
-  'Holiday': Icons.CategoryFood,
-  'Big Purchase': Icons.CategoryEntertainment,
-  'Education': Icons.CategoryOther,
+  'Emergency': Icons.Umbrella,
+  'Holiday': Icons.Plane,
+  'Big Purchase': Icons.ShoppingBag,
+  'Education': Icons.GraduationCap,
   'Home': Icons.CategoryHome,
-  'Retirement': Icons.CategorySavings,
-  'Investment': Icons.CategorySavings,
+  'Retirement': Icons.Sunset,
+  'Investment': Icons.TrendingChart,
   'Other': Icons.CategoryOther,
 };
 
@@ -103,7 +103,7 @@ export default function SavingsPanel({
                         <button className="btn btn-primary" onClick={handleSavingsEditSave} style={{ flex: 1 }}><Icons.Check size={18} /> Save</button>
                         <button className="btn btn-secondary" onClick={() => setEditingSavingsId(null)} style={{ flex: 1 }}><Icons.X size={18} /> Cancel</button>
                       </div>
-                      <button onClick={() => { setEditingSavingsId(null); handleDeleteSavings(goal.id); }} style={{ width: '100%', marginTop: '8px', padding: '9px', background: tc.dangerTintLight, border: `1px solid ${tc.dangerTintStrong}`, borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: tc.danger }}>
+                      <button onClick={async () => { const deleted = await handleDeleteSavings(goal.id); if (deleted !== false) setEditingSavingsId(null); }} style={{ width: '100%', marginTop: '8px', padding: '9px', background: tc.dangerTintLight, border: `1px solid ${tc.dangerTintStrong}`, borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: tc.danger }}>
                         Delete goal
                       </button>
                     </div>

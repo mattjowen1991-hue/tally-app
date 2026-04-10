@@ -56,7 +56,7 @@ export function AddBillScreen({ show, onClose, newBill, setNewBill, handleAddBil
           <div>
             <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Category</label>
             <select className="input" value={newBill.category} onChange={(e) => setNewBill({ ...newBill, category: e.target.value })}>
-              {categories.map((cat) => (<option key={cat} value={cat}>{cat}</option>))}
+              {categories.filter(c => c !== 'ALL').map((cat) => (<option key={cat} value={cat}>{cat}</option>))}
             </select>
           </div>
           <div>

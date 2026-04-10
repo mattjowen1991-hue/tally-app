@@ -35,6 +35,16 @@ function applyStatusBar(theme) {
 
 export async function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
+  // Set color-scheme on html element so native UI elements (select, confirm, etc.) respect theme
+  document.documentElement.style.colorScheme = theme === 'light' ? 'light' : 'dark';
+  // Also set/create meta color-scheme tag for Android WebView
+  let colorSchemeMeta = document.querySelector('meta[name="color-scheme"]');
+  if (!colorSchemeMeta) {
+    colorSchemeMeta = document.createElement('meta');
+    colorSchemeMeta.name = 'color-scheme';
+    document.head.appendChild(colorSchemeMeta);
+  }
+  colorSchemeMeta.content = theme === 'light' ? 'light' : 'dark';
   try {
     localStorage.setItem(STORAGE_KEY, theme);
   } catch {}

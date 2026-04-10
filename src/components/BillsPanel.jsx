@@ -24,15 +24,18 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 
 const CATEGORY_ICON_MAP = {
   HOME: Icons.CategoryHome,
+  TRANSPORTATION: Icons.CategoryTransport,
   TRANSPORT: Icons.CategoryTransport,
   FOOD: Icons.CategoryFood,
   ENTERTAINMENT: Icons.CategoryEntertainment,
   HEALTH: Icons.CategoryHealth,
   INSURANCE: Icons.CategoryInsurance,
   'CREDIT CARDS': Icons.CategoryCreditCard,
+  PAYMENTS: Icons.Coins,
   SUBSCRIPTION: Icons.CategorySubscription,
   SAVINGS: Icons.CategorySavings,
   UTILITIES: Icons.CategoryUtilities,
+  EDUCATION: Icons.CategoryEducation,
 };
 
 function getCategoryIcon(cat, size = 20, color = 'currentColor') {
@@ -123,7 +126,7 @@ function BillCard({
             </div>
           </div>
           <select className="input" value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}>
-            {categories.map((cat) => (<option key={cat} value={cat}>{cat}</option>))}
+            {categories.filter(c => c !== 'ALL').map((cat) => (<option key={cat} value={cat}>{cat}</option>))}
           </select>
           {!editForm.recurring || editForm.frequency === 'Monthly' || editForm.frequency === 'Quarterly' ? (
             <div>
@@ -151,7 +154,7 @@ function BillCard({
             <button className="btn btn-primary" onClick={() => { haptic.success(); handleEditSave(); }} style={{ flex: 1 }}><Icons.Check size={18} /> Save</button>
             <button className="btn btn-secondary" onClick={() => { haptic.light(); setEditingId(null); }} style={{ flex: 1 }}><Icons.X size={18} /> Cancel</button>
           </div>
-          <button onClick={() => { haptic.error(); setEditingId(null); handleDelete(bill.id); }} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `1px solid var(--danger-tint-strong)`, background: tc.dangerTintLight, color: tc.danger, cursor: 'pointer', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><Icons.Trash size={16} /> Delete Bill</button>
+          <button onClick={async () => { haptic.error(); const deleted = await handleDelete(bill.id); if (deleted !== false) setEditingId(null); }} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `1px solid var(--danger-tint-strong)`, background: tc.dangerTintLight, color: tc.danger, cursor: 'pointer', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><Icons.Trash size={16} /> Delete Bill</button>
         </div>
       </div>
     );
@@ -310,11 +313,12 @@ function BillCard({
 export default function BillsPanel({
   categories, selectedCategory, setSelectedCategory, statusFilter, setStatusFilter,
   filteredBills, editingId, editForm, setEditForm, handleEditStart, handleEditSave,
-  handleDelete, handleTogglePaid, handleToggleMissed, handleTogglePaused, setEditingId, categoryScrollRef,
+  handleDelete, handleTogglePaid, handleToggleMissed, handleTogglePaused, setEditingId,
   billSearch, setBillSearch, billSort, setBillSort,
   onBulkDelete, onBulkTogglePaid, onBulkToggleMissed, onBulkTogglePaused, activePanel,
-  setShowAddModal, setShowCategoryModal, setShowImportModal,
+  setShowAddModal, setShowCategoryModal,
 }) {
+  const [showCategoryFilter, setShowCategoryFilter] = useState(false);
   const cs = useCurrency();
   const [showSort, setShowSort] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -408,38 +412,84 @@ export default function BillsPanel({
         )}
       </div>
 
-      {/* Quick Add Buttons */}
-      <div className="animate-in" style={{ display: 'flex', gap: '8px', marginBottom: '8px', animationDelay: '0.65s' }}>
+      {/* Action bar — compact */}
+      <div className="animate-in" style={{ display: 'flex', gap: '8px', marginBottom: '10px', animationDelay: '0.65s' }}>
         <button className="btn btn-primary" onClick={() => { haptic.medium(); setShowAddModal(true); }} style={{ flex: 1, justifyContent: 'center' }}>
           <Icons.Plus size={16} /> Add Bill
         </button>
-        <button className="btn btn-secondary" onClick={() => { haptic.medium(); setShowCategoryModal(true); }} style={{ flex: 1, justifyContent: 'center' }}>
-          Manage Categories
-        </button>
-      </div>
-      <div className="animate-in" style={{ marginBottom: '12px', animationDelay: '0.7s' }}>
-        <button onClick={() => { haptic.medium(); setShowImportModal(true); }} style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-          background: 'rgba(0,212,255,0.06)', border: '1px solid rgba(0,212,255,0.2)',
-          borderRadius: '12px', padding: '10px', cursor: 'pointer', color: 'var(--accent-primary)',
-          fontSize: '13px', fontWeight: '600', WebkitTapHighlightColor: 'transparent',
-        }}>
-          Import data from a file
+        <button onClick={() => { haptic.medium(); setShowCategoryModal(true); }}
+          style={{ width: '44px', height: '44px', borderRadius: '12px', border: '1px solid var(--border)',
+            background: 'var(--glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--text-muted)', flexShrink: 0 }}>
+          <Icons.SlidersH size={18} />
         </button>
       </div>
 
-      {/* Category + Status Filters */}
-      <div className="animate-in" style={{ marginBottom: '16px', animationDelay: '0.7s' }}>
-        <div ref={categoryScrollRef} className="mobile-category-scroll" style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
-          {categories.map((cat) => (
-            <button key={cat} className={`btn ${selectedCategory === cat ? 'btn-primary' : 'btn-secondary'}`} onClick={() => { haptic.light(); setSelectedCategory(cat); }} style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{cat}</button>
+      {/* Status filters + Category filter button */}
+      <div className="animate-in" style={{ marginBottom: '14px', animationDelay: '0.7s' }}>
+        {/* Status pills + Category toggle — single row, no wrap */}
+        <div style={{ display: 'flex', gap: '5px' }}>
+          {STATUS_FILTERS.filter(f => f.key !== 'RECURRING' && f.key !== 'ONE-OFF').map((f) => (
+            <button key={f.key} onClick={() => { haptic.light(); setStatusFilter(f.key); }}
+              style={{ flex: 1, padding: '7px 4px', borderRadius: '20px', fontSize: '11px', fontWeight: '600', minWidth: 0,
+                cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s',
+                border: statusFilter === f.key ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
+                background: statusFilter === f.key ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'var(--glass)',
+                color: statusFilter === f.key ? 'var(--accent-primary)' : 'var(--text-muted)',
+              }}>{f.label}</button>
           ))}
+          {/* Category toggle — always says "Category", just opens/closes the sheet */}
+          <button onClick={() => { haptic.light(); setShowCategoryFilter(v => !v); }}
+            style={{ padding: '7px 4px', borderRadius: '20px', fontSize: '11px', fontWeight: '600',
+              cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+              border: selectedCategory !== 'ALL' || showCategoryFilter ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
+              background: selectedCategory !== 'ALL' || showCategoryFilter ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'var(--glass)',
+              color: selectedCategory !== 'ALL' || showCategoryFilter ? 'var(--accent-primary)' : 'var(--text-muted)',
+            }}>
+            Category
+            <Icons.ChevronDown size={12} style={{ transition: 'transform 0.2s', transform: showCategoryFilter ? 'rotate(180deg)' : 'none' }} />
+          </button>
         </div>
-        <div className="mobile-category-scroll" style={{ display: 'flex', gap: '6px', overflowX: 'auto', marginTop: '8px' }}>
-          {STATUS_FILTERS.map((f) => (
-            <button key={f.key} onClick={() => { haptic.light(); setStatusFilter(f.key); }} style={{ padding: '6px 14px', borderRadius: '20px', border: statusFilter === f.key ? '2px solid var(--accent-primary)' : '1px solid var(--border)', background: statusFilter === f.key ? 'var(--accent-primary)20' : 'var(--glass)', color: statusFilter === f.key ? 'var(--accent-primary)' : 'var(--text-muted)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap', flexShrink: 0, transition: 'all 0.2s' }}>{f.label}</button>
-          ))}
-        </div>
+
+        {/* Category filter sheet (slides down when open) */}
+        {showCategoryFilter && (
+          <div style={{ marginTop: '10px', padding: '12px', background: 'var(--bg-card, var(--glass))',
+            border: '1px solid var(--border)', borderRadius: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category</span>
+              {selectedCategory !== 'ALL' && (
+                <button onClick={() => { haptic.light(); setSelectedCategory('ALL'); }}
+                  style={{ fontSize: '11px', fontWeight: '600', color: 'var(--accent-primary)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  Clear
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+              {categories.map((cat) => (
+                <button key={cat} onClick={() => { haptic.light(); setSelectedCategory(cat); }}
+                  style={{ padding: '8px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: '600',
+                    cursor: 'pointer', transition: 'all 0.15s', textAlign: 'center',
+                    border: selectedCategory === cat ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
+                    background: selectedCategory === cat ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'var(--glass)',
+                    color: selectedCategory === cat ? 'var(--accent-primary)' : 'var(--text-muted)',
+                  }}>{cat}</button>
+              ))}
+            </div>
+            {/* Recurring / One-off filters */}
+            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border)', display: 'flex', gap: '6px' }}>
+              {STATUS_FILTERS.filter(f => f.key === 'RECURRING' || f.key === 'ONE-OFF').map((f) => (
+                <button key={f.key} onClick={() => { haptic.light(); setStatusFilter(f.key); }}
+                  style={{ padding: '7px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '600',
+                    cursor: 'pointer', transition: 'all 0.15s',
+                    border: statusFilter === f.key ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
+                    background: statusFilter === f.key ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'var(--glass)',
+                    color: statusFilter === f.key ? 'var(--accent-primary)' : 'var(--text-muted)',
+                  }}>{f.label}</button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bills Header + List */}
@@ -524,7 +574,7 @@ export default function BillsPanel({
             {filteredBills.some(b => selectedIds.has(b.id) && b.recurring) && (
               <button onClick={() => { haptic.light(); onBulkTogglePaused([...selectedIds]); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--warning), #d97706)', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: '600', minWidth: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}><Icons.Pause size={14} /> Pause</button>
             )}
-            <button onClick={() => { haptic.error(); if (confirm(`Delete ${selectedIds.size} bill${selectedIds.size > 1 ? 's' : ''}?`)) { onBulkDelete([...selectedIds]); exitSelection(); } }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', minWidth: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}><Icons.Trash size={14} /> Delete</button>
+            <button onClick={() => { haptic.error(); onBulkDelete([...selectedIds]); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', minWidth: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}><Icons.Trash size={14} /> Delete</button>
           </div>
         </div>,
         document.body

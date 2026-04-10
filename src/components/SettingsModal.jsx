@@ -5,8 +5,24 @@ import haptic from '../utils/haptics';
 import { saveNotificationSettings } from '../utils/notifications';
 import * as Icons from './Icons';
 
+const CURRENCIES = [
+  { code: 'GBP', symbol: '£', name: 'GBP (£)' },
+  { code: 'USD', symbol: '$', name: 'USD ($)' },
+  { code: 'EUR', symbol: '€', name: 'EUR (€)' },
+  { code: 'AUD', symbol: 'A$', name: 'AUD (A$)' },
+  { code: 'CAD', symbol: 'C$', name: 'CAD (C$)' },
+  { code: 'NZD', symbol: 'NZ$', name: 'NZD (NZ$)' },
+  { code: 'SEK', symbol: 'kr', name: 'SEK (kr)' },
+  { code: 'NOK', symbol: 'kr', name: 'NOK (kr)' },
+  { code: 'DKK', symbol: 'kr', name: 'DKK (kr)' },
+  { code: 'CHF', symbol: 'CHF', name: 'CHF' },
+  { code: 'JPY', symbol: '¥', name: 'JPY (¥)' },
+  { code: 'INR', symbol: '₹', name: 'INR (₹)' },
+];
+
 export default function SettingsModal({ show, onClose, theme, onToggleTheme, notificationSettings, onNotificationSettingsChange, currencyCode, onCurrencyChange }) {
   const cs = useCurrency();
+  const [showCurrencyPicker, setShowCurrencyPicker] = React.useState(false);
   if (!show) return null;
 
   const updateSetting = (key, value) => {
@@ -69,35 +85,41 @@ export default function SettingsModal({ show, onClose, theme, onToggleTheme, not
           padding: '16px', borderRadius: '12px', background: 'var(--glass)',
           border: '1px solid var(--border)', marginBottom: '16px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}><Icons.Coins size={16} /> Currency</span>
-            <select
-              value={currencyCode || 'GBP'}
-              onChange={(e) => { onCurrencyChange(e.target.value); haptic.light(); }}
-              style={{
-                padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)',
-                background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px',
-                fontWeight: '600', cursor: 'pointer', appearance: 'none', textAlign: 'center',
-                minWidth: '120px',
-              }}
-            >
-              {[
-                { code: 'GBP', symbol: '£', name: 'GBP (£)' },
-                { code: 'USD', symbol: '$', name: 'USD ($)' },
-                { code: 'EUR', symbol: '€', name: 'EUR (€)' },
-                { code: 'AUD', symbol: 'A$', name: 'AUD (A$)' },
-                { code: 'CAD', symbol: 'C$', name: 'CAD (C$)' },
-                { code: 'NZD', symbol: 'NZ$', name: 'NZD (NZ$)' },
-                { code: 'SEK', symbol: 'kr', name: 'SEK (kr)' },
-                { code: 'NOK', symbol: 'kr', name: 'NOK (kr)' },
-                { code: 'DKK', symbol: 'kr', name: 'DKK (kr)' },
-                { code: 'CHF', symbol: 'CHF', name: 'CHF' },
-                { code: 'JPY', symbol: '¥', name: 'JPY (¥)' },
-                { code: 'INR', symbol: '₹', name: 'INR (₹)' },
-              ].map(c => (
-                <option key={c.code} value={c.code}>{c.name}</option>
-              ))}
-            </select>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}><Icons.Coins size={16} /> Currency</span>
+              <button onClick={() => { haptic.light(); setShowCurrencyPicker(v => !v); }}
+                style={{
+                  padding: '8px 14px', borderRadius: '10px',
+                  border: showCurrencyPicker ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
+                  background: showCurrencyPicker ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'var(--glass)',
+                  color: showCurrencyPicker ? 'var(--accent-primary)' : 'var(--text-primary)',
+                  fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                }}>
+                {CURRENCIES.find(c => c.code === (currencyCode || 'GBP'))?.name || 'GBP (£)'}
+                <Icons.ChevronDown size={12} style={{ transition: 'transform 0.2s', transform: showCurrencyPicker ? 'rotate(180deg)' : 'none' }} />
+              </button>
+            </div>
+            {showCurrencyPicker && (
+              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                {CURRENCIES.map(c => (
+                  <button key={c.code} onClick={() => { haptic.light(); onCurrencyChange(c.code); setShowCurrencyPicker(false); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '10px 12px', borderRadius: '10px', cursor: 'pointer',
+                      border: 'none', width: '100%', textAlign: 'left',
+                      background: currencyCode === c.code ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'transparent',
+                      color: currencyCode === c.code ? 'var(--accent-primary)' : 'var(--text-primary)',
+                      fontSize: '14px', fontWeight: currencyCode === c.code ? '700' : '500',
+                      transition: 'all 0.15s',
+                    }}>
+                    <span>{c.name}</span>
+                    {currencyCode === c.code && <Icons.Check size={16} style={{ color: 'var(--accent-primary)' }} />}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

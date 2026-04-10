@@ -13,15 +13,15 @@ const PAYMENT_MODES = [
 
 const DEBT_TYPE_ICONS = {
   'Credit Card': Icons.CategoryCreditCard,
-  'Personal Loan': Icons.CategoryOther,
-  'Student Loan': Icons.CategoryEducation,
+  'Personal Loan': Icons.Banknote,
+  'Student Loan': Icons.GraduationCap,
   'Car Loan': Icons.CategoryTransport,
-  'Store Finance': Icons.CategoryEntertainment,
-  'Buy Now Pay Later': Icons.CategorySubscription,
-  'Hire Purchase': Icons.CategoryOther,
+  'Store Finance': Icons.ShoppingBag,
+  'Buy Now Pay Later': Icons.Clock,
+  'Hire Purchase': Icons.Handshake,
   'Mortgage': Icons.CategoryHome,
   'Medical Debt': Icons.CategoryHealth,
-  'Payday Loan': Icons.CategoryOther,
+  'Payday Loan': Icons.Banknote,
   'Other': Icons.CategoryOther,
 };
 
@@ -336,7 +336,7 @@ export default function DebtPanel({
                         <button className="btn btn-primary" onClick={handleDebtEditSave} style={{ flex: 1 }}><Icons.Check size={18} /> Save</button>
                         <button className="btn btn-secondary" onClick={() => setEditingDebtId(null)} style={{ flex: 1 }}><Icons.X size={18} /> Cancel</button>
                       </div>
-                      <button onClick={() => { setEditingDebtId(null); handleDeleteDebt(debt.id); }} style={{ width: '100%', marginTop: '8px', padding: '9px', background: tc.dangerTintLight, border: `1px solid ${tc.dangerTintStrong}`, borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: tc.danger }}>
+                      <button onClick={async () => { const deleted = await handleDeleteDebt(debt.id); if (deleted !== false) setEditingDebtId(null); }} style={{ width: '100%', marginTop: '8px', padding: '9px', background: tc.dangerTintLight, border: `1px solid ${tc.dangerTintStrong}`, borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: tc.danger }}>
                         Delete debt
                       </button>
                     </div>

@@ -56,18 +56,68 @@ import { AddBillScreen, ManageCategoriesModal, AddDebtScreen, AddSavingsScreen }
 
 const PANEL_NAMES = ['Overview', 'Actions', 'Bills', 'Debt', 'Savings'];
 
+// ── Themed confirm dialog (replaces native confirm()) ──
+const ConfirmContext = React.createContext(null);
+function useConfirm() { return React.useContext(ConfirmContext); }
+
+function ConfirmProvider({ children }) {
+  const [dialog, setDialog] = useState(null);
+  const confirm = (message, { title = 'Confirm', okText = 'OK', cancelText = 'Cancel', danger = false } = {}) => {
+    return new Promise((resolve) => {
+      setDialog({ message, title, okText, cancelText, danger, resolve });
+    });
+  };
+  const handleClose = (result) => { dialog?.resolve(result); setDialog(null); };
+
+  return (
+    <ConfirmContext.Provider value={confirm}>
+      {children}
+      {dialog && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', padding: '24px' }}
+          onClick={() => handleClose(false)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '18px',
+            padding: '24px', maxWidth: '340px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+          }}>
+            <h3 style={{ fontSize: '17px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '10px' }}>{dialog.title}</h3>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '20px', whiteSpace: 'pre-line' }}>{dialog.message}</p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => handleClose(false)}
+                style={{ flex: 1, padding: '12px', borderRadius: '12px', fontSize: '14px', fontWeight: '600',
+                  border: '1px solid var(--border)', background: 'var(--glass)', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                {dialog.cancelText}
+              </button>
+              <button onClick={() => handleClose(true)}
+                style={{ flex: 1, padding: '12px', borderRadius: '12px', fontSize: '14px', fontWeight: '600',
+                  border: 'none', cursor: 'pointer', color: '#fff',
+                  background: dialog.danger ? 'linear-gradient(135deg, var(--danger), #dc2626)' : 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))',
+                }}>
+                {dialog.okText}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </ConfirmContext.Provider>
+  );
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
+    <ConfirmProvider>
     <ToastProvider>
       <AppContent />
     </ToastProvider>
+    </ConfirmProvider>
     </ErrorBoundary>
   );
 }
 
 function AppContent() {
   const toast = useToast();
+  const confirm = useConfirm();
   // ── Theme ──
   const [theme, setTheme] = useState(() => initTheme());
   useEffect(() => { initKeyboardScroll(); }, []);
@@ -80,7 +130,7 @@ function AppContent() {
     } catch(e) {}
   })(); }, [theme]);
   const handleToggleTheme = async () => {
-    const next = toggleTheme();
+    const next = await toggleTheme();
     setTheme(next);
     haptic.light();
     const color = next === 'light' ? '#f1f5f9' : '#0a0e27';
@@ -261,7 +311,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 
         if (localHasData && cloudHasData) {
           const cloudDate = new Date(result.updated_at).toLocaleString();
-          const useCloud = confirm(`Found cloud data (last synced: ${cloudDate}).\n\nUse cloud data? OK = Use cloud, Cancel = Keep local & overwrite cloud`);
+          const useCloud = await confirm(`Found cloud data (last synced: ${cloudDate}).\n\nUse cloud data?`, { title: 'Cloud Data Found', okText: 'Use Cloud', cancelText: 'Keep Local' });
           if (useCloud) {
             applyCloudData(result.data);
             toast('Cloud data loaded', 'success');
@@ -405,7 +455,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 };
 
   const handleClearLocalData = async () => {
-    if (!confirm('Remove all Tally data from this device?\n\nYour cloud backup is not affected — sign back in to restore.')) return;
+    if (!await confirm('Remove all Tally data from this device?\n\nYour cloud backup is not affected — sign back in to restore.', { title: 'Clear Local Data', okText: 'Clear All', danger: true })) return;
     setBills([]);
     setDebts([]);
     setSavings([]);
@@ -688,7 +738,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   // ── Bill handlers ──
   const handleEditStart = (bill) => { setEditingId(bill.id); setEditForm({ ...bill }); };
   const handleEditSave = () => { setBills(bills.map((b) => (b.id === editingId ? { ...editForm, projected: parseFloat(editForm.projected) || 0, actual: parseFloat(editForm.actual) || 0 } : b))); setEditingId(null); setEditForm({}); haptic.medium(); toast('Bill updated', 'success'); };
-  const handleDelete = (id) => { if (confirm('Delete this bill?')) { setBills(bills.filter((b) => b.id !== id)); haptic.error(); toast('Bill deleted', 'error'); } };
+  const handleDelete = async (id) => { if (await confirm('Delete this bill?', { title: 'Delete Bill', okText: 'Delete', danger: true })) { setBills(bills.filter((b) => b.id !== id)); haptic.error(); toast('Bill deleted', 'error'); return true; } return false; };
   const handleBulkDeleteBills = (ids) => { setBills(bills.filter((b) => !ids.includes(b.id))); haptic.error(); toast(`${ids.length} bill${ids.length > 1 ? 's' : ''} deleted`, 'error'); };
   const handleBulkTogglePaid = (ids) => { setBills(bills.map((b) => ids.includes(b.id) ? { ...b, paid: true, missed: false, paused: false } : b)); haptic.success(); toast(`${ids.length} bill${ids.length > 1 ? 's' : ''} marked paid`, 'success'); };
   const handleBulkToggleMissed = (ids) => { setBills(bills.map((b) => ids.includes(b.id) ? { ...b, missed: true, paid: false, paused: false } : b)); haptic.warning(); toast(`${ids.length} bill${ids.length > 1 ? 's' : ''} marked missed`, 'warning'); };
@@ -715,7 +765,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // ── Debt handlers ──
   const handleAddDebt = () => { const errors = {}; if (!newDebt.name.trim()) errors['debt-name'] = true; if (!newDebt.totalAmount) errors['debt-amount'] = true; const mode = newDebt.paymentMode || 'recurring'; if (mode === 'one-off' && !newDebt.dueDate) errors['debt-dueDate'] = true; if (mode === 'installment' && !newDebt.installmentMonths) errors['debt-installmentMonths'] = true; if (mode === 'installment' && !newDebt.installmentStartDate) errors['debt-installmentStartDate'] = true; if (mode === 'bnpl' && !newDebt.bnplPromoMonths) errors['debt-bnplPromoMonths'] = true; if (mode === 'bnpl' && !newDebt.bnplStartDate) errors['debt-bnplStartDate'] = true; if (Object.keys(errors).length > 0) { setValidationErrors(errors); haptic.warning(); return; } setValidationErrors({}); const id = Date.now().toString(), total = parseFloat(newDebt.totalAmount) || 0; const debt = { ...newDebt, id, totalAmount: total, originalAmount: total, interestRate: parseFloat(newDebt.interestRate) || 0, minimumPayment: parseFloat(newDebt.minimumPayment) || 0, recurringPayment: parseFloat(newDebt.recurringPayment) || 0, installmentMonths: parseInt(newDebt.installmentMonths) || 0, bnplPromoMonths: parseInt(newDebt.bnplPromoMonths) || 0, bnplPostInterest: parseFloat(newDebt.bnplPostInterest) || 0, bnplPostPayment: parseFloat(newDebt.bnplPostPayment) || 0, payments: [] }; if (debt.paymentMode === 'installment' && debt.installmentMonths > 0) { debt.recurringPayment = Math.ceil((total / debt.installmentMonths) * 100) / 100; } setDebts([...debts, debt]); setShowDebtModal(false); setValidationErrors({}); setNewDebt({ ...emptyDebt }); haptic.success(); toast('Debt added', 'success'); };
-  const handleDeleteDebt = (id) => { if (confirm('Delete this debt?')) { setDebts(debts.filter((d) => d.id !== id)); haptic.error(); toast('Debt deleted', 'error'); } };
+  const handleDeleteDebt = async (id) => { if (await confirm('Delete this debt?', { title: 'Delete Debt', okText: 'Delete', danger: true })) { setDebts(debts.filter((d) => d.id !== id)); haptic.error(); toast('Debt deleted', 'error'); return true; } return false; };
   const handleArchiveDebt = (id) => { setDebts(debts.map((d) => d.id !== id ? d : { ...d, archived: true, archivedAt: d.archivedAt || new Date().toISOString() })); haptic.success(); toast('Debt archived', 'success'); };
   const handleUnarchiveDebt = (id) => { setDebts(debts.map((d) => d.id !== id ? d : { ...d, archived: false })); haptic.medium(); toast('Debt restored', 'info'); };
   const handleDebtEditStart = (debt) => { setEditingDebtId(debt.id); setEditDebtForm({ ...debt }); };
@@ -752,7 +802,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // ── Savings handlers ──
   const handleAddSavings = () => { const errors = {}; if (!newSavingsGoal.name.trim()) errors['savings-name'] = true; if (Object.keys(errors).length > 0) { setValidationErrors(errors); haptic.warning(); return; } setValidationErrors({}); const id = Date.now().toString(); const startingAmount = parseFloat(newSavingsGoal.startingAmount) || 0; const transactions = startingAmount > 0 ? [{ type: 'deposit', amount: startingAmount, date: new Date().toISOString(), note: 'Starting balance' }] : []; setSavings([...savings, { ...newSavingsGoal, id, currentAmount: startingAmount, targetAmount: parseFloat(newSavingsGoal.targetAmount) || 0, monthlyContribution: parseFloat(newSavingsGoal.monthlyContribution) || 0, transactions }]); setShowSavingsModal(false); setValidationErrors({}); setNewSavingsGoal({ ...emptySavings }); haptic.success(); toast('Savings goal created', 'success'); };
-  const handleDeleteSavings = (id) => { if (confirm('Delete this goal?')) { setSavings(savings.filter((s) => s.id !== id)); haptic.error(); toast('Goal deleted', 'error'); } };
+  const handleDeleteSavings = async (id) => { if (await confirm('Delete this savings goal?', { title: 'Delete Goal', okText: 'Delete', danger: true })) { setSavings(savings.filter((s) => s.id !== id)); haptic.error(); toast('Goal deleted', 'error'); return true; } return false; };
   const handleArchiveSavings = (id) => { setSavings(savings.map((s) => s.id !== id ? s : { ...s, archived: true, archivedAt: s.archivedAt || new Date().toISOString() })); haptic.success(); toast('Goal archived', 'success'); };
   const handleUnarchiveSavings = (id) => { setSavings(savings.map((s) => s.id !== id ? s : { ...s, archived: false })); haptic.medium(); toast('Goal restored', 'info'); };
   const handleSavingsEditStart = (goal) => { setEditingSavingsId(goal.id); setEditSavingsForm({ ...goal }); };
@@ -858,7 +908,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
               <ActionsPanel income={income} setIncome={setIncome} categoryTotals={categoryTotals} setShowAddModal={setShowAddModal} setShowDebtModal={setShowDebtModal} setShowSavingsModal={setShowSavingsModal} setShowCategoryModal={setShowCategoryModal} setShowImportModal={setShowImportModal} salaryCalc={salaryCalc} setSalaryCalc={setSalaryCalc} />
             </div>
             <div className={`swipe-panel ${activePanel === 2 ? 'panel-active' : ''}`}>
-              <BillsPanel categories={['ALL', ...categories]} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} statusFilter={statusFilter} setStatusFilter={setStatusFilter} filteredBills={filteredBills} editingId={editingId} editForm={editForm} setEditForm={setEditForm} handleEditStart={handleEditStart} handleEditSave={handleEditSave} handleDelete={handleDelete} handleTogglePaid={handleTogglePaid} handleToggleMissed={handleToggleMissed} handleTogglePaused={handleTogglePaused} setEditingId={setEditingId} categoryScrollRef={categoryScrollRef} billSearch={billSearch} setBillSearch={setBillSearch} billSort={billSort} setBillSort={setBillSort} onBulkDelete={handleBulkDeleteBills} onBulkTogglePaid={handleBulkTogglePaid} onBulkToggleMissed={handleBulkToggleMissed} onBulkTogglePaused={handleBulkTogglePaused} activePanel={activePanel} setShowAddModal={setShowAddModal} setShowCategoryModal={setShowCategoryModal} setShowImportModal={setShowImportModal} />
+              <BillsPanel categories={['ALL', ...categories]} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} statusFilter={statusFilter} setStatusFilter={setStatusFilter} filteredBills={filteredBills} editingId={editingId} editForm={editForm} setEditForm={setEditForm} handleEditStart={handleEditStart} handleEditSave={handleEditSave} handleDelete={handleDelete} handleTogglePaid={handleTogglePaid} handleToggleMissed={handleToggleMissed} handleTogglePaused={handleTogglePaused} setEditingId={setEditingId} billSearch={billSearch} setBillSearch={setBillSearch} billSort={billSort} setBillSort={setBillSort} onBulkDelete={handleBulkDeleteBills} onBulkTogglePaid={handleBulkTogglePaid} onBulkToggleMissed={handleBulkToggleMissed} onBulkTogglePaused={handleBulkTogglePaused} activePanel={activePanel} setShowAddModal={setShowAddModal} setShowCategoryModal={setShowCategoryModal} />
             </div>
             <div className={`swipe-panel ${activePanel === 3 ? 'panel-active' : ''}`}>
               <DebtPanel debts={debts} totalDebt={totalDebt} calculatePayoff={calculatePayoff} editingDebtId={editingDebtId} editDebtForm={editDebtForm} setEditDebtForm={setEditDebtForm} handleDebtEditStart={handleDebtEditStart} handleDebtEditSave={handleDebtEditSave} handleDeleteDebt={handleDeleteDebt} handleMakePayment={handleMakePayment} debtPaymentAmounts={debtPaymentAmounts} setDebtPaymentAmounts={setDebtPaymentAmounts} showDebtHistory={showDebtHistory} setShowDebtHistory={setShowDebtHistory} setEditingDebtId={setEditingDebtId} setShowDebtModal={setShowDebtModal} handleArchiveDebt={handleArchiveDebt} handleUnarchiveDebt={handleUnarchiveDebt} />
