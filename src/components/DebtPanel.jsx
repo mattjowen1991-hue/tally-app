@@ -1,6 +1,8 @@
 import { useCurrency } from './CurrencyContext';
 import React from 'react';
+import ReactDOM from 'react-dom';
 import * as Icons from './Icons';
+import haptic from '../utils/haptics';
 import { tc } from '../utils/themeColors';
 import { DEBT_TYPES } from '../data/initialData';
 
@@ -197,6 +199,30 @@ export default function DebtPanel({
   const [whatIfAmounts, setWhatIfAmounts] = React.useState({});
   const [showArchived, setShowArchived] = React.useState(false);
 
+  // Selection mode
+  const [selectionMode, setSelectionMode] = React.useState(false);
+  const [selectedIds, setSelectedIds] = React.useState(new Set());
+  const longPressTimer = React.useRef(null);
+  const longPressMoved = React.useRef(false);
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  };
+  const selectAll = () => {
+    const active = debts.filter(d => !d.archived);
+    setSelectedIds(prev => prev.size === active.length ? new Set() : new Set(active.map(d => d.id)));
+  };
+  const exitSelection = () => { setSelectionMode(false); setSelectedIds(new Set()); };
+  const onCardTouchStart = (e, id) => {
+    if (e.target.closest('button, input, select, a') || selectionMode) return;
+    longPressMoved.current = false;
+    longPressTimer.current = setTimeout(() => {
+      if (!longPressMoved.current) { setSelectionMode(true); setSelectedIds(new Set([id])); haptic.medium(); }
+    }, 400);
+  };
+  const onCardTouchMove = () => { longPressMoved.current = true; if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } };
+  const onCardTouchEnd = () => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } };
+
   const activeDebts = debts.filter(d => !d.archived);
   const archivedDebts = debts.filter(d => d.archived);
 
@@ -206,7 +232,19 @@ export default function DebtPanel({
       <div className="glass-card animate-in" style={{ padding: '20px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h2 className="font-display" style={{ fontSize: '24px' }}>Debt Tracker</h2>
-          <button className="btn btn-primary" onClick={() => setShowDebtModal(true)}><Icons.Plus size={18} /> Add</button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {selectionMode ? (
+              <>
+                <button onClick={() => { haptic.light(); selectAll(); }} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--accent-primary)' }}>{selectedIds.size === activeDebts.length ? 'Deselect All' : 'Select All'}</button>
+                <button onClick={() => { haptic.light(); exitSelection(); }} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Cancel</button>
+              </>
+            ) : (
+              <>
+                {activeDebts.length > 0 && <button onClick={() => { haptic.medium(); setSelectionMode(true); }} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Select</button>}
+                <button className="btn btn-primary" onClick={() => setShowDebtModal(true)}><Icons.Plus size={18} /> Add</button>
+              </>
+            )}
+          </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
           <div style={{ padding: '14px', background: totalDebt > 0 ? tc.dangerTintLight : tc.successTintLight, borderRadius: '12px', border: `1px solid ${totalDebt > 0 ? tc.dangerTintStrong : tc.successTintStrong}` }}>
@@ -240,11 +278,26 @@ export default function DebtPanel({
             const accentColor = isPaidOff ? 'var(--success)' : tc.danger;
 
             return (
-              <div key={debt.id}>
+              <div key={debt.id}
+                onTouchStart={(e) => onCardTouchStart(e, debt.id)}
+                onTouchMove={onCardTouchMove}
+                onTouchEnd={onCardTouchEnd}
+                onClick={() => selectionMode && (haptic.light(), toggleSelect(debt.id))}
+              >
                 <div className="mobile-bill-card" style={{
                   borderLeft: `3px solid ${accentColor}`,
                   background: isPaidOff ? tc.successTintLight : undefined,
+                  outline: selectionMode && selectedIds.has(debt.id) ? '2px solid var(--accent-primary)' : 'none',
                 }}>
+                  {selectionMode && (
+                    <div style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)',
+                      width: '22px', height: '22px', borderRadius: '6px',
+                      border: `2px solid ${selectedIds.has(debt.id) ? 'var(--accent-primary)' : 'var(--border)'}`,
+                      background: selectedIds.has(debt.id) ? 'linear-gradient(135deg, var(--accent-primary), var(--success))' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#fff' }}>
+                      {selectedIds.has(debt.id) && '✓'}
+                    </div>
+                  )}
                   {editingDebtId === debt.id ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <input className="input" value={editDebtForm.name} onChange={(e) => setEditDebtForm({ ...editDebtForm, name: e.target.value })} placeholder="Debt name" />
@@ -402,8 +455,8 @@ export default function DebtPanel({
                         <DebtInfoBanner debt={debt} calculatePayoff={calculatePayoff} />
                       </div>
 
-                      {/* ── Payment input ── */}
-                      {!isPaidOff && (
+                      {/* ── Payment input (hidden in selection mode) ── */}
+                      {!isPaidOff && !selectionMode && (
                         <div style={{ marginLeft: '46px' }}>
                           <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                             <input type="number" className="input" placeholder="Payment amount..." value={debtPaymentAmounts[debt.id] || ''} onChange={(e) => setDebtPaymentAmounts({ ...debtPaymentAmounts, [debt.id]: e.target.value })} style={{ flex: 1 }} />
@@ -457,7 +510,7 @@ export default function DebtPanel({
                       )}
 
                       {/* Paid off state */}
-                      {isPaidOff && (
+                      {isPaidOff && !selectionMode && (
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: '46px' }}>
                           <div style={{ flex: 1, padding: '8px 12px', background: tc.successTint, borderRadius: '8px', border: `1px solid ${tc.successTintStrong}`, color: tc.success, fontSize: '13px', fontWeight: '600', textAlign: 'center' }}>✓ Paid off!</div>
                           <button onClick={() => handleArchiveDebt(debt.id)} style={{ padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Archive</button>
@@ -528,6 +581,25 @@ export default function DebtPanel({
             </div>
           )}
         </div>
+      )}
+
+      {/* Bulk Action Bar */}
+      {selectionMode && selectedIds.size > 0 && ReactDOM.createPortal(
+        <div style={{ position: 'fixed', bottom: '20px', left: '16px', right: '16px', padding: '12px 16px', borderRadius: '16px', background: 'var(--bg-card, #141833)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.6)', zIndex: 9999, animation: 'slideInUp 0.2s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{selectedIds.size} selected</span>
+            <button onClick={exitSelection} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>✕ Cancel</button>
+          </div>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button onClick={() => { haptic.success(); [...selectedIds].forEach(id => handleArchiveDebt(id)); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--success), #059669)', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+              <Icons.Check size={14} /> Archive
+            </button>
+            <button onClick={() => { haptic.error(); [...selectedIds].forEach(id => handleDeleteDebt(id)); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+              <Icons.Trash size={14} /> Delete
+            </button>
+          </div>
+        </div>,
+        document.body
       )}
     </>
   );

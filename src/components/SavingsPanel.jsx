@@ -1,6 +1,8 @@
 import { useCurrency } from './CurrencyContext';
 import React from 'react';
+import ReactDOM from 'react-dom';
 import * as Icons from './Icons';
+import haptic from '../utils/haptics';
 import { tc } from '../utils/themeColors';
 import { SAVINGS_CATEGORIES } from '../data/initialData';
 
@@ -31,6 +33,30 @@ export default function SavingsPanel({
   const cs = useCurrency();
   const [showArchived, setShowArchived] = React.useState(false);
 
+  // Selection mode
+  const [selectionMode, setSelectionMode] = React.useState(false);
+  const [selectedIds, setSelectedIds] = React.useState(new Set());
+  const longPressTimer = React.useRef(null);
+  const longPressMoved = React.useRef(false);
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  };
+  const selectAll = () => {
+    const active = savings.filter(s => !s.archived);
+    setSelectedIds(prev => prev.size === active.length ? new Set() : new Set(active.map(s => s.id)));
+  };
+  const exitSelection = () => { setSelectionMode(false); setSelectedIds(new Set()); };
+  const onCardTouchStart = (e, id) => {
+    if (e.target.closest('button, input, select, a') || selectionMode) return;
+    longPressMoved.current = false;
+    longPressTimer.current = setTimeout(() => {
+      if (!longPressMoved.current) { setSelectionMode(true); setSelectedIds(new Set([id])); haptic.medium(); }
+    }, 400);
+  };
+  const onCardTouchMove = () => { longPressMoved.current = true; if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } };
+  const onCardTouchEnd = () => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } };
+
   const activeSavings = savings.filter(s => !s.archived);
   const archivedSavings = savings.filter(s => s.archived);
 
@@ -40,7 +66,19 @@ export default function SavingsPanel({
       <div className="glass-card animate-in" style={{ padding: '20px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h2 className="font-display" style={{ fontSize: '24px' }}>Savings Goals</h2>
-          <button className="btn btn-primary" onClick={() => setShowSavingsModal(true)}><Icons.Plus size={18} /> Add</button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {selectionMode ? (
+              <>
+                <button onClick={() => { haptic.light(); selectAll(); }} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--accent-primary)' }}>{selectedIds.size === activeSavings.length ? 'Deselect All' : 'Select All'}</button>
+                <button onClick={() => { haptic.light(); exitSelection(); }} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Cancel</button>
+              </>
+            ) : (
+              <>
+                {activeSavings.length > 0 && <button onClick={() => { haptic.medium(); setSelectionMode(true); }} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Select</button>}
+                <button className="btn btn-primary" onClick={() => setShowSavingsModal(true)}><Icons.Plus size={18} /> Add</button>
+              </>
+            )}
+          </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
           <div style={{ padding: '14px', background: tc.successTintLight, borderRadius: '12px', border: `1px solid ${tc.successTintStrong}` }}>
@@ -74,11 +112,26 @@ export default function SavingsPanel({
             const accentColor = isComplete ? 'var(--success)' : 'var(--accent-primary)';
 
             return (
-              <div key={goal.id}>
+              <div key={goal.id}
+                onTouchStart={(e) => onCardTouchStart(e, goal.id)}
+                onTouchMove={onCardTouchMove}
+                onTouchEnd={onCardTouchEnd}
+                onClick={() => selectionMode && (haptic.light(), toggleSelect(goal.id))}
+              >
                 <div className="mobile-bill-card" style={{
                   borderLeft: `3px solid ${accentColor}`,
                   background: isComplete ? tc.successTintLight : undefined,
+                  outline: selectionMode && selectedIds.has(goal.id) ? '2px solid var(--accent-primary)' : 'none',
                 }}>
+                  {selectionMode && (
+                    <div style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)',
+                      width: '22px', height: '22px', borderRadius: '6px',
+                      border: `2px solid ${selectedIds.has(goal.id) ? 'var(--accent-primary)' : 'var(--border)'}`,
+                      background: selectedIds.has(goal.id) ? 'linear-gradient(135deg, var(--accent-primary), var(--success))' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#fff' }}>
+                      {selectedIds.has(goal.id) && '✓'}
+                    </div>
+                  )}
                   {editingSavingsId === goal.id ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <input className="input" value={editSavingsForm.name} onChange={(e) => setEditSavingsForm({ ...editSavingsForm, name: e.target.value })} placeholder="Goal name" />
@@ -170,18 +223,18 @@ export default function SavingsPanel({
                         </div>
                       )}
 
-                      {/* ── Action buttons ── */}
-                      {!isComplete ? (
+                      {/* ── Action buttons (hidden in selection mode) ── */}
+                      {!selectionMode && !isComplete ? (
                         <div style={{ display: 'flex', gap: '6px', marginLeft: '46px' }}>
                           <input type="number" className="input" placeholder="Amount..." value={savingsTransactionAmounts[goal.id] || ''} onChange={(e) => setSavingsTransactionAmounts({ ...savingsTransactionAmounts, [goal.id]: e.target.value })} style={{ flex: 1 }} />
                           <button className="btn btn-primary" onClick={() => handleSavingsDeposit(goal.id)} style={{ whiteSpace: 'nowrap', padding: '0 14px' }}>+ Add</button>
                           <button className="btn btn-secondary" onClick={() => handleSavingsWithdraw(goal.id)} style={{ whiteSpace: 'nowrap', padding: '0 12px', color: tc.danger }}>- Take</button>
                         </div>
-                      ) : (
+                      ) : !selectionMode ? (
                         <div style={{ display: 'flex', gap: '8px', marginLeft: '46px' }}>
                           <button onClick={() => handleArchiveSavings(goal.id)} style={{ flex: 1, padding: '8px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Archive Goal</button>
                         </div>
-                      )}
+                      ) : null}
 
                       {/* ── Transaction history ── */}
                       {goal.transactions && goal.transactions.length > 0 && (
@@ -247,6 +300,25 @@ export default function SavingsPanel({
             </div>
           )}
         </div>
+      )}
+
+      {/* Bulk Action Bar */}
+      {selectionMode && selectedIds.size > 0 && ReactDOM.createPortal(
+        <div style={{ position: 'fixed', bottom: '20px', left: '16px', right: '16px', padding: '12px 16px', borderRadius: '16px', background: 'var(--bg-card, #141833)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.6)', zIndex: 9999, animation: 'slideInUp 0.2s', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{selectedIds.size} selected</span>
+            <button onClick={exitSelection} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>✕ Cancel</button>
+          </div>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button onClick={() => { haptic.success(); [...selectedIds].forEach(id => handleArchiveSavings(id)); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--success), #059669)', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+              <Icons.Check size={14} /> Archive
+            </button>
+            <button onClick={() => { haptic.error(); [...selectedIds].forEach(id => handleDeleteSavings(id)); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+              <Icons.Trash size={14} /> Delete
+            </button>
+          </div>
+        </div>,
+        document.body
       )}
     </>
   );
