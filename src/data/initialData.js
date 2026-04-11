@@ -60,7 +60,9 @@ export const DEFAULT_CATEGORIES = ['HOME', 'TRANSPORTATION', 'CREDIT CARDS', 'EN
 export const DEBT_TYPES = [
   'Credit Card', 'Personal Loan', 'Student Loan', 'Car Loan',
   'Store Finance', 'Buy Now Pay Later', 'Hire Purchase',
-  'Mortgage', 'Medical Debt', 'Payday Loan', 'Other',
+  'Mortgage', 'Medical Debt', 'Payday Loan',
+  'Council Tax', 'Utilities', 'Court Fine', 'Child Maintenance', 'HMRC/Tax',
+  'Other',
 ];
 
 export const SAVINGS_CATEGORIES = [

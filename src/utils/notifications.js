@@ -154,8 +154,29 @@ const getMissedBills = (bills) => {
   });
 };
 
+// ── Get debts due within N days ──
+const getDebtsDueWithin = (debts, days) => {
+  const now = new Date();
+  const currentDay = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+
+  return debts
+    .filter(d => !d.archived && d.totalAmount > 0 && (d.paymentMode || 'recurring') === 'recurring')
+    .map(d => {
+      const payDay = d.paymentDate ? parseInt(d.paymentDate) : null;
+      if (!payDay) return null;
+      let daysUntilDue = payDay >= currentDay ? payDay - currentDay : (daysInMonth - currentDay) + payDay;
+      if (daysUntilDue <= days) return { ...d, _daysUntilDue: daysUntilDue };
+      return null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a._daysUntilDue - b._daysUntilDue);
+};
+
+const ID_DEBT_REMINDER = 40000;
+
 // ── Schedule all notifications ──
-export const scheduleNotifications = async (bills, settings = {}) => {
+export const scheduleNotifications = async (bills, settings = {}, debts = []) => {
   if (!isNative()) return;
 
   const {
@@ -244,6 +265,34 @@ export const scheduleNotifications = async (bills, settings = {}) => {
       sound: null,
       actionTypeId: '',
       extra: { type: 'missed_alert' },
+    });
+  }
+
+  // ── 4. Debt payment reminders (debts due within 3 days) ──
+  const upcomingDebts = getDebtsDueWithin(debts, 3);
+  if (upcomingDebts.length > 0) {
+    const debtReminderDate = new Date();
+    debtReminderDate.setHours(reminderHour, reminderMinute, 0, 0);
+    if (debtReminderDate <= now) debtReminderDate.setDate(debtReminderDate.getDate() + 1);
+
+    const debtTotal = upcomingDebts.reduce((s, d) => s + Math.max(d.minimumPayment || 0, d.recurringPayment || 0), 0);
+    const title = upcomingDebts.length === 1
+      ? `${upcomingDebts[0].name} payment ${upcomingDebts[0]._daysUntilDue === 0 ? 'today' : upcomingDebts[0]._daysUntilDue === 1 ? 'tomorrow' : `in ${upcomingDebts[0]._daysUntilDue} days`}`
+      : `${upcomingDebts.length} debt payments due soon — ${formatCurrency(debtTotal)}`;
+    const body = upcomingDebts.map(d => {
+      const payment = Math.max(d.minimumPayment || 0, d.recurringPayment || 0);
+      return `${d.name}: ${formatCurrency(payment)}`;
+    }).join(', ');
+
+    notifications.push({
+      id: ID_DEBT_REMINDER,
+      title,
+      body,
+      largeBody: body,
+      schedule: { at: debtReminderDate, allowWhileIdle: true },
+      sound: null,
+      actionTypeId: '',
+      extra: { type: 'debt_reminder' },
     });
   }
 

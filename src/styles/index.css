@@ -619,6 +619,33 @@ body.modal-open {
   100% { transform: scale(1); }
 }
 
+/* ── Milestone Celebration Animations ── */
+@keyframes celebrationIn {
+  0% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes celebrationOut {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.8); }
+}
+
+@keyframes celebrationPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes confettiFloat {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(-40px) rotate(180deg); opacity: 0; }
+}
+
+@keyframes milestoneGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  50% { box-shadow: 0 0 20px 4px rgba(16, 185, 129, 0.3); }
+}
+
 /* ═══════════════════════════════════════════════
    Responsive
    ═══════════════════════════════════════════════ */

@@ -368,6 +368,24 @@ export const PartyPopper = ({ size = 24, style = {}, className = '' }) => (
   </svg>
 );
 
+export const Trophy = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <path d="M6 9H4.5a2.5 2.5 0 010-5H6"/>
+    <path d="M18 9h1.5a2.5 2.5 0 000-5H18"/>
+    <path d="M4 22h16"/>
+    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/>
+    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/>
+    <path d="M18 2H6v7a6 6 0 1012 0V2z" fill="currentColor" opacity="0.15"/>
+    <path d="M18 2H6v7a6 6 0 1012 0V2z"/>
+  </svg>
+);
+
+export const Fire = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+    <path d="M12 12c2-2.96 0-7-1-8 0 3.038-1.773 4.741-3 6-1.226 1.26-2 3.24-2 5a6 6 0 1012 0c0-1.532-1.056-3.94-2-5-1.786 3-2.791 3-4 2z"/>
+  </svg>
+);
+
 export const Banknote = ({ size = 24, style = {}, className = '' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
     <rect x="2" y="6" width="20" height="12" rx="2" fill="currentColor" opacity="0.15"/>

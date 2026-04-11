@@ -440,24 +440,92 @@ export function AddDebtScreen({ show, onClose, newDebt, setNewDebt, handleAddDeb
           {/* RECURRING fields */}
           {mode === 'recurring' && (
             <>
-              <div>
-                <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Interest Rate (% APR)</label>
-                <input type="number" className="input" placeholder="0" value={newDebt.interestRate} onChange={(e) => setNewDebt({ ...newDebt, interestRate: e.target.value })} onKeyDown={handleNext} />
+              <div style={{ display: 'grid', gridTemplateColumns: newDebt.type === 'Credit Card' ? '1fr 1fr' : '1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Interest Rate (% APR)</label>
+                  <input type="number" className="input" placeholder="0" value={newDebt.interestRate} onChange={(e) => setNewDebt({ ...newDebt, interestRate: e.target.value })} onKeyDown={handleNext} />
+                </div>
+                {newDebt.type === 'Credit Card' && (
+                  <div>
+                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Credit Limit</label>
+                    <input type="number" className="input" placeholder="e.g. 5000" value={newDebt.creditLimit || ''} onChange={(e) => setNewDebt({ ...newDebt, creditLimit: e.target.value })} onKeyDown={handleNext} />
+                  </div>
+                )}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Minimum Payment</label>
-                  <input type="number" className="input" placeholder="0.00" value={newDebt.minimumPayment} onChange={(e) => setNewDebt({ ...newDebt, minimumPayment: e.target.value })} onKeyDown={handleNext} />
+              {/* Minimum Payment Mode */}
+              <div>
+                <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Minimum Payment</label>
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+                  <button type="button" onClick={() => { haptic.light(); setNewDebt({ ...newDebt, minPaymentMode: 'fixed' }); }}
+                    style={{ flex: 1, padding: '8px', borderRadius: '8px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', textAlign: 'center',
+                      border: (newDebt.minPaymentMode || 'fixed') === 'fixed' ? `2px solid ${tc.info}` : '1px solid var(--border)',
+                      background: (newDebt.minPaymentMode || 'fixed') === 'fixed' ? tc.infoTint : 'var(--glass)',
+                      color: (newDebt.minPaymentMode || 'fixed') === 'fixed' ? tc.info : 'var(--text-muted)',
+                    }}>Fixed Amount</button>
+                  <button type="button" onClick={() => { haptic.light(); setNewDebt({ ...newDebt, minPaymentMode: 'percentage' }); }}
+                    style={{ flex: 1, padding: '8px', borderRadius: '8px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', textAlign: 'center',
+                      border: newDebt.minPaymentMode === 'percentage' ? `2px solid ${tc.purple}` : '1px solid var(--border)',
+                      background: newDebt.minPaymentMode === 'percentage' ? tc.purpleTint : 'var(--glass)',
+                      color: newDebt.minPaymentMode === 'percentage' ? tc.purple : 'var(--text-muted)',
+                    }}>% of Balance</button>
                 </div>
-                <div>
-                  <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Auto Monthly</label>
-                  <input type="number" className="input" placeholder="0.00" value={newDebt.recurringPayment} onChange={(e) => setNewDebt({ ...newDebt, recurringPayment: e.target.value })} onKeyDown={handleNext} />
-                </div>
+                {(newDebt.minPaymentMode || 'fixed') === 'fixed' ? (
+                  <input type="number" className="input" placeholder="e.g. 25.00" value={newDebt.minimumPayment} onChange={(e) => setNewDebt({ ...newDebt, minimumPayment: e.target.value })} onKeyDown={handleNext} />
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div>
+                        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px', marginBottom: '4px' }}>% of balance</label>
+                        <input type="number" className="input" placeholder="e.g. 2.5" value={newDebt.minPaymentPct || ''} onChange={(e) => setNewDebt({ ...newDebt, minPaymentPct: e.target.value })} onKeyDown={handleNext} />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px', marginBottom: '4px' }}>Floor (min {cs})</label>
+                        <input type="number" className="input" placeholder="e.g. 25" value={newDebt.minPaymentFloor || ''} onChange={(e) => setNewDebt({ ...newDebt, minPaymentFloor: e.target.value })} onKeyDown={handleNext} />
+                      </div>
+                    </div>
+                    {total > 0 && parseFloat(newDebt.minPaymentPct) > 0 && (
+                      <div style={{ fontSize: '12px', color: tc.purple, padding: '8px 10px', borderRadius: '8px', background: tc.purpleTint, border: '1px solid rgba(124,58,237,0.15)' }}>
+                        Current minimum: {cs}{Math.max(parseFloat(newDebt.minPaymentFloor) || 0, total * (parseFloat(newDebt.minPaymentPct) || 0) / 100 + total * (parseFloat(newDebt.interestRate) || 0) / 100 / 12).toFixed(2)}/mo
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Auto Monthly Payment</label>
+                <input type="number" className="input" placeholder="0.00" value={newDebt.recurringPayment} onChange={(e) => setNewDebt({ ...newDebt, recurringPayment: e.target.value })} onKeyDown={handleNext} />
               </div>
               <div>
                 <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Payment Day</label>
                 <input type="number" className="input" placeholder="Day of month (1-31)" min="1" max="31" value={newDebt.paymentDate || ''} onKeyDown={handleNext} onChange={(e) => { const v = e.target.value; if (v === '') { setNewDebt({ ...newDebt, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setNewDebt({ ...newDebt, paymentDate: String(Math.min(31, Math.max(1, n))) }); }} />
               </div>
+
+              {/* Balance Transfer */}
+              {(newDebt.type === 'Credit Card' || newDebt.balanceTransfer) && (
+                <div>
+                  <button type="button" onClick={() => { haptic.light(); setNewDebt({ ...newDebt, balanceTransfer: !newDebt.balanceTransfer }); }}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px', fontWeight: '500',
+                      border: newDebt.balanceTransfer ? `2px solid ${tc.info}` : '1px solid var(--border)',
+                      background: newDebt.balanceTransfer ? tc.infoTint : 'var(--glass)',
+                      color: newDebt.balanceTransfer ? tc.info : 'var(--text-secondary)',
+                    }}>
+                    <span>0% Balance Transfer</span>
+                    <span style={{ fontSize: '11px', fontWeight: '600' }}>{newDebt.balanceTransfer ? 'ON' : 'OFF'}</span>
+                  </button>
+                  {newDebt.balanceTransfer && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>0% Ends</label>
+                        <input type="date" className={`input ${newDebt.btEndDate ? 'has-value' : ''}`} value={newDebt.btEndDate || ''} onChange={(e) => setNewDebt({ ...newDebt, btEndDate: e.target.value })} />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Revert APR %</label>
+                        <input type="number" className="input" placeholder="e.g. 24.9" value={newDebt.btRevertRate || ''} onChange={(e) => setNewDebt({ ...newDebt, btRevertRate: e.target.value })} onKeyDown={handleNext} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
 

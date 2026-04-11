@@ -14,6 +14,7 @@ import CurrencyPrompt from './components/CurrencyPrompt';
 import OnboardingFlow from './components/OnboardingFlow';
 import CSVImportModal from './components/CSVImportModal';
 import { initKeyboardScroll } from './utils/keyboardScroll';
+import { compareStrategies, calcDynamicMinimum } from './utils/debtStrategy';
 import { CurrencyProvider } from './components/CurrencyContext';
 import { getSymbol, loadCurrencyPreference, saveCurrencyPreference, CURRENCIES } from './utils/currency';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -186,8 +187,11 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [editDebtForm, setEditDebtForm] = useState({});
   const [debtPaymentAmounts, setDebtPaymentAmounts] = useState({});
   const [showDebtHistory, setShowDebtHistory] = useState({});
-  const emptyDebt = { name: '', type: 'Credit Card', totalAmount: '', interestRate: '', minimumPayment: '', recurringPayment: '', paymentDate: '', paymentMode: 'recurring', dueDate: '', installmentMonths: '', installmentStartDate: '', bnplPromoMonths: '', bnplStartDate: '', bnplPostInterest: '', bnplPostPayment: '' };
+  const emptyDebt = { name: '', type: 'Credit Card', totalAmount: '', interestRate: '', minimumPayment: '', recurringPayment: '', paymentDate: '', paymentMode: 'recurring', dueDate: '', installmentMonths: '', installmentStartDate: '', bnplPromoMonths: '', bnplStartDate: '', bnplPostInterest: '', bnplPostPayment: '', balanceTransfer: false, btEndDate: '', btRevertRate: '', minPaymentMode: 'fixed', minPaymentPct: '', minPaymentFloor: '', creditLimit: '' };
   const [newDebt, setNewDebt] = useState({ ...emptyDebt });
+  const [debtStrategy, setDebtStrategy] = useState('avalanche');
+  const [extraDebtPayment, setExtraDebtPayment] = useState(0);
+  const [debtCelebration, setDebtCelebration] = useState(null);
 
   // ── Savings state ──
   const [savings, setSavings] = useState([]);
@@ -364,14 +368,14 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     }).catch(() => {});
   }, []);
 
-  // ── Schedule notifications when bills change ──
+  // ── Schedule notifications when bills/debts change ──
   useEffect(() => {
-    if (bills.length === 0) return;
+    if (bills.length === 0 && debts.length === 0) return;
     const timer = setTimeout(() => {
-      scheduleNotifications(bills, notificationSettings);
+      scheduleNotifications(bills, notificationSettings, debts);
     }, 5000); // 5 second debounce (after auto-save)
     return () => clearTimeout(timer);
-  }, [bills, notificationSettings]);
+  }, [bills, debts, notificationSettings]);
 
   // Load notification settings on mount
   useEffect(() => {
@@ -717,6 +721,13 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const totalDebt = debts.filter(d => !d.archived).reduce((sum, d) => sum + (d.totalAmount || 0), 0);
   const totalSaved = savings.reduce((sum, s) => sum + (s.currentAmount || 0), 0);
 
+  // Strategy comparison — memoized to avoid recalculating on every render
+  const strategyResults = React.useMemo(() => {
+    const active = debts.filter(d => !d.archived && d.totalAmount > 0);
+    if (active.length < 2) return null; // Need 2+ debts for strategy to matter
+    return compareStrategies(active, extraDebtPayment);
+  }, [debts, extraDebtPayment]);
+
   // ── Smart Insights ──
   const lastSnapshot = monthlySnapshots.length > 0 ? monthlySnapshots[monthlySnapshots.length - 1] : null;
   const lastCatTotals = lastSnapshot?.categories || {};
@@ -764,7 +775,40 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const filteredBills = bills.filter((b) => { const catMatch = selectedCategory === 'ALL' || b.category === selectedCategory; if (!catMatch) return false; if (billSearch && !b.name.toLowerCase().includes(billSearch.toLowerCase())) return false; switch (statusFilter) { case 'PAID': return b.paid && !b.missed; case 'UNPAID': return !b.paid && !b.missed && !b.paused; case 'MISSED': return b.missed; case 'PAUSED': return b.paused; case 'RECURRING': return b.recurring; case 'ONE-OFF': return !b.recurring; default: return true; } }).sort((a, b) => { switch (billSort) { case 'name': return a.name.localeCompare(b.name); case 'amount-high': return (b.actual || 0) - (a.actual || 0); case 'amount-low': return (a.actual || 0) - (b.actual || 0); case 'status': return (a.paid === b.paid) ? 0 : a.paid ? 1 : -1; default: return 0; } });
 
   // ── Debt handlers ──
-  const handleAddDebt = () => { const errors = {}; if (!newDebt.name.trim()) errors['debt-name'] = true; if (!newDebt.totalAmount) errors['debt-amount'] = true; const mode = newDebt.paymentMode || 'recurring'; if (mode === 'one-off' && !newDebt.dueDate) errors['debt-dueDate'] = true; if (mode === 'installment' && !newDebt.installmentMonths) errors['debt-installmentMonths'] = true; if (mode === 'installment' && !newDebt.installmentStartDate) errors['debt-installmentStartDate'] = true; if (mode === 'bnpl' && !newDebt.bnplPromoMonths) errors['debt-bnplPromoMonths'] = true; if (mode === 'bnpl' && !newDebt.bnplStartDate) errors['debt-bnplStartDate'] = true; if (Object.keys(errors).length > 0) { setValidationErrors(errors); haptic.warning(); return; } setValidationErrors({}); const id = Date.now().toString(), total = parseFloat(newDebt.totalAmount) || 0; const debt = { ...newDebt, id, totalAmount: total, originalAmount: total, interestRate: parseFloat(newDebt.interestRate) || 0, minimumPayment: parseFloat(newDebt.minimumPayment) || 0, recurringPayment: parseFloat(newDebt.recurringPayment) || 0, installmentMonths: parseInt(newDebt.installmentMonths) || 0, bnplPromoMonths: parseInt(newDebt.bnplPromoMonths) || 0, bnplPostInterest: parseFloat(newDebt.bnplPostInterest) || 0, bnplPostPayment: parseFloat(newDebt.bnplPostPayment) || 0, payments: [] }; if (debt.paymentMode === 'installment' && debt.installmentMonths > 0) { debt.recurringPayment = Math.ceil((total / debt.installmentMonths) * 100) / 100; } setDebts([...debts, debt]); setShowDebtModal(false); setValidationErrors({}); setNewDebt({ ...emptyDebt }); haptic.success(); toast('Debt added', 'success'); };
+  const handleAddDebt = () => {
+    const errors = {};
+    if (!newDebt.name.trim()) errors['debt-name'] = true;
+    if (!newDebt.totalAmount || parseFloat(newDebt.totalAmount) <= 0) errors['debt-amount'] = true;
+    const mode = newDebt.paymentMode || 'recurring';
+    if (mode === 'one-off' && !newDebt.dueDate) errors['debt-dueDate'] = true;
+    if (mode === 'installment' && (!newDebt.installmentMonths || parseInt(newDebt.installmentMonths) <= 0)) errors['debt-installmentMonths'] = true;
+    if (mode === 'installment' && !newDebt.installmentStartDate) errors['debt-installmentStartDate'] = true;
+    if (mode === 'bnpl' && (!newDebt.bnplPromoMonths || parseInt(newDebt.bnplPromoMonths) <= 0)) errors['debt-bnplPromoMonths'] = true;
+    if (mode === 'bnpl' && !newDebt.bnplStartDate) errors['debt-bnplStartDate'] = true;
+    if (Object.keys(errors).length > 0) { setValidationErrors(errors); haptic.warning(); return; }
+    setValidationErrors({});
+    const id = Date.now().toString(), total = parseFloat(newDebt.totalAmount) || 0;
+    const debt = { ...newDebt, id, totalAmount: total, originalAmount: total,
+      interestRate: Math.max(0, parseFloat(newDebt.interestRate) || 0),
+      minimumPayment: Math.max(0, parseFloat(newDebt.minimumPayment) || 0),
+      recurringPayment: Math.max(0, parseFloat(newDebt.recurringPayment) || 0),
+      installmentMonths: Math.max(0, parseInt(newDebt.installmentMonths) || 0),
+      bnplPromoMonths: Math.max(0, parseInt(newDebt.bnplPromoMonths) || 0),
+      bnplPostInterest: Math.max(0, parseFloat(newDebt.bnplPostInterest) || 0),
+      bnplPostPayment: Math.max(0, parseFloat(newDebt.bnplPostPayment) || 0),
+      balanceTransfer: !!newDebt.balanceTransfer,
+      btEndDate: newDebt.btEndDate || '',
+      btRevertRate: parseFloat(newDebt.btRevertRate) || 0,
+      minPaymentMode: newDebt.minPaymentMode || 'fixed',
+      minPaymentPct: parseFloat(newDebt.minPaymentPct) || 0,
+      minPaymentFloor: parseFloat(newDebt.minPaymentFloor) || 0,
+      creditLimit: Math.max(0, parseFloat(newDebt.creditLimit) || 0),
+      payments: [] };
+    if (debt.paymentMode === 'installment' && debt.installmentMonths > 0) {
+      debt.recurringPayment = Math.round((total / debt.installmentMonths) * 100) / 100;
+    }
+    setDebts([...debts, debt]); setShowDebtModal(false); setValidationErrors({}); setNewDebt({ ...emptyDebt }); haptic.success(); toast('Debt added', 'success');
+  };
   const handleDeleteDebt = async (id) => { if (await confirm('Delete this debt?', { title: 'Delete Debt', okText: 'Delete', danger: true })) { setDebts(debts.filter((d) => d.id !== id)); haptic.error(); toast('Debt deleted', 'error'); return true; } return false; };
   const handleArchiveDebt = (id) => { setDebts(debts.map((d) => d.id !== id ? d : { ...d, archived: true, archivedAt: d.archivedAt || new Date().toISOString() })); haptic.success(); toast('Debt archived', 'success'); };
   const handleUnarchiveDebt = (id) => { setDebts(debts.map((d) => d.id !== id ? d : { ...d, archived: false })); haptic.medium(); toast('Debt restored', 'info'); };
@@ -778,27 +822,96 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
       const newOriginal = newTotal > (d.originalAmount || d.totalAmount)
         ? newTotal
         : (d.originalAmount || d.totalAmount);
-      return {
+      const saved = {
         ...editDebtForm,
-        totalAmount: newTotal,
-        originalAmount: newOriginal,
-        interestRate: parseFloat(editDebtForm.interestRate) || 0,
-        minimumPayment: parseFloat(editDebtForm.minimumPayment) || 0,
-        recurringPayment: parseFloat(editDebtForm.recurringPayment) || 0,
-        installmentMonths: parseInt(editDebtForm.installmentMonths) || 0,
-        bnplPromoMonths: parseInt(editDebtForm.bnplPromoMonths) || 0,
-        bnplPostInterest: parseFloat(editDebtForm.bnplPostInterest) || 0,
-        bnplPostPayment: parseFloat(editDebtForm.bnplPostPayment) || 0,
+        totalAmount: Math.max(0, newTotal),
+        originalAmount: Math.max(0, newOriginal),
+        interestRate: Math.max(0, parseFloat(editDebtForm.interestRate) || 0),
+        minimumPayment: Math.max(0, parseFloat(editDebtForm.minimumPayment) || 0),
+        recurringPayment: Math.max(0, parseFloat(editDebtForm.recurringPayment) || 0),
+        installmentMonths: Math.max(0, parseInt(editDebtForm.installmentMonths) || 0),
+        bnplPromoMonths: Math.max(0, parseInt(editDebtForm.bnplPromoMonths) || 0),
+        bnplPostInterest: Math.max(0, parseFloat(editDebtForm.bnplPostInterest) || 0),
+        bnplPostPayment: Math.max(0, parseFloat(editDebtForm.bnplPostPayment) || 0),
         paymentDate: editDebtForm.paymentDate ? String(Math.min(31, Math.max(1, parseInt(editDebtForm.paymentDate) || 0))) : '',
+        balanceTransfer: !!editDebtForm.balanceTransfer,
+        btEndDate: editDebtForm.btEndDate || '',
+        btRevertRate: parseFloat(editDebtForm.btRevertRate) || 0,
+        minPaymentMode: editDebtForm.minPaymentMode || 'fixed',
+        minPaymentPct: parseFloat(editDebtForm.minPaymentPct) || 0,
+        minPaymentFloor: parseFloat(editDebtForm.minPaymentFloor) || 0,
+        creditLimit: Math.max(0, parseFloat(editDebtForm.creditLimit) || 0),
       };
+      // Recalculate installment recurringPayment if in installment mode
+      if (saved.paymentMode === 'installment' && saved.installmentMonths > 0 && saved.originalAmount > 0) {
+        saved.recurringPayment = Math.round((saved.originalAmount / saved.installmentMonths) * 100) / 100;
+      }
+      return saved;
     }));
     setEditingDebtId(null);
     setEditDebtForm({});
     haptic.medium();
     toast('Debt updated', 'success');
   };
-  const handleMakePayment = (debtId) => { const amount = parseFloat(debtPaymentAmounts[debtId]); if (!amount || amount <= 0) return; const debt = debts.find(d => d.id === debtId); const newTotal = Math.max(0, (debt?.totalAmount || 0) - amount); setDebts(debts.map((d) => d.id !== debtId ? d : { ...d, totalAmount: newTotal, payments: [...(d.payments || []), { date: new Date().toISOString(), amount, type: 'manual' }] })); setDebtPaymentAmounts({ ...debtPaymentAmounts, [debtId]: '' }); haptic.success(); if (newTotal === 0) { toast('🎉 Debt paid off!', 'success'); setTimeout(() => { setDebts(prev => prev.map(d => d.id !== debtId ? d : { ...d, archived: true, archivedAt: new Date().toISOString() })); }, 1500); } else { toast(`${getSymbol(currencyCode)}${amount.toFixed(2)} payment made`, 'success'); } };
-  const calculatePayoff = (debt, monthlyPayment) => { if (!monthlyPayment || monthlyPayment <= 0 || debt.totalAmount <= 0) return null; const r = (debt.interestRate || 0) / 100 / 12; let bal = debt.totalAmount, m = 0, ti = 0; while (bal > 0 && m < 600) { const i = bal * r; ti += i; bal = bal + i - monthlyPayment; m++; if (monthlyPayment <= i) return { months: Infinity, totalInterest: Infinity }; } return { months: m, totalInterest: ti, totalPaid: debt.totalAmount + ti }; };
+  const handleMakePayment = (debtId) => {
+    const amount = parseFloat(debtPaymentAmounts[debtId]);
+    if (!amount || amount <= 0) return;
+    const debt = debts.find(d => d.id === debtId);
+    if (!debt) return;
+    const remaining = debt.totalAmount || 0;
+    const original = debt.originalAmount || 0;
+    // Cap payment at remaining balance — don't record more than what's owed
+    const actualPayment = Math.min(amount, remaining);
+    const newTotal = Math.max(0, remaining - amount);
+
+    // Detect milestone crossing (25/50/75/100%)
+    let hitMilestone = null;
+    if (original > 0) {
+      const oldProgress = ((original - remaining) / original) * 100;
+      const newProgress = ((original - newTotal) / original) * 100;
+      const milestones = [25, 50, 75, 100];
+      for (let i = milestones.length - 1; i >= 0; i--) {
+        if (oldProgress < milestones[i] && newProgress >= milestones[i]) {
+          hitMilestone = milestones[i];
+          setDebtCelebration({ milestone: milestones[i], debtName: debt.name });
+          break;
+        }
+      }
+    }
+
+    setDebts(debts.map((d) => d.id !== debtId ? d : { ...d, totalAmount: newTotal, payments: [...(d.payments || []), { date: new Date().toISOString(), amount: actualPayment, type: 'manual' }] }));
+    setDebtPaymentAmounts({ ...debtPaymentAmounts, [debtId]: '' });
+    // Stronger haptic for milestone moments
+    if (hitMilestone === 100) { haptic.success(); setTimeout(() => haptic.success(), 200); }
+    else if (hitMilestone) haptic.success();
+    else haptic.success();
+    if (newTotal === 0) {
+      // Celebration overlay handles the 100% message; no toast needed
+      if (!hitMilestone) toast('🎉 Debt destroyed!', 'success');
+      // Delay archive so user sees the celebration overlay
+      setTimeout(() => { setDebts(prev => prev.map(d => d.id !== debtId ? d : { ...d, archived: true, archivedAt: new Date().toISOString() })); }, 4000);
+    } else if (!hitMilestone) {
+      toast(`${getSymbol(currencyCode)}${actualPayment.toFixed(2)} payment made`, 'success');
+    }
+  };
+  const calculatePayoff = (debt, monthlyPayment) => {
+    if (!monthlyPayment || monthlyPayment <= 0 || debt.totalAmount <= 0) return null;
+    const r = (debt.interestRate || 0) / 100 / 12;
+    const isDynamic = debt.minPaymentMode === 'percentage' && debt.minPaymentPct > 0;
+    let bal = debt.totalAmount, m = 0, ti = 0;
+    while (bal > 0 && m < 600) {
+      const i = bal * r;
+      // For dynamic minimum mode, recalculate the effective payment each month
+      let payment = monthlyPayment;
+      if (isDynamic) {
+        const dynMin = calcDynamicMinimum(bal, debt.interestRate, debt.minPaymentPct, debt.minPaymentFloor);
+        payment = Math.max(monthlyPayment, dynMin);
+      }
+      if (payment <= i) return { months: Infinity, totalInterest: Infinity };
+      ti += i; bal = bal + i - payment; m++;
+    }
+    return { months: m, totalInterest: Math.round(ti * 100) / 100, totalPaid: Math.round((debt.totalAmount + ti) * 100) / 100 };
+  };
 
   // ── Savings handlers ──
   const handleAddSavings = () => { const errors = {}; if (!newSavingsGoal.name.trim()) errors['savings-name'] = true; if (Object.keys(errors).length > 0) { setValidationErrors(errors); haptic.warning(); return; } setValidationErrors({}); const id = Date.now().toString(); const startingAmount = parseFloat(newSavingsGoal.startingAmount) || 0; const transactions = startingAmount > 0 ? [{ type: 'deposit', amount: startingAmount, date: new Date().toISOString(), note: 'Starting balance' }] : []; setSavings([...savings, { ...newSavingsGoal, id, currentAmount: startingAmount, targetAmount: parseFloat(newSavingsGoal.targetAmount) || 0, monthlyContribution: parseFloat(newSavingsGoal.monthlyContribution) || 0, transactions }]); setShowSavingsModal(false); setValidationErrors({}); setNewSavingsGoal({ ...emptySavings }); haptic.success(); toast('Savings goal created', 'success'); };
@@ -853,11 +966,11 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
           </div>
           <div className="nav-dots" style={{ position: 'relative' }}>
             {/* Profile icon - left side */}
-            <button onClick={() => { setShowAccountModal(true); haptic.light(); }} style={{
+            <button onClick={() => { if (window.__tallySelectionMode) return; setShowAccountModal(true); haptic.light(); }} style={{
               position: 'absolute', left: '0', top: '50%', transform: 'translateY(-50%)',
               width: '28px', height: '28px', borderRadius: '50%', border: 'none', cursor: 'pointer',
               background: user ? 'linear-gradient(135deg, #06b6d4, #8b5cf6)' : 'rgba(255,255,255,0.1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent',
               fontSize: '12px', fontWeight: '700', color: user ? '#fff' : 'var(--text-muted)',
               padding: 0,
             }}>
@@ -873,17 +986,17 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
               }} />
             )}
             {PANEL_NAMES.map((name, i) => (
-              <div key={name} className={`nav-dot-item ${activePanel === i ? 'active' : ''}`} onClick={() => { goToPanel(i); haptic.light(); }}>
+              <div key={name} className={`nav-dot-item ${activePanel === i ? 'active' : ''}`} style={{ WebkitTapHighlightColor: 'transparent' }} onClick={() => { if (window.__tallySelectionMode) return; goToPanel(i); haptic.light(); }}>
                 <div className="nav-dot" />
                 <span className="nav-dot-label">{name}</span>
               </div>
             ))}
             {/* Settings cog - right side */}
-            <button onClick={() => { setShowSettingsModal(true); haptic.light(); }} style={{
+            <button onClick={() => { if (window.__tallySelectionMode) return; setShowSettingsModal(true); haptic.light(); }} style={{
               position: 'absolute', right: '0', top: '50%', transform: 'translateY(-50%)',
               width: '28px', height: '28px', borderRadius: '50%', border: 'none', cursor: 'pointer',
               background: 'var(--glass)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: 0, color: 'var(--text-muted)',
+              padding: 0, color: 'var(--text-muted)', WebkitTapHighlightColor: 'transparent',
             }}>
               <Icons.Settings size={16} />
             </button>
@@ -899,7 +1012,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 
       {/* Swipe Container */}
       {isMobile ? (
-        <div className="swipe-container" onTouchStart={handleTouchStart}>
+        <div className="swipe-container" onTouchStart={(e) => { if (window.__tallySelectionMode) return; handleTouchStart(e); }}>
           <div className="swipe-track" ref={swipeRef} style={{ transform: `translateX(${-activePanel * 100}%)` }}>
             <div className={`swipe-panel ${activePanel === 0 ? 'panel-active' : ''}`}>
               <OverviewPanel totals={totals} incomeNum={incomeNum} categoryTotals={categoryTotals} isMobile={isMobile} monthlySnapshots={monthlySnapshots} totalDebt={totalDebt} totalSaved={totalSaved} insights={insights} bills={bills} debts={debts} savings={savings} />
@@ -911,7 +1024,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
               <BillsPanel categories={['ALL', ...categories]} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} statusFilter={statusFilter} setStatusFilter={setStatusFilter} filteredBills={filteredBills} editingId={editingId} editForm={editForm} setEditForm={setEditForm} handleEditStart={handleEditStart} handleEditSave={handleEditSave} handleDelete={handleDelete} handleTogglePaid={handleTogglePaid} handleToggleMissed={handleToggleMissed} handleTogglePaused={handleTogglePaused} setEditingId={setEditingId} billSearch={billSearch} setBillSearch={setBillSearch} billSort={billSort} setBillSort={setBillSort} onBulkDelete={handleBulkDeleteBills} onBulkTogglePaid={handleBulkTogglePaid} onBulkToggleMissed={handleBulkToggleMissed} onBulkTogglePaused={handleBulkTogglePaused} activePanel={activePanel} setShowAddModal={setShowAddModal} setShowCategoryModal={setShowCategoryModal} />
             </div>
             <div className={`swipe-panel ${activePanel === 3 ? 'panel-active' : ''}`}>
-              <DebtPanel debts={debts} totalDebt={totalDebt} calculatePayoff={calculatePayoff} editingDebtId={editingDebtId} editDebtForm={editDebtForm} setEditDebtForm={setEditDebtForm} handleDebtEditStart={handleDebtEditStart} handleDebtEditSave={handleDebtEditSave} handleDeleteDebt={handleDeleteDebt} handleMakePayment={handleMakePayment} debtPaymentAmounts={debtPaymentAmounts} setDebtPaymentAmounts={setDebtPaymentAmounts} showDebtHistory={showDebtHistory} setShowDebtHistory={setShowDebtHistory} setEditingDebtId={setEditingDebtId} setShowDebtModal={setShowDebtModal} handleArchiveDebt={handleArchiveDebt} handleUnarchiveDebt={handleUnarchiveDebt} />
+              <DebtPanel debts={debts} totalDebt={totalDebt} calculatePayoff={calculatePayoff} editingDebtId={editingDebtId} editDebtForm={editDebtForm} setEditDebtForm={setEditDebtForm} handleDebtEditStart={handleDebtEditStart} handleDebtEditSave={handleDebtEditSave} handleDeleteDebt={handleDeleteDebt} handleMakePayment={handleMakePayment} debtPaymentAmounts={debtPaymentAmounts} setDebtPaymentAmounts={setDebtPaymentAmounts} showDebtHistory={showDebtHistory} setShowDebtHistory={setShowDebtHistory} setEditingDebtId={setEditingDebtId} setShowDebtModal={setShowDebtModal} handleArchiveDebt={handleArchiveDebt} handleUnarchiveDebt={handleUnarchiveDebt} debtStrategy={debtStrategy} setDebtStrategy={setDebtStrategy} extraDebtPayment={extraDebtPayment} setExtraDebtPayment={setExtraDebtPayment} strategyResults={strategyResults} debtCelebration={debtCelebration} setDebtCelebration={setDebtCelebration} incomeNum={incomeNum} />
             </div>
             <div className={`swipe-panel ${activePanel === 4 ? 'panel-active' : ''}`}>
               <SavingsPanel savings={savings} totalSaved={totalSaved} editingSavingsId={editingSavingsId} editSavingsForm={editSavingsForm} setEditSavingsForm={setEditSavingsForm} handleSavingsEditStart={handleSavingsEditStart} handleSavingsEditSave={handleSavingsEditSave} handleDeleteSavings={handleDeleteSavings} handleSavingsDeposit={handleSavingsDeposit} handleSavingsWithdraw={handleSavingsWithdraw} savingsTransactionAmounts={savingsTransactionAmounts} setSavingsTransactionAmounts={setSavingsTransactionAmounts} showSavingsHistory={showSavingsHistory} setShowSavingsHistory={setShowSavingsHistory} calculateSavingsEstimate={calculateSavingsEstimate} setEditingSavingsId={setEditingSavingsId} setShowSavingsModal={setShowSavingsModal} handleArchiveSavings={handleArchiveSavings} handleUnarchiveSavings={handleUnarchiveSavings} />
