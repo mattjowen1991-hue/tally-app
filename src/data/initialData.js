@@ -55,7 +55,7 @@ export const initialBills = [
   { id: '39', name: 'Vodafone Extra Costs', category: 'PAYMENTS', projected: 0, actual: 0, paymentDate: 'N/A', paid: false },
 ];
 
-export const DEFAULT_CATEGORIES = ['HOME', 'TRANSPORTATION', 'CREDIT CARDS', 'ENTERTAINMENT', 'HEALTH', 'PAYMENTS'];
+export const DEFAULT_CATEGORIES = ['HOME', 'TRANSPORTATION', 'ENTERTAINMENT', 'HEALTH', 'PAYMENTS', 'SUBSCRIPTIONS'];
 
 export const DEBT_TYPES = [
   'Credit Card', 'Personal Loan', 'Student Loan', 'Car Loan',

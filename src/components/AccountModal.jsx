@@ -1,5 +1,6 @@
 import { tc } from '../utils/themeColors';
 import React, { useState } from 'react';
+import * as Icons from './Icons';
 import haptic from '../utils/haptics';
 
 export default function AccountModal({ show, onClose, user, onSignIn, onSignUp, onSignOut, onResetPassword, onGoogleSignIn, syncStatus, onSyncNow, onDeleteAccount, onClearLocalData, lastSynced }) {
@@ -196,7 +197,7 @@ export default function AccountModal({ show, onClose, user, onSignIn, onSignUp, 
                 background: 'transparent', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500',
                 cursor: 'pointer', marginBottom: '10px', textAlign: 'left',
               }}>
-                🗑️ &nbsp;Remove data from this device
+                <Icons.Trash size={14} style={{ verticalAlign: '-2px' }} /> &nbsp;Remove data from this device
                 <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                   Clears local data only. Your cloud backup is not affected.
                 </span>
@@ -207,7 +208,7 @@ export default function AccountModal({ show, onClose, user, onSignIn, onSignUp, 
                 background: 'transparent', color: tc.danger, fontSize: '14px', fontWeight: '500',
                 cursor: 'pointer', textAlign: 'left',
               }}>
-                ⚠️ &nbsp;Delete account & all data
+                <Icons.Warning size={14} style={{ verticalAlign: '-2px' }} /> &nbsp;Delete account & all data
                 <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                   Permanently deletes your account, cloud data, and local data. This cannot be reversed.
                 </span>

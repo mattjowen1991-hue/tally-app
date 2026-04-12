@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import * as Icons from './Icons';
 import { tc } from '../utils/themeColors';
 import { DEFAULT_CATEGORIES, DEBT_TYPES, SAVINGS_CATEGORIES } from '../data/initialData';
+import { EmojiPicker } from './SavingsPanel';
 import haptic from '../utils/haptics';
 import {
   DndContext,
@@ -79,6 +80,22 @@ export function AddBillScreen({ show, onClose, newBill, setNewBill, handleAddBil
                 <option value="Weekly">Weekly</option><option value="Fortnightly">Fortnightly</option><option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option><option value="Yearly">Yearly</option>
               </select>
             </div>
+          )}
+          {newBill.recurring && (
+            <button type="button" onClick={() => { haptic.light(); setNewBill({ ...newBill, autoPay: !newBill.autoPay }); }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px', fontWeight: '500',
+                border: newBill.autoPay ? `2px solid ${tc.success}` : '1px solid var(--border)',
+                background: newBill.autoPay ? tc.successTintLight : 'var(--glass)',
+                color: newBill.autoPay ? tc.success : 'var(--text-secondary)',
+              }}>
+              <div>
+                <div>{newBill.autoPay ? '✓ Direct Debit / Auto-pay' : 'Manual Payment'}</div>
+                <div style={{ fontSize: '11px', fontWeight: '400', marginTop: '2px', opacity: 0.7 }}>
+                  {newBill.autoPay ? 'Auto-marks as paid on due date' : 'You\'ll confirm payment manually'}
+                </div>
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: '600' }}>{newBill.autoPay ? 'ON' : 'OFF'}</span>
+            </button>
           )}
           {!newBill.recurring ? (
             <div>
@@ -263,12 +280,25 @@ function DragOverlayCard({ cat, bills }) {
   );
 }
 
-export function ManageCategoriesModal({ show, onClose, bills, customCategories, categoryOrder, newCategoryName, setNewCategoryName, handleAddCategory, handleDeleteCategory, handleRenameCategory, handleMoveCategory }) {
+export function ManageCategoriesModal({ show, onClose, bills, customCategories, categoryOrder, newCategoryName, setNewCategoryName, handleAddCategory, handleDeleteCategory, handleRenameCategory, handleMoveCategory, debts, customDebtTypes, setCustomDebtTypes, savings, customSavingsCategories, setCustomSavingsCategories, defaultSection }) {
   const [categoryError, setCategoryError] = useState(false);
+  const [newDebtType, setNewDebtType] = useState('');
+  const [newSavingsCat, setNewSavingsCat] = useState('');
+  const [showBillSection, setShowBillSection] = useState(true);
+  const [showDebtSection, setShowDebtSection] = useState(false);
+  const [showSavingsSection, setShowSavingsSection] = useState(false);
   const [editingCat, setEditingCat] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [activeDragCat, setActiveDragCat] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
+
+  // When modal opens, expand the requested section
+  useEffect(() => {
+    if (!show) return;
+    setShowBillSection(defaultSection === 'debts' ? false : defaultSection === 'savings' ? false : true);
+    setShowDebtSection(defaultSection === 'debts');
+    setShowSavingsSection(defaultSection === 'savings');
+  }, [show, defaultSection]);
 
   const handleClose = () => { haptic.light(); onClose(); setCategoryError(false); setEditingCat(null); setPendingDelete(null); };
   const handleAdd = () => {
@@ -317,32 +347,117 @@ export function ManageCategoriesModal({ show, onClose, bills, customCategories, 
         </div>
         <div className="form-screen-body">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* ── Bill Categories Section ── */}
             <div>
-              <label style={{ display: 'block', color: categoryError ? tc.danger : 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Add New Category</label>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input className={`input${categoryError ? ' input-error' : ''}`} placeholder="e.g., GROCERIES" value={newCategoryName}
-                  onChange={(e) => { setNewCategoryName(e.target.value); if (categoryError) setCategoryError(false); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }} style={{ flex: 1 }} />
-                <button className="btn btn-primary" onMouseDown={(e) => { e.preventDefault(); handleAdd(); }}><Icons.Plus size={18} /></button>
-              </div>
+              <button onClick={() => { haptic.light(); setShowBillSection(v => !v); }}
+                style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: '0', marginBottom: showBillSection ? '12px' : '0' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '500' }}>BILL CATEGORIES</span>
+                <span style={{ color: 'var(--text-muted)', transition: 'transform 0.2s', transform: showBillSection ? 'rotate(180deg)' : 'none', display: 'flex' }}><Icons.ChevronDown size={16} /></span>
+              </button>
+              {showBillSection && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', color: categoryError ? tc.danger : 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Add New Category</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input className={`input${categoryError ? ' input-error' : ''}`} placeholder="e.g., GROCERIES" value={newCategoryName}
+                        onChange={(e) => { setNewCategoryName(e.target.value); if (categoryError) setCategoryError(false); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }} style={{ flex: 1 }} />
+                      <button className="btn btn-primary" onMouseDown={(e) => { e.preventDefault(); handleAdd(); }}><Icons.Plus size={18} /></button>
+                    </div>
+                  </div>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                    <SortableContext items={orderedList} strategy={verticalListSortingStrategy}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {orderedList.map((cat) => (
+                          <SortableCategoryRow key={cat} cat={cat} bills={bills}
+                            isEditing={editingCat === cat} editValue={editValue} setEditValue={setEditValue}
+                            onStartEdit={() => startEdit(cat)} onCommitEdit={commitEdit} onCancelEdit={cancelEdit}
+                            onDelete={() => { haptic.light(); setPendingDelete(cat); }} />
+                        ))}
+                      </div>
+                    </SortableContext>
+                    <DragOverlay dropAnimation={{ duration: 180, easing: 'ease' }}>
+                      {activeDragCat ? <DragOverlayCard cat={activeDragCat} bills={bills} /> : null}
+                    </DragOverlay>
+                  </DndContext>
+                </div>
+              )}
             </div>
+
+            {/* ── Debt Types Section ── */}
             <div>
-              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: '500' }}>CATEGORY ORDER</div>
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-                <SortableContext items={orderedList} strategy={verticalListSortingStrategy}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {orderedList.map((cat) => (
-                      <SortableCategoryRow key={cat} cat={cat} bills={bills}
-                        isEditing={editingCat === cat} editValue={editValue} setEditValue={setEditValue}
-                        onStartEdit={() => startEdit(cat)} onCommitEdit={commitEdit} onCancelEdit={cancelEdit}
-                        onDelete={() => { haptic.light(); setPendingDelete(cat); }} />
+              <button onClick={() => { haptic.light(); setShowDebtSection(v => !v); }}
+                style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: '0', marginBottom: showDebtSection ? '12px' : '0' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '500' }}>DEBT TYPES</span>
+                <span style={{ color: 'var(--text-muted)', transition: 'transform 0.2s', transform: showDebtSection ? 'rotate(180deg)' : 'none', display: 'flex' }}><Icons.ChevronDown size={16} /></span>
+              </button>
+              {showDebtSection && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input className="input" placeholder="e.g., Overdraft" value={newDebtType}
+                      onChange={(e) => setNewDebtType(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const name = newDebtType.trim(); if (!name) return; if ([...DEBT_TYPES, ...customDebtTypes].includes(name)) { haptic.warning(); return; } setCustomDebtTypes(prev => [...prev, name]); setNewDebtType(''); haptic.medium(); } }}
+                      style={{ flex: 1 }} />
+                    <button className="btn btn-primary" onClick={() => { const name = newDebtType.trim(); if (!name) return; if ([...DEBT_TYPES, ...customDebtTypes].includes(name)) { haptic.warning(); return; } setCustomDebtTypes(prev => [...prev, name]); setNewDebtType(''); haptic.medium(); }}><Icons.Plus size={18} /></button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {DEBT_TYPES.map(t => (
+                      <div key={t} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '10px', background: 'var(--glass)', border: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: '14px', fontWeight: '500' }}>{t}</span>
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Default</span>
+                      </div>
+                    ))}
+                    {customDebtTypes.map(t => (
+                      <div key={t} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '10px', background: 'var(--glass)', border: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: '14px', fontWeight: '500' }}>{t}</span>
+                        <button onClick={() => {
+                          const inUse = debts.some(d => d.type === t);
+                          if (inUse) { haptic.warning(); return; }
+                          haptic.error(); setCustomDebtTypes(prev => prev.filter(x => x !== t));
+                        }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tc.danger, padding: '2px' }}><Icons.Trash size={14} /></button>
+                      </div>
                     ))}
                   </div>
-                </SortableContext>
-                <DragOverlay dropAnimation={{ duration: 180, easing: 'ease' }}>
-                  {activeDragCat ? <DragOverlayCard cat={activeDragCat} bills={bills} /> : null}
-                </DragOverlay>
-              </DndContext>
+                </div>
+              )}
+            </div>
+
+            {/* ── Savings Categories Section ── */}
+            <div>
+              <button onClick={() => { haptic.light(); setShowSavingsSection(v => !v); }}
+                style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: '0', marginBottom: showSavingsSection ? '12px' : '0' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '500' }}>SAVINGS CATEGORIES</span>
+                <span style={{ color: 'var(--text-muted)', transition: 'transform 0.2s', transform: showSavingsSection ? 'rotate(180deg)' : 'none', display: 'flex' }}><Icons.ChevronDown size={16} /></span>
+              </button>
+              {showSavingsSection && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input className="input" placeholder="e.g., Wedding" value={newSavingsCat}
+                      onChange={(e) => setNewSavingsCat(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const name = newSavingsCat.trim(); if (!name) return; if ([...SAVINGS_CATEGORIES, ...customSavingsCategories].includes(name)) { haptic.warning(); return; } setCustomSavingsCategories(prev => [...prev, name]); setNewSavingsCat(''); haptic.medium(); } }}
+                      style={{ flex: 1 }} />
+                    <button className="btn btn-primary" onClick={() => { const name = newSavingsCat.trim(); if (!name) return; if ([...SAVINGS_CATEGORIES, ...customSavingsCategories].includes(name)) { haptic.warning(); return; } setCustomSavingsCategories(prev => [...prev, name]); setNewSavingsCat(''); haptic.medium(); }}><Icons.Plus size={18} /></button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {SAVINGS_CATEGORIES.map(c => (
+                      <div key={c} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '10px', background: 'var(--glass)', border: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: '14px', fontWeight: '500' }}>{c}</span>
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Default</span>
+                      </div>
+                    ))}
+                    {customSavingsCategories.map(c => (
+                      <div key={c} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '10px', background: 'var(--glass)', border: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: '14px', fontWeight: '500' }}>{c}</span>
+                        <button onClick={() => {
+                          const inUse = savings.some(s => s.category === c);
+                          if (inUse) { haptic.warning(); return; }
+                          haptic.error(); setCustomSavingsCategories(prev => prev.filter(x => x !== c));
+                        }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tc.danger, padding: '2px' }}><Icons.Trash size={14} /></button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -376,7 +491,7 @@ export function ManageCategoriesModal({ show, onClose, bills, customCategories, 
 // ══════════════════════════════════════
 // Add Debt Screen (full-page, keyboard-safe)
 // ══════════════════════════════════════
-export function AddDebtScreen({ show, onClose, newDebt, setNewDebt, handleAddDebt, emptyDebt, validationErrors, setValidationErrors }) {
+export function AddDebtScreen({ show, onClose, newDebt, setNewDebt, handleAddDebt, emptyDebt, validationErrors, setValidationErrors, allDebtTypes }) {
   const cs = useCurrency();
   const handleClose = () => { haptic.light(); onClose(); setValidationErrors({}); setNewDebt({ ...emptyDebt }); };
   const mode = newDebt.paymentMode || 'recurring';
@@ -405,7 +520,7 @@ export function AddDebtScreen({ show, onClose, newDebt, setNewDebt, handleAddDeb
           <div>
             <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Type</label>
             <select className="input" value={newDebt.type} onChange={(e) => setNewDebt({ ...newDebt, type: e.target.value })}>
-              {DEBT_TYPES.map((t) => (<option key={t} value={t}>{t}</option>))}
+              {(allDebtTypes || DEBT_TYPES).map((t) => (<option key={t} value={t}>{t}</option>))}
             </select>
           </div>
           <div>
@@ -547,7 +662,7 @@ export function AddDebtScreen({ show, onClose, newDebt, setNewDebt, handleAddDeb
                     color: isOverdue ? tc.danger : isUrgent ? tc.warning : tc.secondary,
                     background: isOverdue ? 'rgba(239,68,68,0.08)' : isUrgent ? 'rgba(245,158,11,0.08)' : 'var(--glass)',
                     border: `1px solid ${isOverdue ? 'rgba(239,68,68,0.2)' : isUrgent ? 'rgba(245,158,11,0.2)' : 'var(--border)'}` }}>
-                    {isOverdue ? `⚠️ This date is ${Math.abs(daysUntil)} days overdue` : `Due in ${daysUntil} days (${due.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })})`}
+                    {isOverdue ? <><Icons.Warning size={13} style={{ verticalAlign: '-2px' }} /> This date is {Math.abs(daysUntil)} days overdue</> : `Due in ${daysUntil} days (${due.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })})`}
                   </div>
                 );
               })()}
@@ -617,7 +732,7 @@ export function AddDebtScreen({ show, onClose, newDebt, setNewDebt, handleAddDeb
                     color: isExpired ? tc.danger : remaining <= 3 ? tc.warning : tc.success,
                     background: isExpired ? 'rgba(239,68,68,0.08)' : remaining <= 3 ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.06)',
                     border: `1px solid ${isExpired ? 'rgba(239,68,68,0.2)' : remaining <= 3 ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.15)'}` }}>
-                    {isExpired ? '⚠️ Interest-free period already expired!' : `🟢 Interest-free · ${remaining} of ${bnplMonths} months remaining`}
+                    {isExpired ? <><Icons.Warning size={13} style={{ verticalAlign: '-2px' }} /> Interest-free period already expired!</> : <><Icons.CircleDot size={13} style={{ verticalAlign: '-2px', color: 'currentColor' }} /> Interest-free · {remaining} of {bnplMonths} months remaining</>}
                   </div>
                 );
               })()}
@@ -651,7 +766,7 @@ export function AddDebtScreen({ show, onClose, newDebt, setNewDebt, handleAddDeb
 // ══════════════════════════════════════
 // Add Savings Screen (full-page, keyboard-safe)
 // ══════════════════════════════════════
-export function AddSavingsScreen({ show, onClose, newSavingsGoal, setNewSavingsGoal, handleAddSavings, emptySavings, validationErrors, setValidationErrors }) {
+export function AddSavingsScreen({ show, onClose, newSavingsGoal, setNewSavingsGoal, handleAddSavings, emptySavings, validationErrors, setValidationErrors, allSavingsCategories }) {
   const handleClose = () => { haptic.light(); onClose(); setNewSavingsGoal({ ...emptySavings }); setValidationErrors({}); };
   return (
     <div className={`form-screen ${show ? 'open' : ''}`}>
@@ -673,7 +788,7 @@ export function AddSavingsScreen({ show, onClose, newSavingsGoal, setNewSavingsG
           <div>
             <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Category</label>
             <select className="input" value={newSavingsGoal.category} onChange={(e) => setNewSavingsGoal({ ...newSavingsGoal, category: e.target.value })}>
-              {SAVINGS_CATEGORIES.map((c) => (<option key={c} value={c}>{c}</option>))}
+              {(allSavingsCategories || SAVINGS_CATEGORIES).map((c) => (<option key={c} value={c}>{c}</option>))}
             </select>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -686,9 +801,19 @@ export function AddSavingsScreen({ show, onClose, newSavingsGoal, setNewSavingsG
               <input type="number" className="input" placeholder="0.00 (optional)" value={newSavingsGoal.targetAmount} onChange={(e) => setNewSavingsGoal({ ...newSavingsGoal, targetAmount: e.target.value })} onKeyDown={handleNext} />
             </div>
           </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Monthly Auto-Save</label>
+              <input type="number" className="input" placeholder="0.00 (optional)" value={newSavingsGoal.monthlyContribution} onChange={(e) => setNewSavingsGoal({ ...newSavingsGoal, monthlyContribution: e.target.value })} onKeyDown={handleNext} />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Target Date</label>
+              <input type="date" className={`input ${newSavingsGoal.targetDate ? 'has-value' : ''}`} value={newSavingsGoal.targetDate || ''} onChange={(e) => setNewSavingsGoal({ ...newSavingsGoal, targetDate: e.target.value })} />
+            </div>
+          </div>
           <div>
-            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Monthly Auto-Save</label>
-            <input type="number" className="input" placeholder="0.00 (optional)" value={newSavingsGoal.monthlyContribution} onChange={(e) => setNewSavingsGoal({ ...newSavingsGoal, monthlyContribution: e.target.value })} onKeyDown={handleNext} />
+            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Goal Emoji (optional)</label>
+            <EmojiPicker value={newSavingsGoal.emoji || ''} onChange={(emoji) => setNewSavingsGoal({ ...newSavingsGoal, emoji })} />
           </div>
           <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
             <button className="btn btn-primary" onClick={handleAddSavings} style={{ flex: 1, justifyContent: 'center' }}><Icons.Plus size={20} /> Add Goal</button>

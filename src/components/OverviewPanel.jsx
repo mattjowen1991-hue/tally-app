@@ -4,8 +4,6 @@ import * as Icons from './Icons';
 import { tc } from '../utils/themeColors';
 import haptic from '../utils/haptics';
 
-const CHART_COLORS = ['rgba(0,212,255,0.8)', 'rgba(124,58,237,0.8)', 'rgba(245,158,11,0.8)', 'rgba(16,185,129,0.8)', 'rgba(239,68,68,0.8)', 'rgba(168,85,247,0.8)'];
-
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function formatMonth(monthStr) {
@@ -48,14 +46,20 @@ function ChevronDown({ expanded, color = 'var(--text-muted)' }) {
   );
 }
 
-export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMobile, insights = {}, bills = [], totalDebt = 0, totalSaved = 0, debts = [], savings = [] }) {
+export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMobile, insights = {}, bills = [], totalDebt = 0, totalSaved = 0, debts = [], savings = [], strategyResults, debtStrategy, calculateSavingsEstimate, expenseScope = 'bills', setExpenseScope, monthlyDebtPayments = 0, monthlySavingsContributions = 0 }) {
   const cs = useCurrency();
 
   const [expandedCards, setExpandedCards] = useState({});
   const toggleCard = (key) => setExpandedCards(prev => ({ ...prev, [key]: !prev[key] }));
-  const [expandedCategory, setExpandedCategory] = useState(null);
 
-  const { lastSnapshot, biggestChange } = insights;
+  const { lastSnapshot } = insights;
+
+  // Scoped expense calculations
+  const scopedExpenses = totals.actualExpenses
+    + (expenseScope === 'bills+debt' || expenseScope === 'all' ? monthlyDebtPayments : 0)
+    + (expenseScope === 'all' ? monthlySavingsContributions : 0);
+  const scopedBalance = incomeNum - scopedExpenses;
+  const scopedLabel = expenseScope === 'all' ? 'Total Outflow' : expenseScope === 'bills+debt' ? 'Expenses + Debt' : 'Expenses';
 
   const upcomingBills = bills.filter(b => !b.paid && !b.paused && !b.missed);
   const upcomingCount = upcomingBills.length;
@@ -86,11 +90,28 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
 
   return (
     <>
+      {/* Expense scope toggle */}
+      <div className="animate-in" style={{ display: 'flex', gap: '6px', marginBottom: '12px', animationDelay: '0.05s' }}>
+        {[
+          { key: 'bills', label: 'Living Expenses' },
+          { key: 'bills+debt', label: '+ Debt' },
+          { key: 'all', label: '+ Debt & Savings' },
+        ].map(s => (
+          <button key={s.key} onClick={() => { haptic.light(); setExpenseScope(s.key); }}
+            style={{ flex: 1, padding: '8px 4px', borderRadius: '20px', fontSize: '11px', fontWeight: '600',
+              cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s',
+              border: expenseScope === s.key ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
+              background: expenseScope === s.key ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'var(--glass)',
+              color: expenseScope === s.key ? 'var(--accent-primary)' : 'var(--text-muted)',
+            }}>{s.label}</button>
+        ))}
+      </div>
+
       {/* Stats Grid */}
       <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: isMobile ? '12px' : '20px', marginBottom: isMobile ? '20px' : '40px' }}>
         <StatCard label="Income" value={`${cs}${incomeNum.toFixed(2)}`} subtitle="Monthly income" icon={<Icons.DollarSign size={16} />} color="var(--success)" delay="0.1s" isMobile={isMobile} />
-        <StatCard label="Expenses" value={`${cs}${totals.actualExpenses.toFixed(2)}`} subtitle={`${totals.paidBills} of ${totals.totalBills} bills paid`} icon={<Icons.TrendingUp size={16} />} color="var(--danger)" delay="0.2s" isMobile={isMobile} progress={totals.totalBills > 0 ? (totals.paidBills / totals.totalBills) * 100 : 0} progressColor="var(--success)" />
-        <StatCard label="Balance" value={`${cs}${totals.actualBalance.toFixed(2)}`} subtitle="Remaining this month" icon={totals.actualBalance >= 0 ? <Icons.TrendingUp size={16} /> : <Icons.TrendingDown size={16} />} color={totals.actualBalance >= 0 ? 'var(--accent-primary)' : 'var(--danger)'} valueColor={totals.actualBalance >= 0 ? tc.success : tc.danger} delay="0.3s" isMobile={isMobile} progress={incomeNum > 0 ? Math.min(100, (totals.actualBalance / incomeNum) * 100) : 0} progressColor="var(--accent-primary)" />
+        <StatCard label={scopedLabel} value={`${cs}${scopedExpenses.toFixed(2)}`} subtitle={expenseScope === 'bills' ? `${totals.paidBills} of ${totals.totalBills} bills paid` : expenseScope === 'bills+debt' ? `Bills + ${cs}${monthlyDebtPayments.toFixed(0)} debt` : `Bills + debt + ${cs}${monthlySavingsContributions.toFixed(0)} savings`} icon={<Icons.TrendingUp size={16} />} color="var(--danger)" delay="0.2s" isMobile={isMobile} progress={totals.totalBills > 0 ? (totals.paidBills / totals.totalBills) * 100 : 0} progressColor="var(--success)" />
+        <StatCard label="Balance" value={`${cs}${scopedBalance.toFixed(2)}`} subtitle="Remaining this month" icon={scopedBalance >= 0 ? <Icons.TrendingUp size={16} /> : <Icons.TrendingDown size={16} />} color={scopedBalance >= 0 ? 'var(--accent-primary)' : 'var(--danger)'} valueColor={scopedBalance >= 0 ? tc.success : tc.danger} delay="0.3s" isMobile={isMobile} progress={incomeNum > 0 ? Math.min(100, Math.max(0, (scopedBalance / incomeNum) * 100)) : 0} progressColor="var(--accent-primary)" />
         <StatCard label="Variance" value={`${totals.difference > 0 ? '+' : ''}${cs}${totals.difference.toFixed(2)}`} subtitle="vs projected budget" icon={<Icons.PieChart size={16} />} color={Math.abs(totals.difference) < 10 ? 'var(--warning)' : 'var(--accent-secondary)'} valueColor={totals.difference === 0 ? tc.success : totals.difference > 0 ? tc.danger : tc.info} delay="0.4s" isMobile={isMobile} />
       </div>
 
@@ -99,7 +120,50 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
         <h2 className="font-display" style={{ fontSize: '20px', marginBottom: '20px' }}>Insights</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-          {/* 1. Upcoming Bills */}
+          {/* 1. Missed Bills Alert */}
+          {(() => {
+            const missedBills = bills.filter(b => b.missed);
+            if (missedBills.length === 0) return null;
+            const missedTotal = missedBills.reduce((s, b) => s + (parseFloat(b.actual) || parseFloat(b.projected) || 0), 0);
+            return (
+              <div onClick={() => missedBills.length > 0 && (haptic.light(), toggleCard('missed'))} style={{
+                padding: '18px 20px', borderRadius: '14px',
+                background: `linear-gradient(135deg, ${tc.dangerTint}, ${tc.warningTintLight})`,
+                border: `1px solid ${tc.dangerTintStrong}`,
+                ...cardClickStyle,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: tc.danger, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Missed Bills</div>
+                    <div className="font-mono" style={{ fontSize: '28px', fontWeight: '700', color: tc.danger, lineHeight: 1.1 }}>
+                      {cs}{missedTotal.toFixed(2)}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <ChevronDown expanded={expandedCards.missed} color={tc.danger} />
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: tc.dangerTintStrong, display: 'flex', alignItems: 'center', justifyContent: 'center', color: tc.danger }}>
+                      <Icons.X size={20} />
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontSize: '13px', color: tc.secondary, marginTop: '8px' }}>
+                  {missedBills.length} bill{missedBills.length !== 1 ? 's' : ''} missed this month
+                </div>
+                {expandedCards.missed && (
+                  <div style={{ marginTop: '14px', borderTop: `1px solid ${tc.cardDivider}`, paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {missedBills.map(bill => (
+                      <div key={bill.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderRadius: '8px', background: tc.cardDetail }}>
+                        <div style={{ fontSize: '13px', fontWeight: '500', color: tc.primary }}>{bill.name}</div>
+                        <div className="font-mono" style={{ fontSize: '14px', fontWeight: '600', color: tc.danger }}>{cs}{(parseFloat(bill.actual) || parseFloat(bill.projected) || 0).toFixed(2)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* 2. Upcoming Bills */}
           <div onClick={() => upcomingCount > 0 && (haptic.light(), toggleCard('upcoming'))} style={{
             padding: '18px 20px', borderRadius: '14px',
             background: upcomingCount > 0
@@ -219,51 +283,89 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
             </div>
           )}
 
-          {/* 3. Biggest Category Change */}
-          {biggestChange && lastSnapshot ? (
-            <div style={{
-              padding: '18px 20px', borderRadius: '14px',
-              background: biggestChange.diff > 0
-                ? `linear-gradient(135deg, ${tc.warningTint}, ${tc.dangerTintLight})`
-                : `linear-gradient(135deg, ${tc.successTint}, ${tc.infoTintLight})`,
-              border: `1px solid ${biggestChange.diff > 0 ? tc.warningTintStrong : tc.successTintStrong}`,
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontSize: '12px', color: tc.muted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Biggest change</div>
-                  <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>{biggestChange.category}</div>
-                  <div className="font-mono" style={{ fontSize: '18px', fontWeight: '700', color: biggestChange.diff > 0 ? tc.warning : tc.success }}>
-                    {biggestChange.diff > 0 ? '+' : '-'}{cs}{Math.abs(biggestChange.diff || 0).toFixed(2)}
+          {/* 3. Debt-Free Countdown */}
+          {(() => {
+            const strat = strategyResults?.[debtStrategy];
+            if (!strat || !strat.debtFreeDate || totalDebt <= 0) return null;
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            const target = new Date(strat.debtFreeDate);
+            target.setHours(0, 0, 0, 0);
+            const daysUntil = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+            if (daysUntil <= 0) return null;
+            const years = Math.floor(strat.totalMonths / 12);
+            const months = strat.totalMonths % 12;
+            return (
+              <div style={{
+                padding: '18px 20px', borderRadius: '14px',
+                background: `linear-gradient(135deg, color-mix(in srgb, var(--success) 10%, transparent), color-mix(in srgb, var(--accent-primary) 8%, transparent))`,
+                border: '1px solid color-mix(in srgb, var(--success) 20%, transparent)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: tc.muted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Debt-Free Countdown</div>
+                    <div className="font-mono" style={{ fontSize: '28px', fontWeight: '700', color: tc.success, lineHeight: 1.1 }}>
+                      {daysUntil} days
+                    </div>
+                  </div>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: tc.successTintStrong, display: 'flex', alignItems: 'center', justifyContent: 'center', color: tc.success }}>
+                    <Icons.TrendingDown size={20} />
                   </div>
                 </div>
-                <div style={{
-                  width: '40px', height: '40px', borderRadius: '12px',
-                  background: biggestChange.diff > 0 ? tc.warningTintStrong : tc.successTintStrong,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: biggestChange.diff > 0 ? tc.warning : tc.success,
-                }}>
-                  <Icons.PieChart size={20} />
+                <div style={{ fontSize: '13px', color: tc.secondary, marginTop: '8px' }}>
+                  {years > 0 ? `${years}y ${months}m` : `${months}m`} - free by {target.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
                 </div>
               </div>
-              <div style={{ fontSize: '13px', color: tc.secondary, marginTop: '8px' }}>
-                {biggestChange.diff > 0
-                  ? `Up from ${cs}${(biggestChange.prev || 0).toFixed(2)} last month`
-                  : `Down from ${cs}${(biggestChange.prev || 0).toFixed(2)} last month`
-                }
-              </div>
-            </div>
-          ) : !lastSnapshot ? (
-            <div style={{
-              padding: '18px 20px', borderRadius: '14px',
-              background: tc.cardEmpty,
-              border: `1px dashed ${tc.cardEmptyBorder}`,
-            }}>
-              <div style={{ fontSize: '12px', color: tc.muted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Biggest Change</div>
-              <div style={{ fontSize: '13px', color: tc.muted }}>Category insights available after your first month</div>
-            </div>
-          ) : null}
+            );
+          })()}
 
-          {/* 4. Debt & Savings row */}
+          {/* 4. Nearest Savings Goal */}
+          {(() => {
+            const activeGoals = savings.filter(s => !s.archived && s.targetAmount > 0 && s.currentAmount < s.targetAmount);
+            if (activeGoals.length === 0) return null;
+            // Find the one closest to completion
+            const nearest = activeGoals.reduce((best, g) => {
+              const pct = g.currentAmount / g.targetAmount;
+              const bestPct = best.currentAmount / best.targetAmount;
+              return pct > bestPct ? g : best;
+            });
+            const progress = Math.min((nearest.currentAmount / nearest.targetAmount) * 100, 100);
+            const remaining = nearest.targetAmount - nearest.currentAmount;
+            const estimate = calculateSavingsEstimate?.(nearest);
+            return (
+              <div style={{
+                padding: '18px 20px', borderRadius: '14px',
+                background: `linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 10%, transparent), color-mix(in srgb, var(--success) 8%, transparent))`,
+                border: '1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '12px', color: tc.muted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Nearest Goal</div>
+                    <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                      {nearest.emoji ? `${nearest.emoji} ` : ''}{nearest.name}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                      <span className="font-mono" style={{ fontSize: '18px', fontWeight: '700', color: 'var(--accent-primary)' }}>{progress.toFixed(0)}%</span>
+                      <span style={{ fontSize: '12px', color: tc.muted }}>{cs}{remaining.toFixed(0)} to go</span>
+                    </div>
+                  </div>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'color-mix(in srgb, var(--accent-primary) 20%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)' }}>
+                    <Icons.TrendingUp size={20} />
+                  </div>
+                </div>
+                <div style={{ marginTop: '10px' }}>
+                  <MiniProgress current={nearest.currentAmount} total={nearest.targetAmount} color="var(--accent-primary)" height={5} />
+                </div>
+                {estimate && estimate.months > 0 && (
+                  <div style={{ fontSize: '13px', color: tc.secondary, marginTop: '8px' }}>
+                    ~{estimate.months} month{estimate.months !== 1 ? 's' : ''} to go at {cs}{nearest.monthlyContribution?.toFixed(0) || '0'}/mo
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* 5. Debt & Savings row */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             {/* Total Debt */}
             <div onClick={() => debts.length > 0 && (haptic.light(), toggleCard('debt'))} style={{
@@ -413,58 +515,54 @@ export default function OverviewPanel({ totals, incomeNum, categoryTotals, isMob
         </div>
       </div>
 
-      {/* Expense Breakdown */}
-      {categoryTotals.length > 0 && (
-      <div className="glass-card animate-in" style={{ padding: isMobile ? '20px' : '32px', marginBottom: '20px', animationDelay: '0.5s' }}>
-        <h2 className="font-display" style={{ fontSize: '20px', marginBottom: '20px' }}>Expense Breakdown</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {categoryTotals.map((cat, i) => {
-            const pct = totals.actualExpenses > 0 ? (cat.total / totals.actualExpenses) * 100 : 0;
-            const isExpanded = expandedCategory === cat.name;
-            const catBills = bills.filter(b => b.category === cat.name && (b.actual || 0) > 0);
-            return (
-              <div key={cat.name}>
-                <div onClick={() => { haptic.light(); setExpandedCategory(isExpanded ? null : cat.name); }} style={{ cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: CHART_COLORS[i % CHART_COLORS.length], flexShrink: 0 }} />
-                      <span style={{ fontSize: '13px', fontWeight: '500', color: tc.secondary }}>{cat.name}</span>
-                      <span style={{ fontSize: '11px', color: tc.muted }}>({catBills.length})</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span className="font-mono" style={{ fontSize: '14px', fontWeight: '600' }}>{cs}{cat.total.toFixed(2)}</span>
-                      <span style={{ fontSize: '12px', color: tc.muted, minWidth: '40px', textAlign: 'right' }}>{pct.toFixed(1)}%</span>
-                      <ChevronDown expanded={isExpanded} color={tc.muted} />
-                    </div>
-                  </div>
-                  <div style={{ height: '8px', borderRadius: '4px', background: tc.progressTrack, overflow: 'hidden' }}>
-                    <div style={{
-                      width: `${pct}%`, height: '100%', borderRadius: '4px',
-                      background: CHART_COLORS[i % CHART_COLORS.length],
-                      transition: 'width 0.5s ease',
-                    }} />
-                  </div>
-                </div>
-                {isExpanded && catBills.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px', paddingLeft: '18px' }}>
-                    {catBills.map(bill => (
-                      <div key={bill.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '8px', background: tc.cardDetail, border: `1px solid ${CHART_COLORS[i % CHART_COLORS.length]}20` }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: '500', color: tc.primary }}>{bill.name}</span>
-                          {bill.paid && <span style={{ fontSize: '10px', color: tc.success }}>✓</span>}
-                          {bill.missed && <span style={{ fontSize: '10px', color: tc.danger }}>✗</span>}
-                        </div>
-                        <span className="font-mono" style={{ fontSize: '13px', fontWeight: '600', color: tc.secondary }}>{cs}{(bill.actual || 0).toFixed(2)}</span>
+      {/* Monthly Outgoings Breakdown */}
+      {(() => {
+        const COLORS = ['rgba(0,212,255,0.8)', 'rgba(124,58,237,0.8)', 'rgba(245,158,11,0.8)', 'rgba(16,185,129,0.8)', 'rgba(239,68,68,0.8)', 'rgba(168,85,247,0.8)', 'rgba(59,130,246,0.8)', 'rgba(236,72,153,0.8)'];
+        // Bill categories (always shown)
+        const entries = categoryTotals.map(c => ({ name: c.name, total: c.total }));
+        // Debt payments (when scope includes debt)
+        if ((expenseScope === 'bills+debt' || expenseScope === 'all') && monthlyDebtPayments > 0) {
+          entries.push({ name: 'Debt Payments', total: Math.round(monthlyDebtPayments * 100) / 100 });
+        }
+        // Savings contributions (when scope includes all)
+        if (expenseScope === 'all' && monthlySavingsContributions > 0) {
+          entries.push({ name: 'Savings', total: Math.round(monthlySavingsContributions * 100) / 100 });
+        }
+        entries.sort((a, b) => b.total - a.total);
+        if (entries.length === 0) return null;
+        const grandTotal = entries.reduce((s, e) => s + e.total, 0);
+
+        return (
+          <div className="glass-card animate-in" style={{ padding: isMobile ? '20px' : '28px', marginBottom: '20px', animationDelay: '0.5s' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 className="font-display" style={{ fontSize: '20px' }}>Monthly Outgoings</h2>
+              <span className="font-mono" style={{ fontSize: '14px', color: tc.muted }}>{cs}{grandTotal.toFixed(0)}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {entries.map((entry, i) => {
+                const pct = grandTotal > 0 ? (entry.total / grandTotal) * 100 : 0;
+                return (
+                  <div key={entry.name}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: COLORS[i % COLORS.length], flexShrink: 0 }} />
+                        <span style={{ fontSize: '13px', fontWeight: '500', color: tc.secondary }}>{entry.name}</span>
                       </div>
-                    ))}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className="font-mono" style={{ fontSize: '13px', fontWeight: '600' }}>{cs}{entry.total.toFixed(0)}</span>
+                        <span style={{ fontSize: '11px', color: tc.muted, minWidth: '36px', textAlign: 'right' }}>{pct.toFixed(0)}%</span>
+                      </div>
+                    </div>
+                    <div style={{ height: '6px', borderRadius: '3px', background: tc.progressTrack, overflow: 'hidden' }}>
+                      <div style={{ width: `${pct}%`, height: '100%', borderRadius: '3px', background: COLORS[i % COLORS.length], transition: 'width 0.5s ease' }} />
+                    </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      )}
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
     </>
   );
 }

@@ -1,8 +1,8 @@
 import { scheduleNotifications, loadNotificationSettings, saveNotificationSettings } from './utils/notifications';
 import React, { useState, useEffect, useRef } from 'react';
 import * as Icons from './components/Icons';
-import { shouldAutoPay } from './utils/billHelpers';
-import { DEFAULT_CATEGORIES } from './data/initialData';
+import { shouldAutoPay, shouldAutoMiss } from './utils/billHelpers';
+import { DEFAULT_CATEGORIES, DEBT_TYPES, SAVINGS_CATEGORIES } from './data/initialData';
 import useSwipe from './hooks/useSwipe';
 import haptic from './utils/haptics';
 import { ToastProvider, useToast } from './components/Toast';
@@ -149,16 +149,26 @@ function AppContent() {
   const [editForm, setEditForm] = useState({});
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categorySection, setCategorySection] = useState('bills');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
-  const emptyBill = { name: '', category: 'HOME', amount: '', paymentDate: '', paymentDay: '', startDate: '', startMonth: '', paid: false, recurring: false, missed: false, frequency: 'Monthly' };
+  const emptyBill = { name: '', category: 'HOME', amount: '', paymentDate: '', paymentDay: '', startDate: '', startMonth: '', paid: false, recurring: false, missed: false, frequency: 'Monthly', autoPay: false };
   const [newBill, setNewBill] = useState({ ...emptyBill });
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [customCategories, setCustomCategories] = useState([]);
   const [categoryOrder, setCategoryOrder] = useState([...DEFAULT_CATEGORIES]);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [billSearch, setBillSearch] = useState('');
+  // Debt filters + custom types
+  const [debtStatusFilter, setDebtStatusFilter] = useState('ALL');
+  const [selectedDebtType, setSelectedDebtType] = useState('ALL');
+  const [customDebtTypes, setCustomDebtTypes] = useState([]);
+  // Savings filters + custom categories
+  const [savingsStatusFilter, setSavingsStatusFilter] = useState('ALL');
+  const [selectedSavingsCategory, setSelectedSavingsCategory] = useState('ALL');
+  const [customSavingsCategories, setCustomSavingsCategories] = useState([]);
   const [billSort, setBillSort] = useState('default');
+  const [expenseScope, setExpenseScope] = useState('bills'); // 'bills' | 'bills+debt' | 'all'
   const [isMobile, setIsMobile] = useState(false);
   const headerRef = useRef(null);
   const headerCollapsedRef = useRef(false);
@@ -175,7 +185,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const syncTimeoutRef = useRef(null);
   const userRef = useRef(null);
   const deletingAccountRef = useRef(false);
-  const [notificationSettings, setNotificationSettings] = useState({ enabled: true, reminderHour: 9, reminderMinute: 0 });
+  const [notificationSettings, setNotificationSettings] = useState({ billReminders: false, missedAlerts: false, debtReminders: false, reminderHour: 9, reminderMinute: 0 });
   const [currencyCode, setCurrencyCode] = useState('GBP');
   const [showCurrencyPrompt, setShowCurrencyPrompt] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -192,6 +202,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [debtStrategy, setDebtStrategy] = useState('avalanche');
   const [extraDebtPayment, setExtraDebtPayment] = useState(0);
   const [debtCelebration, setDebtCelebration] = useState(null);
+  const [savingsCelebration, setSavingsCelebration] = useState(null);
 
   // ── Savings state ──
   const [savings, setSavings] = useState([]);
@@ -200,7 +211,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [editSavingsForm, setEditSavingsForm] = useState({});
   const [savingsTransactionAmounts, setSavingsTransactionAmounts] = useState({});
   const [showSavingsHistory, setShowSavingsHistory] = useState({});
-  const emptySavings = { name: '', category: 'Emergency', targetAmount: '', monthlyContribution: '', startingAmount: '' };
+  const emptySavings = { name: '', category: 'Emergency', targetAmount: '', monthlyContribution: '', startingAmount: '', targetDate: '', emoji: '' };
   const [newSavingsGoal, setNewSavingsGoal] = useState({ ...emptySavings });
 
   // ── Monthly snapshots ──
@@ -300,7 +311,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     } catch (err) {
       console.error('Cloud save error:', err);
       setSyncStatus('error');
-      toast('Sync failed — will retry', 'error');
+      toast('Sync failed - will retry', 'error');
     }
   };
 
@@ -347,6 +358,8 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     if (d.savings) setSavings(d.savings);
     if (d.customCategories) setCustomCategories(d.customCategories);
     if (d.categoryOrder) setCategoryOrder(d.categoryOrder);
+    if (d.customDebtTypes) setCustomDebtTypes(d.customDebtTypes);
+    if (d.customSavingsCategories) setCustomSavingsCategories(d.customSavingsCategories);
     if (d.monthlySnapshots) setMonthlySnapshots(d.monthlySnapshots);
     if (d.salaryCalc) setSalaryCalc(d.salaryCalc);
   };
@@ -459,7 +472,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 };
 
   const handleClearLocalData = async () => {
-    if (!await confirm('Remove all Tally data from this device?\n\nYour cloud backup is not affected — sign back in to restore.', { title: 'Clear Local Data', okText: 'Clear All', danger: true })) return;
+    if (!await confirm('Remove all Tally data from this device?\n\nYour cloud backup is not affected - sign back in to restore.', { title: 'Clear Local Data', okText: 'Clear All', danger: true })) return;
     setBills([]);
     setDebts([]);
     setSavings([]);
@@ -477,16 +490,16 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 
     const collapseHeader = (el) => {
       headerCollapsedRef.current = true;
-      el.style.maxHeight = '0px';
+      el.style.transform = 'translateY(-100%) scaleY(0)';
       el.style.opacity = '0';
-      el.style.padding = '0';
+      el.style.marginBottom = '-50px';
     };
 
     const expandHeader = (el) => {
       headerCollapsedRef.current = false;
-      el.style.maxHeight = '70px';
+      el.style.transform = 'translateY(0) scaleY(1)';
       el.style.opacity = '1';
-      el.style.padding = '10px 0 4px';
+      el.style.marginBottom = '0px';
     };
 
     window.__tallyCollapseHeader = () => { const el = headerRef.current; if (el) collapseHeader(el); };
@@ -660,6 +673,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
           }
           if (b.paid) return b;
           if (shouldAutoPay(b)) return { ...b, paid: true, lastAutoPaid: new Date().toISOString() };
+          if (shouldAutoMiss(b)) return { ...b, missed: true };
           return b;
         });
         setBills(loadedBills);
@@ -697,14 +711,16 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
         } else {
           setCategoryOrder([...DEFAULT_CATEGORIES, ...loadedCustom]);
         }
+        if (data.customDebtTypes) setCustomDebtTypes(data.customDebtTypes);
+        if (data.customSavingsCategories) setCustomSavingsCategories(data.customSavingsCategories);
         if (data.salaryCalc) setSalaryCalc(data.salaryCalc);
       } else { setBills([]); setDebts([]); }
     } catch (error) { console.log('No stored data, starting fresh'); setBills([]); setDebts([]); }
   };
 
   // ── Save data ──
-  useEffect(() => { if (bills.length > 0 || debts.length > 0 || savings.length > 0 || customCategories.length > 0) saveData(); }, [bills, income, debts, savings, customCategories, categoryOrder, salaryCalc]);
-  const saveData = async () => { try { await window.storage.set('bills-data', JSON.stringify({ bills, income: parseFloat(income) || 0, debts, savings, customCategories, categoryOrder, monthlySnapshots, salaryCalc, lastMonth: new Date().getFullYear() + '-' + (new Date().getMonth() + 1) })); } catch (e) { console.error('Error saving:', e); } };
+  useEffect(() => { if (bills.length > 0 || debts.length > 0 || savings.length > 0 || customCategories.length > 0) saveData(); }, [bills, income, debts, savings, customCategories, categoryOrder, customDebtTypes, customSavingsCategories, salaryCalc]);
+  const saveData = async () => { try { await window.storage.set('bills-data', JSON.stringify({ bills, income: parseFloat(income) || 0, debts, savings, customCategories, categoryOrder, customDebtTypes, customSavingsCategories, monthlySnapshots, salaryCalc, lastMonth: new Date().getFullYear() + '-' + (new Date().getMonth() + 1) })); } catch (e) { console.error('Error saving:', e); } };
 
   // ── Calculations ──
   const categories = categoryOrder.filter(c => DEFAULT_CATEGORIES.includes(c) || customCategories.includes(c));
@@ -720,6 +736,14 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const categoryTotals = categories.map((cat) => ({ name: cat, total: bills.filter((b) => b.category === cat).reduce((s, b) => s + (b.actual || 0), 0) })).filter((c) => c.total > 0);
   const totalDebt = debts.filter(d => !d.archived).reduce((sum, d) => sum + (d.totalAmount || 0), 0);
   const totalSaved = savings.reduce((sum, s) => sum + (s.currentAmount || 0), 0);
+  const allDebtTypes = [...DEBT_TYPES, ...customDebtTypes.filter(t => !DEBT_TYPES.includes(t))];
+  const allSavingsCategories = [...SAVINGS_CATEGORIES, ...customSavingsCategories.filter(c => !SAVINGS_CATEGORIES.includes(c))];
+  const monthlyDebtPayments = debts.filter(d => !d.archived && d.totalAmount > 0).reduce((s, d) => {
+    const mode = d.paymentMode || 'recurring';
+    if (mode === 'one-off') return s;
+    return s + Math.max(d.minimumPayment || 0, d.recurringPayment || 0);
+  }, 0);
+  const monthlySavingsContributions = savings.filter(s => !s.archived).reduce((s, g) => s + (g.monthlyContribution || 0), 0);
 
   // Strategy comparison — memoized to avoid recalculating on every render
   const strategyResults = React.useMemo(() => {
@@ -770,7 +794,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const handleTogglePaused = (id) => { setBills(bills.map((b) => (b.id !== id ? b : { ...b, paused: !b.paused, paid: false, missed: false }))); haptic.light(); };
   const handleAddCategory = () => { const name = newCategoryName.trim().toUpperCase(); if (!name) return; if (categories.includes(name)) { alert('Category exists!'); return; } setCustomCategories([...customCategories, name]); setCategoryOrder([...categoryOrder, name]); setNewCategoryName(''); haptic.medium(); toast(`${name} added`, 'success'); };
   const handleRenameCategory = (oldName, newName) => { const name = newName.trim().toUpperCase(); if (!name || name === oldName) return; if (categories.includes(name)) { alert('Category already exists!'); return; } setCustomCategories(customCategories.map((c) => c === oldName ? name : c)); setCategoryOrder(categoryOrder.map((c) => c === oldName ? name : c)); setBills(bills.map((b) => b.category === oldName ? { ...b, category: name } : b)); if (selectedCategory === oldName) setSelectedCategory(name); haptic.light(); toast(`${oldName} renamed to ${name}`, 'success'); };
-  const handleDeleteCategory = (cat) => { const associated = bills.filter((b) => b.category === cat); if (associated.length > 0) { toast(`Can't delete "${cat}" — ${associated.length} bill${associated.length > 1 ? 's' : ''} use it`, 'error'); haptic.warning(); return; } setCustomCategories(customCategories.filter((c) => c !== cat)); setCategoryOrder(categoryOrder.filter((c) => c !== cat)); if (selectedCategory === cat) { setSelectedCategory('HOME'); if (categoryScrollRef.current) categoryScrollRef.current.scrollTo({ left: 0, behavior: 'smooth' }); } haptic.error(); toast(`${cat} removed`, 'error'); };
+  const handleDeleteCategory = (cat) => { const associated = bills.filter((b) => b.category === cat); if (associated.length > 0) { toast(`Can't delete "${cat}" - ${associated.length} bill${associated.length > 1 ? 's' : ''} use it`, 'error'); haptic.warning(); return; } setCustomCategories(customCategories.filter((c) => c !== cat)); setCategoryOrder(categoryOrder.filter((c) => c !== cat)); if (selectedCategory === cat) { setSelectedCategory('HOME'); if (categoryScrollRef.current) categoryScrollRef.current.scrollTo({ left: 0, behavior: 'smooth' }); } haptic.error(); toast(`${cat} removed`, 'error'); };
   const handleMoveCategory = (reordered) => { setCategoryOrder(reordered); };
   const filteredBills = bills.filter((b) => { const catMatch = selectedCategory === 'ALL' || b.category === selectedCategory; if (!catMatch) return false; if (billSearch && !b.name.toLowerCase().includes(billSearch.toLowerCase())) return false; switch (statusFilter) { case 'PAID': return b.paid && !b.missed; case 'UNPAID': return !b.paid && !b.missed && !b.paused; case 'MISSED': return b.missed; case 'PAUSED': return b.paused; case 'RECURRING': return b.recurring; case 'ONE-OFF': return !b.recurring; default: return true; } }).sort((a, b) => { switch (billSort) { case 'name': return a.name.localeCompare(b.name); case 'amount-high': return (b.actual || 0) - (a.actual || 0); case 'amount-low': return (a.actual || 0) - (b.actual || 0); case 'status': return (a.paid === b.paid) ? 0 : a.paid ? 1 : -1; default: return 0; } });
 
@@ -809,7 +833,9 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     }
     setDebts([...debts, debt]); setShowDebtModal(false); setValidationErrors({}); setNewDebt({ ...emptyDebt }); haptic.success(); toast('Debt added', 'success');
   };
-  const handleDeleteDebt = async (id) => { if (await confirm('Delete this debt?', { title: 'Delete Debt', okText: 'Delete', danger: true })) { setDebts(debts.filter((d) => d.id !== id)); haptic.error(); toast('Debt deleted', 'error'); return true; } return false; };
+  const handleDeleteDebt = async (id) => { if (await confirm('Delete this debt?', { title: 'Delete Debt', okText: 'Delete', danger: true })) { setDebts(prev => prev.filter((d) => d.id !== id)); haptic.error(); toast('Debt deleted', 'error'); return true; } return false; };
+  const handleBulkDeleteDebts = async (ids) => { if (await confirm(`Delete ${ids.length} debt${ids.length > 1 ? 's' : ''}?`, { title: 'Delete Debts', okText: 'Delete', danger: true })) { setDebts(prev => prev.filter((d) => !ids.includes(d.id))); haptic.error(); toast(`${ids.length} debt${ids.length > 1 ? 's' : ''} deleted`, 'error'); } };
+  const handleBulkArchiveDebts = (ids) => { setDebts(prev => prev.map((d) => !ids.includes(d.id) ? d : { ...d, archived: true, archivedAt: d.archivedAt || new Date().toISOString() })); haptic.success(); toast(`${ids.length} debt${ids.length > 1 ? 's' : ''} archived`, 'success'); };
   const handleArchiveDebt = (id) => { setDebts(debts.map((d) => d.id !== id ? d : { ...d, archived: true, archivedAt: d.archivedAt || new Date().toISOString() })); haptic.success(); toast('Debt archived', 'success'); };
   const handleUnarchiveDebt = (id) => { setDebts(debts.map((d) => d.id !== id ? d : { ...d, archived: false })); haptic.medium(); toast('Debt restored', 'info'); };
   const handleDebtEditStart = (debt) => { setEditingDebtId(debt.id); setEditDebtForm({ ...debt }); };
@@ -887,7 +913,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     else haptic.success();
     if (newTotal === 0) {
       // Celebration overlay handles the 100% message; no toast needed
-      if (!hitMilestone) toast('🎉 Debt destroyed!', 'success');
+      if (!hitMilestone) toast('Debt destroyed!', 'success');
       // Delay archive so user sees the celebration overlay
       setTimeout(() => { setDebts(prev => prev.map(d => d.id !== debtId ? d : { ...d, archived: true, archivedAt: new Date().toISOString() })); }, 4000);
     } else if (!hitMilestone) {
@@ -915,15 +941,74 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // ── Savings handlers ──
   const handleAddSavings = () => { const errors = {}; if (!newSavingsGoal.name.trim()) errors['savings-name'] = true; if (Object.keys(errors).length > 0) { setValidationErrors(errors); haptic.warning(); return; } setValidationErrors({}); const id = Date.now().toString(); const startingAmount = parseFloat(newSavingsGoal.startingAmount) || 0; const transactions = startingAmount > 0 ? [{ type: 'deposit', amount: startingAmount, date: new Date().toISOString(), note: 'Starting balance' }] : []; setSavings([...savings, { ...newSavingsGoal, id, currentAmount: startingAmount, targetAmount: parseFloat(newSavingsGoal.targetAmount) || 0, monthlyContribution: parseFloat(newSavingsGoal.monthlyContribution) || 0, transactions }]); setShowSavingsModal(false); setValidationErrors({}); setNewSavingsGoal({ ...emptySavings }); haptic.success(); toast('Savings goal created', 'success'); };
-  const handleDeleteSavings = async (id) => { if (await confirm('Delete this savings goal?', { title: 'Delete Goal', okText: 'Delete', danger: true })) { setSavings(savings.filter((s) => s.id !== id)); haptic.error(); toast('Goal deleted', 'error'); return true; } return false; };
+  const handleDeleteSavings = async (id) => { if (await confirm('Delete this savings goal?', { title: 'Delete Goal', okText: 'Delete', danger: true })) { setSavings(prev => prev.filter((s) => s.id !== id)); haptic.error(); toast('Goal deleted', 'error'); return true; } return false; };
+  const handleBulkDeleteSavings = async (ids) => { if (await confirm(`Delete ${ids.length} goal${ids.length > 1 ? 's' : ''}?`, { title: 'Delete Goals', okText: 'Delete', danger: true })) { setSavings(prev => prev.filter((s) => !ids.includes(s.id))); haptic.error(); toast(`${ids.length} goal${ids.length > 1 ? 's' : ''} deleted`, 'error'); } };
+  const handleBulkArchiveSavings = (ids) => { setSavings(prev => prev.map((s) => !ids.includes(s.id) ? s : { ...s, archived: true, archivedAt: s.archivedAt || new Date().toISOString() })); haptic.success(); toast(`${ids.length} goal${ids.length > 1 ? 's' : ''} archived`, 'success'); };
   const handleArchiveSavings = (id) => { setSavings(savings.map((s) => s.id !== id ? s : { ...s, archived: true, archivedAt: s.archivedAt || new Date().toISOString() })); haptic.success(); toast('Goal archived', 'success'); };
   const handleUnarchiveSavings = (id) => { setSavings(savings.map((s) => s.id !== id ? s : { ...s, archived: false })); haptic.medium(); toast('Goal restored', 'info'); };
   const handleSavingsEditStart = (goal) => { setEditingSavingsId(goal.id); setEditSavingsForm({ ...goal }); };
   const handleSavingsEditSave = () => { setSavings(savings.map((s) => s.id === editingSavingsId ? { ...editSavingsForm, targetAmount: parseFloat(editSavingsForm.targetAmount) || 0, monthlyContribution: parseFloat(editSavingsForm.monthlyContribution) || 0, currentAmount: parseFloat(editSavingsForm.currentAmount) || 0 } : s)); setEditingSavingsId(null); setEditSavingsForm({}); haptic.medium(); toast('Goal updated', 'success'); };
   const handleSavingsDeposit = (goalId) => { const a = parseFloat(savingsTransactionAmounts[goalId]); if (!a || a === 0) return; doSavingsTransaction(goalId, Math.abs(a), 'deposit'); };
   const handleSavingsWithdraw = (goalId) => { const a = parseFloat(savingsTransactionAmounts[goalId]); if (!a || a === 0) return; doSavingsTransaction(goalId, -Math.abs(a), 'withdrawal'); };
-  const doSavingsTransaction = (goalId, amount, type) => { const goal = savings.find(s => s.id === goalId); const newAmount = Math.max(0, (goal?.currentAmount || 0) + amount); const hitTarget = goal?.targetAmount > 0 && newAmount >= goal.targetAmount && (goal.currentAmount || 0) < goal.targetAmount; setSavings(savings.map((s) => s.id !== goalId ? s : { ...s, currentAmount: newAmount, transactions: [...(s.transactions || []), { date: new Date().toISOString(), amount, type }] })); setSavingsTransactionAmounts({ ...savingsTransactionAmounts, [goalId]: '' }); if (hitTarget) { haptic.success(); toast('🎉 Goal reached!', 'success'); setTimeout(() => { setSavings(prev => prev.map(s => s.id !== goalId ? s : { ...s, archived: true, archivedAt: new Date().toISOString() })); }, 1500); } else { haptic.medium(); toast(type === 'deposit' ? `${getSymbol(currencyCode)}${Math.abs(amount).toFixed(2)} deposited` : `${getSymbol(currencyCode)}${Math.abs(amount).toFixed(2)} withdrawn`, type === 'deposit' ? 'success' : 'warning'); } };
+  const doSavingsTransaction = (goalId, amount, type) => {
+    const goal = savings.find(s => s.id === goalId);
+    const oldAmount = goal?.currentAmount || 0;
+    const newAmount = Math.max(0, oldAmount + amount);
+    const target = goal?.targetAmount || 0;
+    const hitTarget = target > 0 && newAmount >= target && oldAmount < target;
+
+    // Milestone detection (25/50/75/100%)
+    if (target > 0 && amount > 0) {
+      const oldPct = (oldAmount / target) * 100;
+      const newPct = (newAmount / target) * 100;
+      const milestones = [25, 50, 75, 100];
+      for (let i = milestones.length - 1; i >= 0; i--) {
+        if (oldPct < milestones[i] && newPct >= milestones[i]) {
+          setSavingsCelebration({ milestone: milestones[i], goalName: goal.name });
+          break;
+        }
+      }
+    }
+
+    setSavings(savings.map((s) => s.id !== goalId ? s : { ...s, currentAmount: newAmount, transactions: [...(s.transactions || []), { date: new Date().toISOString(), amount, type }] }));
+    setSavingsTransactionAmounts({ ...savingsTransactionAmounts, [goalId]: '' });
+    if (hitTarget) {
+      haptic.success(); setTimeout(() => haptic.success(), 200);
+      if (!savingsCelebration) toast('Goal reached!', 'success');
+      setTimeout(() => { setSavings(prev => prev.map(s => s.id !== goalId ? s : { ...s, archived: true, archivedAt: new Date().toISOString() })); }, 4000);
+    } else {
+      haptic.medium();
+      if (!savingsCelebration) toast(type === 'deposit' ? `${getSymbol(currencyCode)}${Math.abs(amount).toFixed(2)} deposited` : `${getSymbol(currencyCode)}${Math.abs(amount).toFixed(2)} withdrawn`, type === 'deposit' ? 'success' : 'warning');
+    }
+  };
   const calculateSavingsEstimate = (goal) => { if (!goal.monthlyContribution || goal.monthlyContribution <= 0 || !goal.targetAmount || goal.targetAmount <= 0) return null; const rem = goal.targetAmount - (goal.currentAmount || 0); return rem <= 0 ? { months: 0 } : { months: Math.ceil(rem / goal.monthlyContribution) }; };
+
+  // Check for pending monthly auto-saves (goals with monthlyContribution that haven't had a deposit this month)
+  const pendingAutoSaves = React.useMemo(() => {
+    const now = new Date();
+    const thisMonth = `${now.getFullYear()}-${now.getMonth()}`;
+    return savings.filter(g => {
+      if (g.archived || !g.monthlyContribution || g.monthlyContribution <= 0) return false;
+      if (g.targetAmount > 0 && g.currentAmount >= g.targetAmount) return false;
+      const hasActionThisMonth = (g.transactions || []).some(t => {
+        if (t.amount < 0) return false; // withdrawals don't count
+        const d = new Date(t.date);
+        return `${d.getFullYear()}-${d.getMonth()}` === thisMonth;
+      });
+      return !hasActionThisMonth;
+    });
+  }, [savings]);
+
+  const handleAutoSave = (goalId) => {
+    const goal = savings.find(s => s.id === goalId);
+    if (!goal) return;
+    doSavingsTransaction(goalId, goal.monthlyContribution, 'auto');
+  };
+
+  const handleSkipAutoSave = (goalId) => {
+    // Record a zero-amount "skipped" transaction so the prompt doesn't reappear this month
+    setSavings(savings.map(s => s.id !== goalId ? s : { ...s, transactions: [...(s.transactions || []), { date: new Date().toISOString(), amount: 0, type: 'skipped' }] }));
+  };
 
   // ════════════════════════════════════
   // RENDER
@@ -955,11 +1040,14 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
         <div style={{ position: 'sticky', top: 0, zIndex: 100, background: 'var(--bg-primary)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', marginLeft: '-12px', marginRight: '-12px', marginTop: '-12px', paddingTop: 'calc(env(safe-area-inset-top) + 12px)', paddingLeft: '12px', paddingRight: '12px' }}>
           <div ref={headerRef} data-header-logo style={{
             overflow: 'hidden',
-            transition: 'max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease',
-            maxHeight: '70px',
+            transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin-bottom 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            transform: 'translateY(0) scaleY(1)',
+            transformOrigin: 'top center',
             opacity: 1,
+            marginBottom: '0px',
             padding: '10px 0 4px',
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
+            willChange: 'transform, opacity',
           }}>
             <Icons.TallyWordmark width={120} />
             <p style={{ color: 'var(--text-secondary)', fontSize: '11px', margin: 0 }}>Finance tracking made easy</p>
@@ -1012,22 +1100,22 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 
       {/* Swipe Container */}
       {isMobile ? (
-        <div className="swipe-container" onTouchStart={(e) => { if (window.__tallySelectionMode) return; handleTouchStart(e); }}>
+        <div className="swipe-container" onTouchStart={(e) => { if (window.__tallySelectionMode || window.__tallyModalOpen || document.querySelector('.form-screen.open')) return; handleTouchStart(e); }}>
           <div className="swipe-track" ref={swipeRef} style={{ transform: `translateX(${-activePanel * 100}%)` }}>
             <div className={`swipe-panel ${activePanel === 0 ? 'panel-active' : ''}`}>
-              <OverviewPanel totals={totals} incomeNum={incomeNum} categoryTotals={categoryTotals} isMobile={isMobile} monthlySnapshots={monthlySnapshots} totalDebt={totalDebt} totalSaved={totalSaved} insights={insights} bills={bills} debts={debts} savings={savings} />
+              <OverviewPanel totals={totals} incomeNum={incomeNum} categoryTotals={categoryTotals} isMobile={isMobile} monthlySnapshots={monthlySnapshots} totalDebt={totalDebt} totalSaved={totalSaved} insights={insights} bills={bills} debts={debts} savings={savings} strategyResults={strategyResults} debtStrategy={debtStrategy} calculateSavingsEstimate={calculateSavingsEstimate} expenseScope={expenseScope} setExpenseScope={setExpenseScope} monthlyDebtPayments={monthlyDebtPayments} monthlySavingsContributions={monthlySavingsContributions} />
             </div>
             <div className={`swipe-panel ${activePanel === 1 ? 'panel-active' : ''}`}>
-              <ActionsPanel income={income} setIncome={setIncome} categoryTotals={categoryTotals} setShowAddModal={setShowAddModal} setShowDebtModal={setShowDebtModal} setShowSavingsModal={setShowSavingsModal} setShowCategoryModal={setShowCategoryModal} setShowImportModal={setShowImportModal} salaryCalc={salaryCalc} setSalaryCalc={setSalaryCalc} />
+              <ActionsPanel income={income} setIncome={setIncome} categoryTotals={categoryTotals} setShowAddModal={setShowAddModal} setShowDebtModal={setShowDebtModal} setShowSavingsModal={setShowSavingsModal} setShowCategoryModal={() => { setCategorySection('bills'); setShowCategoryModal(true); }} setShowImportModal={setShowImportModal} salaryCalc={salaryCalc} setSalaryCalc={setSalaryCalc} />
             </div>
             <div className={`swipe-panel ${activePanel === 2 ? 'panel-active' : ''}`}>
-              <BillsPanel categories={['ALL', ...categories]} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} statusFilter={statusFilter} setStatusFilter={setStatusFilter} filteredBills={filteredBills} editingId={editingId} editForm={editForm} setEditForm={setEditForm} handleEditStart={handleEditStart} handleEditSave={handleEditSave} handleDelete={handleDelete} handleTogglePaid={handleTogglePaid} handleToggleMissed={handleToggleMissed} handleTogglePaused={handleTogglePaused} setEditingId={setEditingId} billSearch={billSearch} setBillSearch={setBillSearch} billSort={billSort} setBillSort={setBillSort} onBulkDelete={handleBulkDeleteBills} onBulkTogglePaid={handleBulkTogglePaid} onBulkToggleMissed={handleBulkToggleMissed} onBulkTogglePaused={handleBulkTogglePaused} activePanel={activePanel} setShowAddModal={setShowAddModal} setShowCategoryModal={setShowCategoryModal} />
+              <BillsPanel categories={['ALL', ...categories]} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} statusFilter={statusFilter} setStatusFilter={setStatusFilter} filteredBills={filteredBills} editingId={editingId} editForm={editForm} setEditForm={setEditForm} handleEditStart={handleEditStart} handleEditSave={handleEditSave} handleDelete={handleDelete} handleTogglePaid={handleTogglePaid} handleToggleMissed={handleToggleMissed} handleTogglePaused={handleTogglePaused} setEditingId={setEditingId} billSearch={billSearch} setBillSearch={setBillSearch} billSort={billSort} setBillSort={setBillSort} onBulkDelete={handleBulkDeleteBills} onBulkTogglePaid={handleBulkTogglePaid} onBulkToggleMissed={handleBulkToggleMissed} onBulkTogglePaused={handleBulkTogglePaused} activePanel={activePanel} setShowAddModal={setShowAddModal} setShowCategoryModal={() => { setCategorySection('bills'); setShowCategoryModal(true); }} allBills={bills} />
             </div>
             <div className={`swipe-panel ${activePanel === 3 ? 'panel-active' : ''}`}>
-              <DebtPanel debts={debts} totalDebt={totalDebt} calculatePayoff={calculatePayoff} editingDebtId={editingDebtId} editDebtForm={editDebtForm} setEditDebtForm={setEditDebtForm} handleDebtEditStart={handleDebtEditStart} handleDebtEditSave={handleDebtEditSave} handleDeleteDebt={handleDeleteDebt} handleMakePayment={handleMakePayment} debtPaymentAmounts={debtPaymentAmounts} setDebtPaymentAmounts={setDebtPaymentAmounts} showDebtHistory={showDebtHistory} setShowDebtHistory={setShowDebtHistory} setEditingDebtId={setEditingDebtId} setShowDebtModal={setShowDebtModal} handleArchiveDebt={handleArchiveDebt} handleUnarchiveDebt={handleUnarchiveDebt} debtStrategy={debtStrategy} setDebtStrategy={setDebtStrategy} extraDebtPayment={extraDebtPayment} setExtraDebtPayment={setExtraDebtPayment} strategyResults={strategyResults} debtCelebration={debtCelebration} setDebtCelebration={setDebtCelebration} incomeNum={incomeNum} />
+              <DebtPanel debts={debts} totalDebt={totalDebt} calculatePayoff={calculatePayoff} editingDebtId={editingDebtId} editDebtForm={editDebtForm} setEditDebtForm={setEditDebtForm} handleDebtEditStart={handleDebtEditStart} handleDebtEditSave={handleDebtEditSave} handleDeleteDebt={handleDeleteDebt} handleMakePayment={handleMakePayment} debtPaymentAmounts={debtPaymentAmounts} setDebtPaymentAmounts={setDebtPaymentAmounts} showDebtHistory={showDebtHistory} setShowDebtHistory={setShowDebtHistory} setEditingDebtId={setEditingDebtId} setShowDebtModal={setShowDebtModal} handleArchiveDebt={handleArchiveDebt} handleUnarchiveDebt={handleUnarchiveDebt} debtStrategy={debtStrategy} setDebtStrategy={setDebtStrategy} extraDebtPayment={extraDebtPayment} setExtraDebtPayment={setExtraDebtPayment} strategyResults={strategyResults} debtCelebration={debtCelebration} setDebtCelebration={setDebtCelebration} incomeNum={incomeNum} handleBulkDeleteDebts={handleBulkDeleteDebts} handleBulkArchiveDebts={handleBulkArchiveDebts} debtStatusFilter={debtStatusFilter} setDebtStatusFilter={setDebtStatusFilter} selectedDebtType={selectedDebtType} setSelectedDebtType={setSelectedDebtType} allDebtTypes={allDebtTypes} openManageTypes={() => { setCategorySection('debts'); setShowCategoryModal(true); }} />
             </div>
             <div className={`swipe-panel ${activePanel === 4 ? 'panel-active' : ''}`}>
-              <SavingsPanel savings={savings} totalSaved={totalSaved} editingSavingsId={editingSavingsId} editSavingsForm={editSavingsForm} setEditSavingsForm={setEditSavingsForm} handleSavingsEditStart={handleSavingsEditStart} handleSavingsEditSave={handleSavingsEditSave} handleDeleteSavings={handleDeleteSavings} handleSavingsDeposit={handleSavingsDeposit} handleSavingsWithdraw={handleSavingsWithdraw} savingsTransactionAmounts={savingsTransactionAmounts} setSavingsTransactionAmounts={setSavingsTransactionAmounts} showSavingsHistory={showSavingsHistory} setShowSavingsHistory={setShowSavingsHistory} calculateSavingsEstimate={calculateSavingsEstimate} setEditingSavingsId={setEditingSavingsId} setShowSavingsModal={setShowSavingsModal} handleArchiveSavings={handleArchiveSavings} handleUnarchiveSavings={handleUnarchiveSavings} />
+              <SavingsPanel savings={savings} totalSaved={totalSaved} editingSavingsId={editingSavingsId} editSavingsForm={editSavingsForm} setEditSavingsForm={setEditSavingsForm} handleSavingsEditStart={handleSavingsEditStart} handleSavingsEditSave={handleSavingsEditSave} handleDeleteSavings={handleDeleteSavings} handleSavingsDeposit={handleSavingsDeposit} handleSavingsWithdraw={handleSavingsWithdraw} savingsTransactionAmounts={savingsTransactionAmounts} setSavingsTransactionAmounts={setSavingsTransactionAmounts} showSavingsHistory={showSavingsHistory} setShowSavingsHistory={setShowSavingsHistory} calculateSavingsEstimate={calculateSavingsEstimate} setEditingSavingsId={setEditingSavingsId} setShowSavingsModal={setShowSavingsModal} handleArchiveSavings={handleArchiveSavings} handleUnarchiveSavings={handleUnarchiveSavings} handleBulkDeleteSavings={handleBulkDeleteSavings} handleBulkArchiveSavings={handleBulkArchiveSavings} savingsCelebration={savingsCelebration} setSavingsCelebration={setSavingsCelebration} incomeNum={incomeNum} bills={bills} pendingAutoSaves={pendingAutoSaves} handleAutoSave={handleAutoSave} handleSkipAutoSave={handleSkipAutoSave} savingsStatusFilter={savingsStatusFilter} setSavingsStatusFilter={setSavingsStatusFilter} selectedSavingsCategory={selectedSavingsCategory} setSelectedSavingsCategory={setSelectedSavingsCategory} allSavingsCategories={allSavingsCategories} openManageCategories={() => { setCategorySection('savings'); setShowCategoryModal(true); }} />
             </div>
           </div>
         </div>
@@ -1035,11 +1123,11 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 
       {/* Modals */}
       <AddBillScreen show={showAddModal} onClose={() => setShowAddModal(false)} newBill={newBill} setNewBill={setNewBill} handleAddBill={handleAddBill} categories={categories} validationErrors={validationErrors} setValidationErrors={setValidationErrors} emptyBill={emptyBill} />
-      <ManageCategoriesModal show={showCategoryModal} onClose={() => setShowCategoryModal(false)} bills={bills} customCategories={customCategories} categoryOrder={categoryOrder} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} handleDeleteCategory={handleDeleteCategory} handleRenameCategory={handleRenameCategory} handleMoveCategory={handleMoveCategory} />
-      <AddDebtScreen show={showDebtModal} onClose={() => setShowDebtModal(false)} newDebt={newDebt} setNewDebt={setNewDebt} handleAddDebt={handleAddDebt} emptyDebt={emptyDebt} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
-      <AddSavingsScreen show={showSavingsModal} onClose={() => setShowSavingsModal(false)} newSavingsGoal={newSavingsGoal} setNewSavingsGoal={setNewSavingsGoal} handleAddSavings={handleAddSavings} emptySavings={emptySavings} validationErrors={validationErrors} setValidationErrors={setValidationErrors} />
+      <ManageCategoriesModal show={showCategoryModal} onClose={() => setShowCategoryModal(false)} bills={bills} customCategories={customCategories} categoryOrder={categoryOrder} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} handleDeleteCategory={handleDeleteCategory} handleRenameCategory={handleRenameCategory} handleMoveCategory={handleMoveCategory} debts={debts} customDebtTypes={customDebtTypes} setCustomDebtTypes={setCustomDebtTypes} savings={savings} customSavingsCategories={customSavingsCategories} setCustomSavingsCategories={setCustomSavingsCategories} defaultSection={categorySection} />
+      <AddDebtScreen show={showDebtModal} onClose={() => setShowDebtModal(false)} newDebt={newDebt} setNewDebt={setNewDebt} handleAddDebt={handleAddDebt} emptyDebt={emptyDebt} validationErrors={validationErrors} setValidationErrors={setValidationErrors} allDebtTypes={allDebtTypes} />
+      <AddSavingsScreen show={showSavingsModal} onClose={() => setShowSavingsModal(false)} newSavingsGoal={newSavingsGoal} setNewSavingsGoal={setNewSavingsGoal} handleAddSavings={handleAddSavings} emptySavings={emptySavings} validationErrors={validationErrors} setValidationErrors={setValidationErrors} allSavingsCategories={allSavingsCategories} />
         <AccountModal show={showAccountModal} onClose={() => setShowAccountModal(false)} user={user} onSignIn={handleSignIn} onSignUp={handleSignUp} onSignOut={handleSignOut} onResetPassword={handleResetPassword} onGoogleSignIn={handleGoogleSignIn} syncStatus={syncStatus} onSyncNow={saveToCloud} onDeleteAccount={handleDeleteAccount} onClearLocalData={handleClearLocalData} lastSynced={lastSynced} />
-        <SettingsModal show={showSettingsModal} onClose={() => setShowSettingsModal(false)} theme={theme} onToggleTheme={handleToggleTheme} notificationSettings={notificationSettings} onNotificationSettingsChange={setNotificationSettings} currencyCode={currencyCode} onCurrencyChange={(code) => { setCurrencyCode(code); saveCurrencyPreference(code); }} />
+        <SettingsModal show={showSettingsModal} onClose={() => setShowSettingsModal(false)} theme={theme} onToggleTheme={handleToggleTheme} notificationSettings={notificationSettings} onNotificationSettingsChange={setNotificationSettings} currencyCode={currencyCode} onCurrencyChange={(code) => { setCurrencyCode(code); saveCurrencyPreference(code); }} bills={bills} debts={debts} savings={savings} />
         {showImportModal && (
           <CSVImportModal
             onClose={() => setShowImportModal(false)}

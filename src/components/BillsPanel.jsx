@@ -5,13 +5,6 @@ import * as Icons from './Icons';
 import haptic from '../utils/haptics';
 import { tc } from '../utils/themeColors';
 
-const STATUS_FILTERS = [
-  { key: 'ALL', label: 'All' }, { key: 'PAID', label: 'Paid' },
-  { key: 'UNPAID', label: 'Unpaid' }, { key: 'MISSED', label: 'Missed' },
-  { key: 'PAUSED', label: 'Paused' }, { key: 'RECURRING', label: 'Recurring' },
-  { key: 'ONE-OFF', label: 'One-off' },
-];
-
 const SORT_OPTIONS = [
   { key: 'default', label: 'Default' },
   { key: 'name', label: 'Name A–Z' },
@@ -30,8 +23,8 @@ const CATEGORY_ICON_MAP = {
   ENTERTAINMENT: Icons.CategoryEntertainment,
   HEALTH: Icons.CategoryHealth,
   INSURANCE: Icons.CategoryInsurance,
-  'CREDIT CARDS': Icons.CategoryCreditCard,
   PAYMENTS: Icons.Coins,
+  SUBSCRIPTIONS: Icons.CategorySubscription,
   SUBSCRIPTION: Icons.CategorySubscription,
   SAVINGS: Icons.CategorySavings,
   UTILITIES: Icons.CategoryUtilities,
@@ -128,6 +121,17 @@ function BillCard({
           <select className="input" value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}>
             {categories.filter(c => c !== 'ALL').map((cat) => (<option key={cat} value={cat}>{cat}</option>))}
           </select>
+          {editForm.recurring && (
+            <button type="button" onClick={() => setEditForm({ ...editForm, autoPay: !editForm.autoPay })}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', fontWeight: '500',
+                border: editForm.autoPay ? `2px solid ${tc.success}` : '1px solid var(--border)',
+                background: editForm.autoPay ? tc.successTintLight : 'var(--glass)',
+                color: editForm.autoPay ? tc.success : 'var(--text-muted)',
+              }}>
+              <span>{editForm.autoPay ? '✓ Auto-pay (Direct Debit)' : 'Manual Payment'}</span>
+              <span style={{ fontSize: '10px', fontWeight: '600' }}>{editForm.autoPay ? 'ON' : 'OFF'}</span>
+            </button>
+          )}
           {!editForm.recurring || editForm.frequency === 'Monthly' || editForm.frequency === 'Quarterly' ? (
             <div>
               <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>{editForm.recurring ? 'Day of month' : 'Due date'}</label>
@@ -165,7 +169,7 @@ function BillCard({
       onTouchStart={(e) => !selectionMode && onCardTouchStart(e, bill.id)}
       onTouchMove={onCardTouchMove}
       onTouchEnd={onCardTouchEnd}
-      onClick={() => selectionMode && (haptic.light(), toggleSelect(bill.id))}
+      onClick={() => { if (justLongPressed.current) { justLongPressed.current = false; return; } if (selectionMode) { haptic.light(); toggleSelect(bill.id); } }}
     >
       <div className="mobile-bill-card" style={{
         borderLeft: statusConfig ? `3px solid ${statusConfig.borderColor}` : undefined,
@@ -301,7 +305,7 @@ function BillCard({
           {/* Paused warning */}
           {bill.missed && bill.recurring && (
             <div style={{ marginTop: '8px', marginLeft: '46px', fontSize: '11px', color: tc.danger, background: tc.dangerTintLight, padding: '4px 8px', borderRadius: '6px', border: `1px solid var(--danger-tint)` }}>
-              ⚠️ Paused until paid
+              <Icons.Warning size={13} style={{ verticalAlign: '-2px' }} /> Paused until paid
             </div>
           )}
         </div>
@@ -316,7 +320,7 @@ export default function BillsPanel({
   handleDelete, handleTogglePaid, handleToggleMissed, handleTogglePaused, setEditingId,
   billSearch, setBillSearch, billSort, setBillSort,
   onBulkDelete, onBulkTogglePaid, onBulkToggleMissed, onBulkTogglePaused, activePanel,
-  setShowAddModal, setShowCategoryModal,
+  setShowAddModal, setShowCategoryModal, allBills,
 }) {
   const [showCategoryFilter, setShowCategoryFilter] = useState(false);
   const cs = useCurrency();
@@ -325,6 +329,9 @@ export default function BillsPanel({
   const [selectedIds, setSelectedIds] = useState(new Set());
   const longPressTimer = useRef(null);
   const longPressMoved = useRef(false);
+
+  // Lock panel swiping during selection mode
+  React.useEffect(() => { window.__tallySelectionMode = selectionMode; return () => { window.__tallySelectionMode = false; }; }, [selectionMode]);
 
   React.useEffect(() => {
     setSelectionMode(false);
@@ -357,13 +364,20 @@ export default function BillsPanel({
     setSelectedIds(new Set([id]));
   };
 
+  const justLongPressed = useRef(false);
   const onCardTouchStart = (e, id) => {
     if (e.target.closest('button, input, select, a')) return;
+    const x = e.touches?.[0]?.clientX || 0;
+    const y = e.touches?.[0]?.clientY || 0;
+    if (x < 40 || y > window.innerHeight - 40) return;
     longPressMoved.current = false;
+    justLongPressed.current = false;
     longPressTimer.current = setTimeout(() => {
       if (!longPressMoved.current) {
         onCardLongPress(id);
         haptic.medium();
+        justLongPressed.current = true;
+        setTimeout(() => { justLongPressed.current = false; }, 300);
       }
     }, 400);
   };
@@ -412,6 +426,44 @@ export default function BillsPanel({
         )}
       </div>
 
+      {/* Summary stats */}
+      {allBills && allBills.length > 0 && (() => {
+        const unpaid = allBills.filter(b => !b.paid && !b.paused && !b.missed);
+        const paid = allBills.filter(b => b.paid);
+        const missed = allBills.filter(b => b.missed);
+        const paused = allBills.filter(b => b.paused);
+        const unpaidTotal = unpaid.reduce((s, b) => s + (parseFloat(b.actual) || parseFloat(b.projected) || 0), 0);
+        const paidTotal = paid.reduce((s, b) => s + (parseFloat(b.actual) || 0), 0);
+        const missedTotal = missed.reduce((s, b) => s + (parseFloat(b.actual) || parseFloat(b.projected) || 0), 0);
+        const pausedTotal = paused.reduce((s, b) => s + (parseFloat(b.actual) || parseFloat(b.projected) || 0), 0);
+        const stats = [
+          { key: 'UNPAID', count: unpaid.length, total: unpaidTotal, label: 'unpaid', color: tc.warning },
+          { key: 'PAID', count: paid.length, total: paidTotal, label: 'paid', color: tc.success },
+          { key: 'PAUSED', count: paused.length, total: pausedTotal, label: 'paused', color: tc.info },
+          { key: 'MISSED', count: missed.length, total: missedTotal, label: 'missed', color: tc.danger },
+        ];
+        return (
+          <div className="animate-in" style={{ marginBottom: '12px', animationDelay: '0.6s', borderRadius: '16px', background: 'var(--glass)', border: '1px solid var(--border)', overflow: 'hidden', display: 'grid', gridTemplateColumns: `repeat(${stats.length}, 1fr)` }}>
+            {stats.map((s, i) => (
+              <div key={s.key} style={{
+                padding: '14px 4px 12px', textAlign: 'center',
+                borderRight: i < stats.length - 1 ? '1px solid var(--border)' : 'none',
+              }}>
+                <div className="font-mono" style={{ fontSize: '17px', fontWeight: '700', color: s.count > 0 ? s.color : 'var(--text-muted)' }}>
+                  {cs}{s.total.toFixed(0)}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '4px' }}>
+                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: s.count > 0 ? s.color : 'var(--border)', flexShrink: 0 }} />
+                  <span style={{ fontSize: '10px', fontWeight: '600', color: 'var(--text-muted)', letterSpacing: '0.02em' }}>
+                    {s.count} {s.label}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* Action bar — compact */}
       <div className="animate-in" style={{ display: 'flex', gap: '8px', marginBottom: '10px', animationDelay: '0.65s' }}>
         <button className="btn btn-primary" onClick={() => { haptic.medium(); setShowAddModal(true); }} style={{ flex: 1, justifyContent: 'center' }}>
@@ -427,9 +479,12 @@ export default function BillsPanel({
 
       {/* Status filters + Category filter button */}
       <div className="animate-in" style={{ marginBottom: '14px', animationDelay: '0.7s' }}>
-        {/* Status pills + Category toggle — single row, no wrap */}
         <div style={{ display: 'flex', gap: '5px' }}>
-          {STATUS_FILTERS.filter(f => f.key !== 'RECURRING' && f.key !== 'ONE-OFF').map((f) => (
+          {[
+            { key: 'ALL', label: 'All' }, { key: 'PAID', label: 'Paid' },
+            { key: 'UNPAID', label: 'Unpaid' }, { key: 'MISSED', label: 'Missed' },
+            { key: 'PAUSED', label: 'Paused' },
+          ].map((f) => (
             <button key={f.key} onClick={() => { haptic.light(); setStatusFilter(f.key); }}
               style={{ flex: 1, padding: '7px 4px', borderRadius: '20px', fontSize: '11px', fontWeight: '600', minWidth: 0,
                 cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s',
@@ -438,7 +493,6 @@ export default function BillsPanel({
                 color: statusFilter === f.key ? 'var(--accent-primary)' : 'var(--text-muted)',
               }}>{f.label}</button>
           ))}
-          {/* Category toggle — always says "Category", just opens/closes the sheet */}
           <button onClick={() => { haptic.light(); setShowCategoryFilter(v => !v); }}
             style={{ padding: '7px 4px', borderRadius: '20px', fontSize: '11px', fontWeight: '600',
               cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s',
@@ -452,7 +506,7 @@ export default function BillsPanel({
           </button>
         </div>
 
-        {/* Category filter sheet (slides down when open) */}
+        {/* Category filter sheet */}
         {showCategoryFilter && (
           <div style={{ marginTop: '10px', padding: '12px', background: 'var(--bg-card, var(--glass))',
             border: '1px solid var(--border)', borderRadius: '14px' }}>
@@ -478,7 +532,7 @@ export default function BillsPanel({
             </div>
             {/* Recurring / One-off filters */}
             <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border)', display: 'flex', gap: '6px' }}>
-              {STATUS_FILTERS.filter(f => f.key === 'RECURRING' || f.key === 'ONE-OFF').map((f) => (
+              {[{ key: 'RECURRING', label: 'Recurring' }, { key: 'ONE-OFF', label: 'One-off' }].map((f) => (
                 <button key={f.key} onClick={() => { haptic.light(); setStatusFilter(f.key); }}
                   style={{ padding: '7px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '600',
                     cursor: 'pointer', transition: 'all 0.15s',
@@ -497,9 +551,6 @@ export default function BillsPanel({
         <div style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2 className="font-display" style={{ fontSize: '24px' }}>{selectedCategory === 'ALL' ? 'All Bills' : selectedCategory}</h2>
-            {filteredBills.length > 0 && !selectionMode && (
-              <button onClick={() => { haptic.medium(); setSelectionMode(true); }} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Select</button>
-            )}
             {selectionMode && (
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <button onClick={() => { haptic.light(); selectAll(); }} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--accent-primary)' }}>{selectedIds.size === filteredBills.length ? 'Deselect All' : 'Select All'}</button>
@@ -515,7 +566,7 @@ export default function BillsPanel({
           </p>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: selectionMode && selectedIds.size > 0 ? '100px' : '0', transition: 'padding-bottom 0.2s' }}>
           {filteredBills.length === 0 && billSearch ? (
             <div style={{ textAlign: 'center', padding: '32px 20px', color: 'var(--text-muted)' }}>
               <Icons.Search size={32} style={{ marginBottom: '12px', opacity: 0.3 }} />

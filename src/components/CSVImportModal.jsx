@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import * as Icons from './Icons';
 import CSVImportFlow from './CSVImportFlow';
 import haptic from '../utils/haptics';
 
@@ -77,10 +78,10 @@ const BANKS = [
       'Tap the download icon in the top right corner',
       'Select "Export transactions"',
       'Choose CSV format',
-      'Select your date range — last 6 months is ideal',
+      'Select your date range - last 6 months is ideal',
       'Tap Share and save the file to your Files app',
     ],
-    note: 'Monzo makes exporting really simple — you can do the whole thing from the app in under a minute.',
+    note: 'Monzo makes exporting really simple - you can do the whole thing from the app in under a minute.',
   },
   {
     name: 'Starling',
@@ -99,7 +100,7 @@ const BANKS = [
       'Select your date range',
       'Save the file to your Files app',
     ],
-    note: 'Starling supports CSV export directly from the app — no browser needed.',
+    note: 'Starling supports CSV export directly from the app - no browser needed.',
   },
   {
     name: 'Revolut',
@@ -137,7 +138,7 @@ const BANKS = [
       'Scroll to the bottom and tap "Export All"',
       'Choose CSV format and download the file',
     ],
-    note: 'CSV export is only available via the Barclays website — not the mobile app. You can use your phone\'s browser if you don\'t have a computer nearby.',
+    note: 'CSV export is only available via the Barclays website - not the mobile app. You can use your phone\'s browser if you don\'t have a computer nearby.',
     warning: true,
   },
   {
@@ -156,7 +157,7 @@ const BANKS = [
       'Tap "Download" and select CSV format',
       'Save the file to your device',
     ],
-    note: 'HSBC\'s CSV export is browser-only. You can use your phone\'s browser — just visit hsbc.co.uk and log in with your usual details.',
+    note: 'HSBC\'s CSV export is browser-only. You can use your phone\'s browser - just visit hsbc.co.uk and log in with your usual details.',
     warning: true,
   },
   {
@@ -250,7 +251,7 @@ const BANKS = [
       'Choose CSV format',
       'Download the file',
     ],
-    note: 'First Direct lets you export up to 90 days at a time, or a full year at once — going back up to 6 years. Browser only, not available in the app.',
+    note: 'First Direct lets you export up to 90 days at a time, or a full year at once - going back up to 6 years. Browser only, not available in the app.',
     warning: true,
   },
   {
@@ -267,9 +268,9 @@ const BANKS = [
       'Tap "Search transactions" and set your date range',
       'Download your statement as a PDF',
       'Come back to Tally and tap "Select file" below',
-      'Choose the PDF you downloaded — we\'ll extract your transactions automatically',
+      'Choose the PDF you downloaded - we\'ll extract your transactions automatically',
     ],
-    note: 'Halifax offers PDF statements (not CSV). No problem — Tally can read PDF bank statements directly and extract your transactions on-device.',
+    note: 'Halifax offers PDF statements (not CSV). No problem - Tally can read PDF bank statements directly and extract your transactions on-device.',
   },
   {
     name: 'Chase UK',
@@ -286,9 +287,9 @@ const BANKS = [
       'Select the statement period you want',
       'Download the PDF statement',
       'Come back to Tally and tap "Select file" below',
-      'Choose the PDF you downloaded — we\'ll extract your transactions automatically',
+      'Choose the PDF you downloaded - we\'ll extract your transactions automatically',
     ],
-    note: 'Chase UK offers PDF statements. Tally can read PDF bank statements directly — just download and upload, we\'ll handle the rest.',
+    note: 'Chase UK offers PDF statements. Tally can read PDF bank statements directly - just download and upload, we\'ll handle the rest.',
   },
 ];
 
@@ -378,7 +379,7 @@ function BankGuide({ bank, onBack, onSelectFile }) {
             How it works
           </div>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
-            Export your recent transactions from your bank ({bank.csvSupport ? 'CSV' : 'PDF'} format). Then come back to Tally and upload the file — we'll scan it and suggest any recurring bills we spot automatically.
+            Export your recent transactions from your bank ({bank.csvSupport ? 'CSV' : 'PDF'} format). Then come back to Tally and upload the file - we'll scan it and suggest any recurring bills we spot automatically.
           </p>
         </div>
 
@@ -390,7 +391,7 @@ function BankGuide({ bank, onBack, onSelectFile }) {
             borderRadius: '12px', padding: '12px 14px', marginBottom: '20px',
             display: 'flex', gap: '10px', alignItems: 'flex-start',
           }}>
-            <span style={{ fontSize: '16px', flexShrink: 0 }}>⚠️</span>
+            <span style={{ fontSize: '16px', flexShrink: 0 }}><Icons.Warning size={16} /></span>
             <p style={{ fontSize: '13px', color: 'var(--warning)', margin: 0, lineHeight: 1.5 }}>
               {bank.name} requires you to use a <strong>web browser</strong> (not the app) to export transactions. Open your phone\'s browser and go to {bank.tagline.split('via ')[1] || 'their website'}.
             </p>
@@ -405,9 +406,9 @@ function BankGuide({ bank, onBack, onSelectFile }) {
             borderRadius: '12px', padding: '12px 14px', marginBottom: '20px',
             display: 'flex', gap: '10px', alignItems: 'flex-start',
           }}>
-            <span style={{ fontSize: '16px', flexShrink: 0 }}>📄</span>
+            <span style={{ fontSize: '16px', flexShrink: 0 }}><Icons.Document size={16} /></span>
             <p style={{ fontSize: '13px', color: 'var(--accent-primary)', margin: 0, lineHeight: 1.5 }}>
-              {bank.name} provides PDF statements. Tally can read these directly — just download and upload, no conversion needed.
+              {bank.name} provides PDF statements. Tally can read these directly - just download and upload, no conversion needed.
             </p>
           </div>
         )}
@@ -445,7 +446,7 @@ function BankGuide({ bank, onBack, onSelectFile }) {
           borderRadius: '12px', padding: '12px 14px',
         }}>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.6 }}>
-            💡 {bank.note}
+            <Icons.Lightbulb size={13} style={{ verticalAlign: '-2px' }} /> {bank.note}
           </p>
         </div>
 
@@ -465,7 +466,7 @@ function BankGuide({ bank, onBack, onSelectFile }) {
           onClick={() => { haptic.medium(); onSelectFile(); }}
           style={{ width: '100%', justifyContent: 'center', fontSize: '15px', padding: '14px' }}
         >
-          I have my file — select {bank.csvSupport ? 'CSV' : 'PDF'} →
+          I have my file - select {bank.csvSupport ? 'CSV' : 'PDF'} →
         </button>
       </div>
     </div>
@@ -591,13 +592,13 @@ export default function CSVImportModal({ onClose, onComplete, bills = [], catego
               width: '48px', height: '48px', borderRadius: '14px', flexShrink: 0,
               background: 'color-mix(in srgb, var(--success) 15%, transparent)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px',
-            }}>📄</div>
+            }}><Icons.Document size={24} /></div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--success)', marginBottom: '4px' }}>
                 Upload a file
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                CSV, spreadsheet, or PDF bank statement — we'll handle the rest.
+                CSV, spreadsheet, or PDF bank statement - we'll handle the rest.
               </div>
             </div>
             <span style={{ color: 'var(--success)', fontSize: '18px', opacity: 0.6, flexShrink: 0 }}>›</span>
@@ -615,7 +616,7 @@ export default function CSVImportModal({ onClose, onComplete, bills = [], catego
         <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-              Easy — export from the app
+              Easy - export from the app
             </div>
             <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
           </div>
@@ -648,7 +649,7 @@ export default function CSVImportModal({ onClose, onComplete, bills = [], catego
           background: 'var(--glass)', border: '1px solid var(--border)',
           borderRadius: '12px',
         }}>
-          <span style={{ fontSize: '14px' }}>🔒</span>
+          <span style={{ fontSize: '14px' }}><Icons.Lock size={14} /></span>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
             Your file is processed <strong style={{ color: 'var(--text-secondary)' }}>on this device only</strong>. No transaction data is ever sent to our servers.
           </p>

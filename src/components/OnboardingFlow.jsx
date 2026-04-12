@@ -120,7 +120,7 @@ export default function OnboardingFlow({ onComplete, onSelectCurrency }) {
               Finance tracking<br />made easy
             </h1>
             <p style={{ fontSize: '16px', color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: '300px' }}>
-              Tally helps you stay on top of your bills, debts and savings — all in one place.
+              Tally helps you stay on top of your bills, debts and savings - all in one place.
             </p>
           </div>
         )}
@@ -217,7 +217,7 @@ export default function OnboardingFlow({ onComplete, onSelectCurrency }) {
             </div>
             <div style={{ padding: '12px 14px', background: 'var(--glass)', borderRadius: '10px', border: '1px solid var(--border)', marginBottom: '20px' }}>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
-                💡 Not sure of your exact take-home? Skip for now — the <strong style={{ color: 'var(--text-secondary)' }}>Take-Home Calculator</strong> in Actions can work it out from your salary after tax, NI and other deductions.
+                <Icons.Lightbulb size={13} style={{ verticalAlign: '-2px' }} /> Not sure of your exact take-home? Skip for now - the <strong style={{ color: 'var(--text-secondary)' }}>Take-Home Calculator</strong> in Actions can work it out from your salary after tax, NI and other deductions.
               </p>
             </div>
             {/* Inline buttons for step 3 — visible above keyboard */}

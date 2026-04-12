@@ -3,7 +3,6 @@ import { Capacitor } from '@capacitor/core';
 
 // ── Notification ID ranges (to avoid collisions) ──
 const ID_DAILY_REMINDER = 10000;
-const ID_WEEKLY_SUMMARY = 20000;
 const ID_MISSED_ALERT = 30000;
 
 // ── Helpers ──
@@ -75,7 +74,7 @@ const buildDailyReminderContent = (bills) => {
   const later = bills.filter(b => b._daysUntilDue > 1);
 
   const total = bills.reduce((s, b) => s + (b.actual || b.projected || 0), 0);
-  const title = `${bills.length} bills due soon — ${formatCurrency(total)}`;
+  const title = `${bills.length} bills due soon - ${formatCurrency(total)}`;
 
   const lines = [];
   if (today.length > 0) {
@@ -103,7 +102,7 @@ const buildMissedAlertContent = (bills) => {
 
   const total = bills.reduce((s, b) => s + (b.actual || b.projected || 0), 0);
   return {
-    title: `${bills.length} missed bills — ${formatCurrency(total)}`,
+    title: `${bills.length} missed bills - ${formatCurrency(total)}`,
     body: bills.map(b => `${b.name} (${formatCurrency(b.actual || b.projected)})`).join(', '),
   };
 };
@@ -180,7 +179,9 @@ export const scheduleNotifications = async (bills, settings = {}, debts = []) =>
   if (!isNative()) return;
 
   const {
-    enabled = true,
+    billReminders = false,
+    missedAlerts = false,
+    debtReminders = false,
     reminderHour = 9,
     reminderMinute = 0,
   } = settings;
@@ -188,7 +189,8 @@ export const scheduleNotifications = async (bills, settings = {}, debts = []) =>
   // Always cancel existing first
   await cancelAllTallyNotifications();
 
-  if (!enabled) return;
+  // If nothing is enabled, don't even request permission
+  if (!billReminders && !missedAlerts && !debtReminders) return;
 
   const hasPermission = await requestNotificationPermission();
   if (!hasPermission) return;
@@ -196,111 +198,87 @@ export const scheduleNotifications = async (bills, settings = {}, debts = []) =>
   const notifications = [];
   const now = new Date();
 
-  // ── 1. Daily bill reminder (bills due within 3 days) ──
-  const upcomingBills = getBillsDueWithin(bills, 3);
-  const dailyContent = buildDailyReminderContent(upcomingBills);
+  // ── 1. Bill due reminders (bills due within 3 days) ──
+  if (billReminders) {
+    const upcomingBills = getBillsDueWithin(bills, 3);
+    const dailyContent = buildDailyReminderContent(upcomingBills);
 
-  if (dailyContent) {
-    // Schedule for today if before reminder time, otherwise tomorrow
-    const reminderDate = new Date();
-    reminderDate.setHours(reminderHour, reminderMinute, 0, 0);
+    if (dailyContent) {
+      const reminderDate = new Date();
+      reminderDate.setHours(reminderHour, reminderMinute, 0, 0);
+      if (reminderDate <= now) reminderDate.setDate(reminderDate.getDate() + 1);
 
-    if (reminderDate <= now) {
-      // Already past today's reminder time, schedule for tomorrow
-      reminderDate.setDate(reminderDate.getDate() + 1);
+      notifications.push({
+        id: ID_DAILY_REMINDER,
+        title: dailyContent.title,
+        body: dailyContent.body,
+        largeBody: dailyContent.body,
+        schedule: { at: reminderDate, allowWhileIdle: true },
+        sound: null,
+        actionTypeId: '',
+        extra: { type: 'bill_reminder' },
+      });
     }
-
-    notifications.push({
-      id: ID_DAILY_REMINDER,
-      title: dailyContent.title,
-      body: dailyContent.body,
-      largeBody: dailyContent.body,
-      schedule: { at: reminderDate, allowWhileIdle: true },
-      sound: null,
-      actionTypeId: '',
-      extra: { type: 'daily_reminder' },
-    });
   }
 
-  // ── 2. Weekly Monday summary ──
-  const unpaidBills = bills.filter(b => !b.paid && !b.paused);
-  if (unpaidBills.length > 0) {
-    const unpaidTotal = unpaidBills.reduce((s, b) => s + (b.actual || b.projected || 0), 0);
+  // ── 2. Missed bill alerts (day after due) ──
+  if (missedAlerts) {
+    const missedBills = getMissedBills(bills);
+    const missedContent = buildMissedAlertContent(missedBills);
 
-    // Find next Monday
-    const nextMonday = new Date();
-    const dayOfWeek = nextMonday.getDay(); // 0=Sun, 1=Mon
-    const daysUntilMonday = dayOfWeek === 0 ? 1 : dayOfWeek === 1 ? (now.getHours() >= reminderHour ? 7 : 0) : 8 - dayOfWeek;
-    nextMonday.setDate(nextMonday.getDate() + daysUntilMonday);
-    nextMonday.setHours(reminderHour, reminderMinute, 0, 0);
+    if (missedContent) {
+      const missedDate = new Date();
+      missedDate.setDate(missedDate.getDate() + 1);
+      missedDate.setHours(reminderHour, reminderMinute, 0, 0);
 
-    notifications.push({
-      id: ID_WEEKLY_SUMMARY,
-      title: `Weekly Summary — ${unpaidBills.length} unpaid bill${unpaidBills.length > 1 ? 's' : ''}`,
-      body: `${formatCurrency(unpaidTotal)} outstanding this month`,
-      largeBody: unpaidBills.map(b => `• ${b.name}: ${formatCurrency(b.actual || b.projected)}`).join('\n'),
-      schedule: { at: nextMonday, allowWhileIdle: true },
-      sound: null,
-      actionTypeId: '',
-      extra: { type: 'weekly_summary' },
-    });
+      notifications.push({
+        id: ID_MISSED_ALERT,
+        title: missedContent.title,
+        body: missedContent.body,
+        largeBody: missedContent.body,
+        schedule: { at: missedDate, allowWhileIdle: true },
+        sound: null,
+        actionTypeId: '',
+        extra: { type: 'missed_alert' },
+      });
+    }
   }
 
-  // ── 3. Missed bill alerts (day after due) ──
-  const missedBills = getMissedBills(bills);
-  const missedContent = buildMissedAlertContent(missedBills);
+  // ── 3. Debt payment reminders (debts due within 3 days) ──
+  if (debtReminders) {
+    const upcomingDebts = getDebtsDueWithin(debts, 3);
+    if (upcomingDebts.length > 0) {
+      const debtReminderDate = new Date();
+      debtReminderDate.setHours(reminderHour, reminderMinute, 0, 0);
+      if (debtReminderDate <= now) debtReminderDate.setDate(debtReminderDate.getDate() + 1);
 
-  if (missedContent) {
-    // Schedule for tomorrow morning if any missed
-    const missedDate = new Date();
-    missedDate.setDate(missedDate.getDate() + 1);
-    missedDate.setHours(reminderHour, reminderMinute, 0, 0);
+      const debtTotal = upcomingDebts.reduce((s, d) => s + Math.max(d.minimumPayment || 0, d.recurringPayment || 0), 0);
+      const title = upcomingDebts.length === 1
+        ? `${upcomingDebts[0].name} payment ${upcomingDebts[0]._daysUntilDue === 0 ? 'today' : upcomingDebts[0]._daysUntilDue === 1 ? 'tomorrow' : `in ${upcomingDebts[0]._daysUntilDue} days`}`
+        : `${upcomingDebts.length} debt payments due soon - ${formatCurrency(debtTotal)}`;
+      const body = upcomingDebts.map(d => {
+        const payment = Math.max(d.minimumPayment || 0, d.recurringPayment || 0);
+        return `${d.name}: ${formatCurrency(payment)}`;
+      }).join(', ');
 
-    notifications.push({
-      id: ID_MISSED_ALERT,
-      title: missedContent.title,
-      body: missedContent.body,
-      largeBody: missedContent.body,
-      schedule: { at: missedDate, allowWhileIdle: true },
-      sound: null,
-      actionTypeId: '',
-      extra: { type: 'missed_alert' },
-    });
-  }
-
-  // ── 4. Debt payment reminders (debts due within 3 days) ──
-  const upcomingDebts = getDebtsDueWithin(debts, 3);
-  if (upcomingDebts.length > 0) {
-    const debtReminderDate = new Date();
-    debtReminderDate.setHours(reminderHour, reminderMinute, 0, 0);
-    if (debtReminderDate <= now) debtReminderDate.setDate(debtReminderDate.getDate() + 1);
-
-    const debtTotal = upcomingDebts.reduce((s, d) => s + Math.max(d.minimumPayment || 0, d.recurringPayment || 0), 0);
-    const title = upcomingDebts.length === 1
-      ? `${upcomingDebts[0].name} payment ${upcomingDebts[0]._daysUntilDue === 0 ? 'today' : upcomingDebts[0]._daysUntilDue === 1 ? 'tomorrow' : `in ${upcomingDebts[0]._daysUntilDue} days`}`
-      : `${upcomingDebts.length} debt payments due soon — ${formatCurrency(debtTotal)}`;
-    const body = upcomingDebts.map(d => {
-      const payment = Math.max(d.minimumPayment || 0, d.recurringPayment || 0);
-      return `${d.name}: ${formatCurrency(payment)}`;
-    }).join(', ');
-
-    notifications.push({
-      id: ID_DEBT_REMINDER,
-      title,
-      body,
-      largeBody: body,
-      schedule: { at: debtReminderDate, allowWhileIdle: true },
-      sound: null,
-      actionTypeId: '',
-      extra: { type: 'debt_reminder' },
-    });
+      notifications.push({
+        id: ID_DEBT_REMINDER,
+        title,
+        body,
+        largeBody: body,
+        schedule: { at: debtReminderDate, allowWhileIdle: true },
+        sound: null,
+        actionTypeId: '',
+        extra: { type: 'debt_reminder' },
+      });
+    }
   }
 
   // Schedule all at once
   if (notifications.length > 0) {
     try {
       await LocalNotifications.schedule({ notifications });
-      console.log(`📬 Scheduled ${notifications.length} notification(s)`);
+      console.log(`Scheduled ${notifications.length} notification(s)`);
     } catch (err) {
       console.error('Error scheduling notifications:', err);
     }
@@ -313,7 +291,7 @@ export const loadNotificationSettings = async () => {
     const result = await window.storage.get('notification-settings');
     if (result?.value) return JSON.parse(result.value);
   } catch {}
-  return { enabled: true, reminderHour: 9, reminderMinute: 0 };
+  return { billReminders: false, missedAlerts: false, debtReminders: false, reminderHour: 9, reminderMinute: 0 };
 };
 
 export const saveNotificationSettings = async (settings) => {

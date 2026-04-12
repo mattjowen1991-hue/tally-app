@@ -106,15 +106,27 @@ function Tip({ children }) {
 
 function InfoTip({ text, title }) {
   const [open, setOpen] = React.useState(false);
+
+  const closeInfo = React.useCallback(() => setOpen(false), []);
+
+  // Push history state when info opens so swipe-back closes info (not parent modal)
+  React.useEffect(() => {
+    if (!open) return;
+    window.history.pushState({ infoTip: true }, '');
+    const handlePopState = () => closeInfo();
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [open, closeInfo]);
+
   return (
     <>
       <button
-        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+        onClick={(e) => { e.stopPropagation(); haptic.light(); setOpen(true); }}
         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1, flexShrink: 0, display: 'inline-flex', alignItems: 'center', WebkitTapHighlightColor: 'transparent', outline: 'none' }}
       >ⓘ</button>
       {open && (
         <div
-          onClick={() => setOpen(false)}
+          onClick={() => { window.history.back(); }}
           style={{
             position: 'fixed', inset: 0, zIndex: 9999,
             background: 'rgba(0,0,0,0.5)',
@@ -136,13 +148,13 @@ function InfoTip({ text, title }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: title ? '12px' : '0' }}>
               {title && <span style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>{title}</span>}
               <button
-                onClick={() => setOpen(false)}
+                onClick={() => window.history.back()}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '18px', padding: '0', marginLeft: 'auto', lineHeight: 1, WebkitTapHighlightColor: 'transparent', outline: 'none' }}
               >✕</button>
             </div>
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>{text}</div>
             <button
-              onClick={() => setOpen(false)}
+              onClick={() => window.history.back()}
               className="btn btn-primary"
               style={{ width: '100%', justifyContent: 'center', marginTop: '16px', padding: '10px' }}
             >Got it</button>
@@ -222,7 +234,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
                 <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
                   <DeductionRow label="Income Tax" sublabel={grossYearly > UK_BASIC_RATE_LIMIT ? '40% higher rate applies' : '20% basic rate'} enabled={settings.incomeTax} onToggle={() => updateSettings({ incomeTax: !settings.incomeTax })} color={tc.danger} tip={
                     <div>
-                      <p style={{ margin: '0 0 10px' }}>Collected via PAYE before you're paid. Everyone gets a tax-free Personal Allowance — above it you pay:</p>
+                      <p style={{ margin: '0 0 10px' }}>Collected via PAYE before you're paid. Everyone gets a tax-free Personal Allowance - above it you pay:</p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '10px' }}>
                         {[
                           { band: 'Personal Allowance', range: 'Up to £12,570', rate: '0%' },
@@ -230,20 +242,20 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
                           { band: 'Higher rate', range: '£50,271 – £125,140', rate: '40%' },
                           { band: 'Additional rate', range: 'Over £125,140', rate: '45%' },
                         ].map(r => (
-                          <div key={r.band} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '5px 8px', background: 'var(--glass)', borderRadius: '6px' }}>
+                          <div key={r.band} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '8px', alignItems: 'center', fontSize: '12px', padding: '5px 8px', background: 'var(--glass)', borderRadius: '6px' }}>
                             <span style={{ color: 'var(--text-secondary)' }}>{r.band}</span>
-                            <span style={{ color: 'var(--text-muted)', marginLeft: '8px' }}>{r.range}</span>
-                            <span style={{ fontWeight: '600', color: 'var(--text-primary)', marginLeft: '8px' }}>{r.rate}</span>
+                            <span style={{ color: 'var(--text-muted)', textAlign: 'right', minWidth: '90px' }}>{r.range}</span>
+                            <span style={{ fontWeight: '600', color: 'var(--text-primary)', textAlign: 'right', minWidth: '28px' }}>{r.rate}</span>
                           </div>
                         ))}
                       </div>
-                      <Tip>Your allowance reduces by £1 for every £2 earned over £100,000 — it's gone entirely at £125,140.</Tip>
+                      <Tip>Your allowance reduces by £1 for every £2 earned over £100,000 - it's gone entirely at £125,140.</Tip>
                       <Tip>Your tax code (e.g. 1257L) tells HMRC your allowance. If yours looks unusual, check it at gov.uk/check-income-tax-current-year.</Tip>
                     </div>
                   } />
                 </div>
                 <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-                  <DeductionRow label="National Insurance" sublabel="Class 1 — 8% / 2%" enabled={settings.nationalInsurance} onToggle={() => updateSettings({ nationalInsurance: !settings.nationalInsurance })} color={tc.warning} tip={
+                  <DeductionRow label="National Insurance" sublabel="Class 1 - 8% / 2%" enabled={settings.nationalInsurance} onToggle={() => updateSettings({ nationalInsurance: !settings.nationalInsurance })} color={tc.warning} tip={
                     <div>
                       <p style={{ margin: '0 0 10px' }}>NI funds the NHS, State Pension, and benefits. As an employee you pay Class 1:</p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '10px' }}>
@@ -253,9 +265,9 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
                           { label: 'Over £50,270', rate: '2%' },
                           { label: 'Employer contribution', rate: '15%' },
                         ].map(r => (
-                          <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '5px 8px', background: 'var(--glass)', borderRadius: '6px' }}>
+                          <div key={r.label} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', alignItems: 'center', fontSize: '12px', padding: '5px 8px', background: 'var(--glass)', borderRadius: '6px' }}>
                             <span style={{ color: 'var(--text-secondary)' }}>{r.label}</span>
-                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{r.rate}</span>
+                            <span style={{ fontWeight: '600', color: 'var(--text-primary)', textAlign: 'right', minWidth: '28px' }}>{r.rate}</span>
                           </div>
                         ))}
                       </div>
@@ -271,15 +283,15 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
                         Student Finance
                         <InfoTip title="Student Finance" text={
                           <div>
-                            <p style={{ margin: '0 0 10px' }}>You only repay when you earn above your plan's threshold — nothing below it. Repayments are taken automatically via PAYE.</p>
+                            <p style={{ margin: '0 0 10px' }}>You only repay when you earn above your plan's threshold - nothing below it. Repayments are taken automatically via PAYE.</p>
                             <ol style={{ margin: '0 0 10px', paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <li><strong>Plan 1</strong> (pre-2012, England/Wales/NI) — £24,990 threshold. Written off 25 years after first repayment, or age 65 if your loan was paid before Sept 2006. Repay 9%.</li>
-                              <li><strong>Plan 2</strong> (post-2012, England/Wales) — £27,295 threshold. Written off after 30 years. Repay 9%.</li>
-                              <li><strong>Plan 4</strong> (Scotland) — £31,395 threshold. Written off after 30 years (or age 65 for loans before Aug 2007). Repay 9%.</li>
-                              <li><strong>Plan 5</strong> (from 2023) — £25,000 threshold. Written off after 40 years. Repay 9%.</li>
-                              <li><strong>Postgrad</strong> — £21,000 threshold. Written off after 30 years. Repay 6%.</li>
+                              <li><strong>Plan 1</strong> (pre-2012, England/Wales/NI) - £24,990 threshold. Written off 25 years after first repayment, or age 65 if your loan was paid before Sept 2006. Repay 9%.</li>
+                              <li><strong>Plan 2</strong> (post-2012, England/Wales) - £27,295 threshold. Written off after 30 years. Repay 9%.</li>
+                              <li><strong>Plan 4</strong> (Scotland) - £31,395 threshold. Written off after 30 years (or age 65 for loans before Aug 2007). Repay 9%.</li>
+                              <li><strong>Plan 5</strong> (from 2023) - £25,000 threshold. Written off after 40 years. Repay 9%.</li>
+                              <li><strong>Postgrad</strong> - £21,000 threshold. Written off after 30 years. Repay 6%.</li>
                             </ol>
-                            <Tip>If you're unlikely to earn enough to clear the balance before write-off, making extra repayments is usually not worth it — you'd just pay more than you would have anyway.</Tip>
+                            <Tip>If you're unlikely to earn enough to clear the balance before write-off, making extra repayments is usually not worth it - you'd just pay more than you would have anyway.</Tip>
                           </div>
                         } />
                       </div>
@@ -297,7 +309,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
                         <div style={{ padding: '7px 10px', background: 'var(--glass)', borderRadius: '8px' }}>
                           <div style={{ fontWeight: '600', fontSize: '12px', marginBottom: '2px' }}>Auto-enrolment minimums</div>
-                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>5% employee + 3% employer = 8% total. Many employers match more — always worth checking, it's free money.</div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>5% employee + 3% employer = 8% total. Many employers match more - always worth checking, it's free money.</div>
                         </div>
                         <div style={{ padding: '7px 10px', background: 'var(--glass)', borderRadius: '8px' }}>
                           <div style={{ fontWeight: '600', fontSize: '12px', marginBottom: '2px' }}>Government top-up</div>
@@ -308,7 +320,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
                           <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Currently 55, rising to 57 on 6 April 2028. Savings grow free of tax until withdrawal.</div>
                         </div>
                       </div>
-                      <Tip>If your employer offers salary sacrifice (pre-tax), it saves you NI too — making it even more efficient than standard pension contributions.</Tip>
+                      <Tip>If your employer offers salary sacrifice (pre-tax), it saves you NI too - making it even more efficient than standard pension contributions.</Tip>
                     </div>
                   } />
                   {settings.pension && (
@@ -320,7 +332,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }}>
                             <div style={{ padding: '8px 10px', background: 'var(--glass)', borderRadius: '8px', borderLeft: '3px solid var(--accent-primary)' }}>
                               <div style={{ fontWeight: '600', fontSize: '12px', marginBottom: '3px' }}>Pre-tax (Salary Sacrifice)</div>
-                              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Deducted before tax and NI are calculated. You save income tax <em>and</em> NI — the most efficient option. A 5% contribution effectively costs a basic rate taxpayer only ~3.9% of take-home.</div>
+                              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Deducted before tax and NI are calculated. You save income tax <em>and</em> NI - the most efficient option. A 5% contribution effectively costs a basic rate taxpayer only ~3.9% of take-home.</div>
                             </div>
                             <div style={{ padding: '8px 10px', background: 'var(--glass)', borderRadius: '8px', borderLeft: '3px solid var(--border)' }}>
                               <div style={{ fontWeight: '600', fontSize: '12px', marginBottom: '3px' }}>Post-tax</div>
@@ -398,14 +410,14 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
           {/* Apply button */}
           {netMonthly > 0 && (
             <button onClick={() => { haptic.success(); onApply(); }} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', fontSize: '15px', padding: '14px' }}>
-              ✓ Apply — use {cs}{netMonthly.toFixed(2)}/mo as my income
+              ✓ Apply - use {cs}{netMonthly.toFixed(2)}/mo as my income
             </button>
           )}
 
           {/* Disclaimer */}
           <div style={{ padding: '12px 14px', background: 'var(--glass)', borderRadius: '10px', border: '1px solid var(--border)' }}>
             <p style={{ fontSize: '11px', color: tc.muted, lineHeight: 1.6, margin: 0 }}>
-              <strong style={{ color: tc.secondary }}>For guidance only.</strong> These calculations are estimates based on standard 2024/25 UK tax rates and may not reflect your exact take-home pay. Individual circumstances vary — including tax codes, employer benefits, salary sacrifice arrangements, and other deductions. Tally is not a financial adviser. For accurate figures, refer to your payslip or consult a qualified accountant or HMRC directly at <span style={{ color: 'var(--accent-primary)' }}>gov.uk/income-tax</span>.
+              <strong style={{ color: tc.secondary }}>For guidance only.</strong> These calculations are estimates based on standard 2024/25 UK tax rates and may not reflect your exact take-home pay. Individual circumstances vary - including tax codes, employer benefits, salary sacrifice arrangements, and other deductions. Tally is not a financial adviser. For accurate figures, refer to your payslip or consult a qualified accountant or HMRC directly at <span style={{ color: 'var(--accent-primary)' }}>gov.uk/income-tax</span>.
             </p>
           </div>
 
@@ -430,16 +442,19 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
   const [showCalcModal, setShowCalcModal] = useState(false);
   const [newDeduction, setNewDeduction] = useState({ name: '', value: '', type: 'fixed' });
 
-  // Push history state when calc modal opens so back gesture / swipe closes it
+  // Block panel swiping and handle back navigation when calc modal is open
   useEffect(() => {
-    if (!showCalcModal) return;
+    if (!showCalcModal) { window.__tallyModalOpen = false; return; }
+    window.__tallyModalOpen = true;
     window.history.pushState({ calcModal: true }, '');
     const handlePopState = () => {
+      // Only close if our own history entry was popped (not an InfoTip's)
+      if (window.history.state?.calcModal) return;
       setShowCalcModal(false);
       if (!calcApplied) setCalcEnabled(false);
     };
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    return () => { window.__tallyModalOpen = false; window.removeEventListener('popstate', handlePopState); };
   }, [showCalcModal, calcApplied]);
 
   // Sync settings into salaryCalc whenever they change
@@ -590,7 +605,7 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
             </button>
             {calcEnabled && calcApplied && (
               <button
-                onClick={() => { if (salaryCalc?.settings) setSettings(salaryCalc.settings); setShowCalcModal(true); }}
+                onClick={() => { haptic.light(); if (salaryCalc?.settings) setSettings(salaryCalc.settings); setShowCalcModal(true); }}
                 style={{
                   fontSize: '12px', fontWeight: '600', padding: '5px 12px', borderRadius: '20px', cursor: 'pointer',
                   border: '1.5px solid var(--border)',

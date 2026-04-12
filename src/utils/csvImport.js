@@ -474,7 +474,7 @@ export function detectRecurring(transactions) {
       nextDueEstimate: nextDue,
       confidence: Math.round(confidence * 100) / 100,
       confidenceLevel: confidence >= 0.75 ? 'high' : confidence >= 0.45 ? 'medium' : 'low',
-      explainer: `Seen ${txns.length} times, every ~${avgGapDays} days, amount range £${minAmount.toFixed(2)}–£${maxAmount.toFixed(2)}`,
+      explainer: `Seen ${txns.length} times, every ~${avgGapDays} days, amount range £${minAmount.toFixed(2)}-£${maxAmount.toFixed(2)}`,
     });
   }
 
@@ -649,7 +649,7 @@ export function importSpreadsheet(text) {
           frequencyLabel: 'Monthly',
           confidence: 0.9,
           confidenceLevel: 'high',
-          explainer: `From your budget spreadsheet — £${amount.toFixed(2)}`,
+          explainer: `From your budget spreadsheet - £${amount.toFixed(2)}`,
           occurrences: 1,
           nextDueEstimate: null,
         });
@@ -668,7 +668,7 @@ export function importSpreadsheet(text) {
           category: currentCategory,
           confidence: 0.9,
           confidenceLevel: 'high',
-          explainer: `From your budget spreadsheet — £${amount.toFixed(2)}/month`,
+          explainer: `From your budget spreadsheet - £${amount.toFixed(2)}/month`,
           occurrences: 1,
           nextDueEstimate: null,
         });

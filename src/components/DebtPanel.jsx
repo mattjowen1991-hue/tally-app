@@ -7,6 +7,62 @@ import { tc } from '../utils/themeColors';
 import { DEBT_TYPES } from '../data/initialData';
 import { calcDynamicMinimum } from '../utils/debtStrategy';
 
+// Reusable bottom sheet for educational info
+function InfoSheet({ open, onClose, title, children }) {
+  // Block panel swiping and enable swipe-back to close
+  React.useEffect(() => {
+    if (!open) return;
+    window.__tallyModalOpen = true;
+    window.history.pushState({ infoSheet: true }, '');
+    const handlePopState = () => onClose();
+    window.addEventListener('popstate', handlePopState);
+    return () => { window.__tallyModalOpen = false; window.removeEventListener('popstate', handlePopState); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  if (!open) return null;
+
+  const close = () => window.history.back();
+
+  return ReactDOM.createPortal(
+    <div onClick={close} style={{
+      position: 'fixed', inset: 0, zIndex: 10000,
+      background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      animation: 'fadeIn 0.15s ease-out',
+    }}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        width: '100%', maxWidth: '500px', padding: '24px 20px 32px',
+        borderRadius: '20px 20px 0 0',
+        background: 'var(--bg-primary, #0f1225)', border: '1px solid var(--border)',
+        borderBottom: 'none', animation: 'slideInUp 0.25s cubic-bezier(0.32, 0.72, 0, 1)',
+      }}>
+        <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'var(--border)', margin: '0 auto 16px' }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+          <h3 style={{ fontSize: '17px', fontWeight: '700', color: 'var(--text-primary)' }}>{title}</h3>
+          <button onClick={close} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}>
+            <Icons.X size={18} />
+          </button>
+        </div>
+        <div style={{ fontSize: '14px', lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+          {children}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// Info button that triggers a bottom sheet
+function InfoButton({ onClick }) {
+  return (
+    <button onClick={(e) => { e.stopPropagation(); haptic.light(); onClick(); }}
+      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', color: 'var(--text-muted)', opacity: 0.6 }}>
+      <Icons.InfoCircle size={15} />
+    </button>
+  );
+}
+
 const PAYMENT_MODES = [
   { key: 'recurring', label: '↻ Recurring', color: tc.info },
   { key: 'one-off', label: '◎ One-off', color: tc.warning },
@@ -311,7 +367,7 @@ function DebtInfoBanner({ debt, calculatePayoff }) {
         background: isExpired ? tc.dangerTint : isUrgent ? tc.warningTint : tc.infoTint,
         border: `1px solid ${isExpired ? tc.dangerTintStrong : isUrgent ? tc.warningTintStrong : 'var(--info-tint-strong)'}` }}>
         {isExpired ? (
-          <div>⚠️ 0% balance transfer expired! · Reverts to {debt.btRevertRate || '?'}% APR</div>
+          <div><Icons.Warning size={13} style={{ verticalAlign: '-2px' }} /> 0% balance transfer expired! · Reverts to {debt.btRevertRate || '?'}% APR</div>
         ) : (
           <>
             <div>Balance transfer · {daysLeft} days left at 0%</div>
@@ -335,7 +391,7 @@ function DebtInfoBanner({ debt, calculatePayoff }) {
         color: isOverdue ? tc.danger : isUrgent ? tc.warning : tc.secondary,
         background: isOverdue ? tc.dangerTint : isUrgent ? tc.warningTint : 'var(--glass)',
         border: `1px solid ${isOverdue ? tc.dangerTintStrong : isUrgent ? tc.warningTintStrong : 'var(--border)'}` }}>
-        {isOverdue ? `⚠️ Overdue by ${Math.abs(daysUntil)} days` : `Due ${due.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · ${daysUntil} days`}
+        {isOverdue ? <><Icons.Warning size={13} style={{ verticalAlign: '-2px' }} /> Overdue by {Math.abs(daysUntil)} days</> : `Due ${due.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · ${daysUntil} days`}
       </div>
     );
   }
@@ -358,8 +414,8 @@ function DebtInfoBanner({ debt, calculatePayoff }) {
           color: info.isExpired ? tc.danger : info.monthsRemaining <= 3 ? tc.warning : tc.success,
           background: info.isExpired ? tc.dangerTint : info.monthsRemaining <= 3 ? tc.warningTint : tc.successTintLight,
           border: `1px solid ${info.isExpired ? tc.dangerTintStrong : info.monthsRemaining <= 3 ? tc.warningTintStrong : tc.successTintStrong}` }}>
-          {info.isExpired ? '⚠️ Interest-free period expired!' : (
-            <><div>🟢 Interest-free · {info.monthsRemaining} of {info.promoMonths} months left</div>
+          {info.isExpired ? <><Icons.Warning size={13} style={{ verticalAlign: '-2px' }} /> Interest-free period expired!</> : (
+            <><div><Icons.CircleDot size={13} style={{ verticalAlign: '-2px', color: 'currentColor' }} /> Interest-free · {info.monthsRemaining} of {info.promoMonths} months left</div>
             {info.monthlyToClear > 0 && <div style={{ fontSize: '11px', marginTop: '2px', opacity: 0.8 }}>Pay {cs}{info.monthlyToClear.toFixed(2)}/mo to clear in time</div>}</>
           )}
         </div>
@@ -442,7 +498,7 @@ function PayMoreNudge({ debt, calculatePayoff }) {
         border: '1px solid color-mix(in srgb, var(--accent-primary) 15%, transparent)',
         color: 'var(--accent-primary)' }}>
         <div style={{ fontWeight: '600' }}>
-          💡 Pay {cs}{bestNudge.extra} more/mo → save {cs}{bestNudge.interestSaved.toFixed(0)} interest
+          <Icons.Lightbulb size={13} style={{ verticalAlign: '-2px' }} /> Pay {cs}{bestNudge.extra} more/mo → save {cs}{bestNudge.interestSaved.toFixed(0)} interest
         </div>
         <div style={{ opacity: 0.8, marginTop: '2px' }}>
           Debt-free {bestNudge.monthsSaved} month{bestNudge.monthsSaved !== 1 ? 's' : ''} sooner
@@ -453,7 +509,7 @@ function PayMoreNudge({ debt, calculatePayoff }) {
           background: 'color-mix(in srgb, var(--warning) 6%, transparent)',
           border: '1px solid color-mix(in srgb, var(--warning) 15%, transparent)',
           color: 'var(--warning)' }}>
-          ⚠️ Minimum only: {formatMonths(minimumWarning.months)} · {cs}{minimumWarning.interest.toFixed(0)} total interest
+          <Icons.Warning size={13} style={{ verticalAlign: '-2px' }} /> Minimum only: {formatMonths(minimumWarning.months)} · {cs}{minimumWarning.interest.toFixed(0)} total interest
         </div>
       )}
     </div>
@@ -510,7 +566,7 @@ function MortgageOverpayCalc({ debt, calculatePayoff }) {
             </div>
           </div>
         ) : extra > 0 && boostedResult && boostedResult.months === Infinity ? (
-          <div style={{ fontSize: '12px', color: tc.danger }}>⚠️ Payment doesn't cover interest</div>
+          <div style={{ fontSize: '12px', color: tc.danger }}><Icons.Warning size={13} style={{ verticalAlign: '-2px' }} /> Payment doesn't cover interest</div>
         ) : (
           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
             Current: {formatMonths(baseResult.months)} · {cs}{baseResult.totalInterest.toLocaleString()} interest
@@ -639,7 +695,7 @@ function DebtPayoffChart({ strategyResults, debtStrategy, debts }) {
   );
 }
 
-function ConsolidationCalc({ totalBalance, currentMonthly, stratInterest, cs }) {
+function ConsolidationCalc({ totalBalance, currentMonthly, stratInterest, cs, setInfoSheet }) {
   const [open, setOpen] = React.useState(false);
   const [consolRate, setConsolRate] = React.useState('');
   const [consolTerm, setConsolTerm] = React.useState('');
@@ -668,6 +724,7 @@ function ConsolidationCalc({ totalBalance, currentMonthly, stratInterest, cs }) 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Icons.Handshake size={16} style={{ color: 'var(--accent-primary)' }} />
           <span style={{ fontSize: '14px', fontWeight: '700' }}>Consolidation Calculator</span>
+          <InfoButton onClick={() => setInfoSheet('consolidation')} />
         </div>
         <span style={{ transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'none', display: 'flex' }}><Icons.ChevronDown size={16} /></span>
       </button>
@@ -713,7 +770,7 @@ function ConsolidationCalc({ totalBalance, currentMonthly, stratInterest, cs }) 
                   <span>
                     {interestDiff > 0
                       ? <><strong>Saves {cs}{interestDiff.toLocaleString()}</strong> in interest vs current plan</>
-                      : <><strong>Costs {cs}{Math.abs(interestDiff).toLocaleString()} more</strong> — current plan is better</>
+                      : <><strong>Costs {cs}{Math.abs(interestDiff).toLocaleString()} more</strong> - current plan is better</>
                     }
                   </span>
                 </div>
@@ -749,11 +806,16 @@ export default function DebtPanel({
   handleArchiveDebt, handleUnarchiveDebt,
   debtStrategy, setDebtStrategy, extraDebtPayment, setExtraDebtPayment, strategyResults,
   debtCelebration, setDebtCelebration, incomeNum,
+  handleBulkDeleteDebts, handleBulkArchiveDebts,
+  debtStatusFilter, setDebtStatusFilter, selectedDebtType, setSelectedDebtType, allDebtTypes,
+  openManageTypes,
 }) {
   const cs = useCurrency();
   const [showWhatIf, setShowWhatIf] = React.useState({});
+  const [showTypeFilter, setShowTypeFilter] = React.useState(false);
   const [whatIfAmounts, setWhatIfAmounts] = React.useState({});
   const [showArchived, setShowArchived] = React.useState(false);
+  const [infoSheet, setInfoSheet] = React.useState(null); // 'snowball' | 'avalanche' | 'dti' | 'utilization' | 'consolidation'
 
   // Selection mode
   const [selectionMode, setSelectionMode] = React.useState(false);
@@ -775,16 +837,20 @@ export default function DebtPanel({
   const justLongPressed = React.useRef(false);
   const onCardTouchStart = (e, id) => {
     if (e.target.closest('button, input, select, a') || selectionMode) return;
+    // Ignore touches near the left edge (swipe-back zone)
+    const x = e.touches?.[0]?.clientX || 0;
+    const y = e.touches?.[0]?.clientY || 0;
+    if (x < 40 || y > window.innerHeight - 40) return;
     longPressMoved.current = false;
     justLongPressed.current = false;
     longPressTimer.current = setTimeout(() => {
-      if (!longPressMoved.current) { setSelectionMode(true); setSelectedIds(new Set([id])); haptic.medium(); justLongPressed.current = true; }
+      if (!longPressMoved.current) { setSelectionMode(true); setSelectedIds(new Set([id])); haptic.medium(); justLongPressed.current = true; setTimeout(() => { justLongPressed.current = false; }, 300); }
     }, 400);
   };
   const onCardTouchMove = () => { longPressMoved.current = true; if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } };
   const onCardTouchEnd = () => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } };
 
-  const activeDebts = React.useMemo(() => {
+  const activeDebtsAll = React.useMemo(() => {
     const active = debts.filter(d => !d.archived);
     if (!strategyResults || !debtStrategy) return active;
     const perDebt = strategyResults[debtStrategy]?.perDebt || {};
@@ -797,6 +863,15 @@ export default function DebtPanel({
     });
   }, [debts, strategyResults, debtStrategy]);
   const archivedDebts = debts.filter(d => d.archived);
+
+  // Apply filters
+  const activeDebts = React.useMemo(() => {
+    let filtered = activeDebtsAll;
+    if (debtStatusFilter === 'ACTIVE') filtered = filtered.filter(d => d.totalAmount > 0);
+    if (debtStatusFilter === 'PAID_OFF') filtered = filtered.filter(d => d.totalAmount === 0);
+    if (selectedDebtType !== 'ALL') filtered = filtered.filter(d => d.type === selectedDebtType);
+    return filtered;
+  }, [activeDebtsAll, debtStatusFilter, selectedDebtType]);
 
   return (
     <>
@@ -812,7 +887,10 @@ export default function DebtPanel({
               </>
             ) : (
               <>
-                {activeDebts.length > 0 && <button onClick={() => { haptic.medium(); setSelectionMode(true); }} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Select</button>}
+                <button onClick={() => { haptic.medium(); openManageTypes(); }}
+                  style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
+                  <Icons.SlidersH size={16} />
+                </button>
                 <button className="btn btn-primary" onClick={() => setShowDebtModal(true)}><Icons.Plus size={18} /> Add</button>
               </>
             )}
@@ -859,7 +937,7 @@ export default function DebtPanel({
                   <ProgressRing progress={portfolioProgress} size={90} strokeWidth={7} color={ringColor} />
                   <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                     <div className="font-mono" style={{ fontSize: '14px', fontWeight: '800', color: portfolioProgress >= 100 ? 'var(--success)' : 'var(--text-primary)' }}>
-                      {portfolioProgress > 0 ? `${Math.round(portfolioProgress)}%` : '—'}
+                      {portfolioProgress > 0 ? `${Math.round(portfolioProgress)}%` : '-'}
                     </div>
                     <div style={{ fontSize: '9px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>paid off</div>
                   </div>
@@ -886,10 +964,11 @@ export default function DebtPanel({
                   <div className="font-mono" style={{ fontSize: '18px', fontWeight: '700', color: tc.info }}>{cs}{monthlyTotal.toFixed(0)}</div>
                 </div>
                 {dtiRatio !== null && (
-                  <div style={{ padding: '10px', background: 'var(--glass)', borderRadius: '10px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                  <div style={{ padding: '10px', background: 'var(--glass)', borderRadius: '10px', border: '1px solid var(--border)', textAlign: 'center', position: 'relative' }}>
                     <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '3px' }}>DTI Ratio</div>
                     <div className="font-mono" style={{ fontSize: '18px', fontWeight: '700', color: dtiColor }}>{dtiRatio.toFixed(0)}%</div>
                     <div style={{ fontSize: '9px', color: dtiColor, fontWeight: '600', marginTop: '1px' }}>{dtiLabel}</div>
+                    <div style={{ position: 'absolute', top: '3px', right: '3px' }}><InfoButton onClick={() => setInfoSheet('dti')} /></div>
                   </div>
                 )}
               </div>
@@ -951,7 +1030,7 @@ export default function DebtPanel({
                   {currentMilestone > 0 && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px', fontSize: '11px', color: getMilestoneColor(currentMilestone).text, fontWeight: '600' }}>
                       {currentMilestone >= 75 ? <Icons.Fire size={12} /> : currentMilestone >= 50 ? <Icons.Trophy size={12} /> : <Icons.Sparkle size={12} />}
-                      {portfolioProgress >= 75 ? 'Almost there!' : portfolioProgress >= 50 ? 'Halfway through your debt!' : 'Great start — keep going!'}
+                      {portfolioProgress >= 75 ? 'Almost there!' : portfolioProgress >= 50 ? 'Halfway through your debt!' : 'Great start - keep going!'}
                     </div>
                   )}
                 </div>
@@ -1039,7 +1118,7 @@ export default function DebtPanel({
           <div style={{ marginTop: '12px', padding: '16px', borderRadius: '12px', textAlign: 'center',
             background: 'color-mix(in srgb, var(--success) 10%, transparent)',
             border: '1px solid color-mix(in srgb, var(--success) 20%, transparent)' }}>
-            <div style={{ fontSize: '28px', marginBottom: '6px' }}>🎉</div>
+            <div style={{ fontSize: '28px', marginBottom: '6px' }}><Icons.PartyPopper size={28} /></div>
             <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--success)' }}>You're debt-free!</div>
             {archivedDebts.length > 0 && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{archivedDebts.length} debt{archivedDebts.length !== 1 ? 's' : ''} paid off</div>}
           </div>
@@ -1055,24 +1134,34 @@ export default function DebtPanel({
 
           {/* Strategy toggle */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-            <button onClick={() => { haptic.light(); setDebtStrategy('snowball'); }}
-              style={{ flex: 1, padding: '10px', borderRadius: '12px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', textAlign: 'center',
-                border: debtStrategy === 'snowball' ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
-                background: debtStrategy === 'snowball' ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'var(--glass)',
-                color: debtStrategy === 'snowball' ? 'var(--accent-primary)' : 'var(--text-muted)',
-              }}>
-              ⛷ Snowball
-              <div style={{ fontSize: '10px', fontWeight: '400', marginTop: '2px', opacity: 0.7 }}>Smallest first</div>
-            </button>
-            <button onClick={() => { haptic.light(); setDebtStrategy('avalanche'); }}
-              style={{ flex: 1, padding: '10px', borderRadius: '12px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', textAlign: 'center',
-                border: debtStrategy === 'avalanche' ? '2px solid #a78bfa' : '1px solid var(--border)',
-                background: debtStrategy === 'avalanche' ? 'color-mix(in srgb, #a78bfa 10%, transparent)' : 'var(--glass)',
-                color: debtStrategy === 'avalanche' ? '#a78bfa' : 'var(--text-muted)',
-              }}>
-              🏔 Avalanche
-              <div style={{ fontSize: '10px', fontWeight: '400', marginTop: '2px', opacity: 0.7 }}>Highest interest first</div>
-            </button>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <button onClick={() => { haptic.light(); setDebtStrategy('snowball'); }}
+                style={{ width: '100%', padding: '10px', borderRadius: '12px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', textAlign: 'center',
+                  border: debtStrategy === 'snowball' ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
+                  background: debtStrategy === 'snowball' ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'var(--glass)',
+                  color: debtStrategy === 'snowball' ? 'var(--accent-primary)' : 'var(--text-muted)',
+                }}>
+                <Icons.Snowflake size={13} style={{ verticalAlign: '-2px' }} /> Snowball
+                <div style={{ fontSize: '10px', fontWeight: '400', marginTop: '2px', opacity: 0.7 }}>Smallest first</div>
+              </button>
+              <div style={{ position: 'absolute', top: '4px', right: '4px' }}>
+                <InfoButton onClick={() => setInfoSheet('snowball')} />
+              </div>
+            </div>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <button onClick={() => { haptic.light(); setDebtStrategy('avalanche'); }}
+                style={{ width: '100%', padding: '10px', borderRadius: '12px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', textAlign: 'center',
+                  border: debtStrategy === 'avalanche' ? '2px solid #a78bfa' : '1px solid var(--border)',
+                  background: debtStrategy === 'avalanche' ? 'color-mix(in srgb, #a78bfa 10%, transparent)' : 'var(--glass)',
+                  color: debtStrategy === 'avalanche' ? '#a78bfa' : 'var(--text-muted)',
+                }}>
+                <Icons.Mountain size={13} style={{ verticalAlign: '-2px' }} /> Avalanche
+                <div style={{ fontSize: '10px', fontWeight: '400', marginTop: '2px', opacity: 0.7 }}>Highest interest first</div>
+              </button>
+              <div style={{ position: 'absolute', top: '4px', right: '4px' }}>
+                <InfoButton onClick={() => setInfoSheet('avalanche')} />
+              </div>
+            </div>
           </div>
 
           {/* Side-by-side comparison */}
@@ -1162,6 +1251,61 @@ export default function DebtPanel({
         </div>
       )}
 
+      {/* Debt filters */}
+      {debts.length > 0 && (
+        <div className="animate-in" style={{ marginBottom: '14px', animationDelay: '0.25s' }}>
+          <div style={{ display: 'flex', gap: '5px' }}>
+            {[
+              { key: 'ALL', label: 'All' },
+              { key: 'ACTIVE', label: 'Active' },
+              { key: 'PAID_OFF', label: 'Paid Off' },
+            ].map((f) => (
+              <button key={f.key} onClick={() => { haptic.light(); setDebtStatusFilter(f.key); }}
+                style={{ flex: 1, padding: '7px 4px', borderRadius: '20px', fontSize: '11px', fontWeight: '600', minWidth: 0,
+                  cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s',
+                  border: debtStatusFilter === f.key ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
+                  background: debtStatusFilter === f.key ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'var(--glass)',
+                  color: debtStatusFilter === f.key ? 'var(--accent-primary)' : 'var(--text-muted)',
+                }}>{f.label}</button>
+            ))}
+            <button onClick={() => { haptic.light(); setShowTypeFilter(v => !v); }}
+              style={{ padding: '7px 4px', borderRadius: '20px', fontSize: '11px', fontWeight: '600',
+                cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+                border: selectedDebtType !== 'ALL' || showTypeFilter ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
+                background: selectedDebtType !== 'ALL' || showTypeFilter ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'var(--glass)',
+                color: selectedDebtType !== 'ALL' || showTypeFilter ? 'var(--accent-primary)' : 'var(--text-muted)',
+              }}>
+              Type
+              <Icons.ChevronDown size={12} style={{ transition: 'transform 0.2s', transform: showTypeFilter ? 'rotate(180deg)' : 'none' }} />
+            </button>
+          </div>
+
+          {showTypeFilter && (
+            <div style={{ marginTop: '10px', padding: '12px', background: 'var(--bg-card, var(--glass))', border: '1px solid var(--border)', borderRadius: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Debt Type</span>
+                {selectedDebtType !== 'ALL' && (
+                  <button onClick={() => { haptic.light(); setSelectedDebtType('ALL'); }}
+                    style={{ fontSize: '11px', fontWeight: '600', color: 'var(--accent-primary)', background: 'none', border: 'none', cursor: 'pointer' }}>Clear</button>
+                )}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                {allDebtTypes.map((t) => (
+                  <button key={t} onClick={() => { haptic.light(); setSelectedDebtType(t); }}
+                    style={{ padding: '8px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: '600',
+                      cursor: 'pointer', transition: 'all 0.15s', textAlign: 'center',
+                      border: selectedDebtType === t ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
+                      background: selectedDebtType === t ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'var(--glass)',
+                      color: selectedDebtType === t ? 'var(--accent-primary)' : 'var(--text-muted)',
+                    }}>{t}</button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Consolidation Calculator */}
       {totalDebt > 0 && activeDebts.filter(d => d.totalAmount > 0 && (d.paymentMode || 'recurring') === 'recurring').length >= 2 && (() => {
         const recurringDebts = activeDebts.filter(d => d.totalAmount > 0 && (d.paymentMode || 'recurring') === 'recurring');
@@ -1173,7 +1317,7 @@ export default function DebtPanel({
           return s + Math.max(dMin, d.recurringPayment || 0);
         }, 0);
         return (
-          <ConsolidationCalc totalBalance={totalBalance} currentMonthly={currentMonthly} stratInterest={strategyResults?.[debtStrategy]?.totalInterest || 0} cs={cs} />
+          <ConsolidationCalc totalBalance={totalBalance} currentMonthly={currentMonthly} stratInterest={strategyResults?.[debtStrategy]?.totalInterest || 0} cs={cs} setInfoSheet={setInfoSheet} />
         );
       })()}
 
@@ -1183,10 +1327,10 @@ export default function DebtPanel({
           <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No debts tracked yet. Tap "Add" to get started.</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: selectionMode && selectedIds.size > 0 ? '100px' : '0', transition: 'padding-bottom 0.2s' }}>
           {activeDebts.length === 0 && (
             <div className="glass-card" style={{ padding: '24px', textAlign: 'center' }}>
-              <p style={{ color: tc.success, fontSize: '14px', fontWeight: '600' }}>🎉 All debts paid off!</p>
+              <p style={{ color: tc.success, fontSize: '14px', fontWeight: '600' }}><Icons.PartyPopper size={16} style={{ verticalAlign: '-2px' }} /> All debts paid off!</p>
             </div>
           )}
 
@@ -1226,7 +1370,7 @@ export default function DebtPanel({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <input className="input" value={editDebtForm.name} onChange={(e) => setEditDebtForm({ ...editDebtForm, name: e.target.value })} placeholder="Debt name" />
                       <select className="input" value={editDebtForm.type} onChange={(e) => setEditDebtForm({ ...editDebtForm, type: e.target.value })}>
-                        {DEBT_TYPES.map((t) => (<option key={t} value={t}>{t}</option>))}
+                        {(allDebtTypes || DEBT_TYPES).map((t) => (<option key={t} value={t}>{t}</option>))}
                       </select>
                       <div>
                         <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '6px' }}>Payment Structure</label>
@@ -1395,7 +1539,7 @@ export default function DebtPanel({
                               <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '10px',
                                 background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
                                 border: '1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent)',
-                                color: 'var(--accent-primary)', flexShrink: 0 }}>★ Focus</span>
+                                color: 'var(--accent-primary)', flexShrink: 0 }}><Icons.Star size={10} style={{ verticalAlign: '-1px' }} /> Focus</span>
                             )}
                             {!selectionMode && <button onClick={() => handleDebtEditStart(debt)} style={{ width: '22px', height: '22px', borderRadius: '5px', border: '1px solid var(--accent-primary)', background: 'var(--info-tint)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)', flexShrink: 0 }}>
                               <Icons.Edit size={12} />
@@ -1454,7 +1598,7 @@ export default function DebtPanel({
                         return (
                           <div style={{ marginBottom: '8px', marginLeft: '46px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', marginBottom: '3px' }}>
-                              <span style={{ color: 'var(--text-muted)' }}>Credit utilization</span>
+                              <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>Credit utilization <InfoButton onClick={() => setInfoSheet('utilization')} /></span>
                               <span style={{ fontWeight: '600', color: utilColor }}>{util.toFixed(0)}% · {utilLabel}</span>
                             </div>
                             <div style={{ height: '4px', background: 'var(--glass)', borderRadius: '2px', overflow: 'hidden', border: '1px solid var(--border)' }}>
@@ -1508,7 +1652,7 @@ export default function DebtPanel({
                                     const calcDebt = { ...debt, interestRate: effectiveRate };
                                     const result = calculatePayoff(calcDebt, amt);
                                     if (!result) return null;
-                                    if (result.months === Infinity) return <div style={{ fontSize: '12px', color: tc.danger }}>⚠️ {cs}{amt.toFixed(2)}/mo won't cover {effectiveRate}% APR interest</div>;
+                                    if (result.months === Infinity) return <div style={{ fontSize: '12px', color: tc.danger }}><Icons.Warning size={13} style={{ verticalAlign: '-2px' }} /> {cs}{amt.toFixed(2)}/mo won't cover {effectiveRate}% APR interest</div>;
                                     const currentPayment = debt.recurringPayment || debt.bnplPostPayment || 0;
                                     const currentResult = currentPayment > 0 ? calculatePayoff(calcDebt, currentPayment) : null;
                                     const savedMonths = currentResult && currentResult.months !== Infinity ? currentResult.months - result.months : null;
@@ -1520,7 +1664,7 @@ export default function DebtPanel({
                                         {result.totalInterest > 0 && <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Total interest: {cs}{result.totalInterest.toFixed(2)}</div>}
                                         {savedMonths > 0 && currentPayment > 0 && currentResult && (
                                           <div style={{ fontSize: '12px', color: tc.success, padding: '6px 8px', background: tc.successTintLight, borderRadius: '8px' }}>
-                                            💡 Saves {savedMonths > 0 ? `${formatMonths(savedMonths)} ` : ''}{savedInterest > 0 ? `· ${cs}${savedInterest.toFixed(2)} interest` : ''}
+                                            <Icons.Lightbulb size={13} style={{ verticalAlign: '-2px' }} /> Saves {savedMonths > 0 ? `${formatMonths(savedMonths)} ` : ''}{savedInterest > 0 ? `· ${cs}${savedInterest.toFixed(2)} interest` : ''}
                                           </div>
                                         )}
                                       </div>
@@ -1615,10 +1759,10 @@ export default function DebtPanel({
             <button onClick={() => { haptic.light(); exitSelection(); }} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>✕ Cancel</button>
           </div>
           <div style={{ display: 'flex', gap: '6px' }}>
-            <button onClick={() => { haptic.success(); [...selectedIds].forEach(id => handleArchiveDebt(id)); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--success), #059669)', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+            <button onClick={() => { handleBulkArchiveDebts([...selectedIds]); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, var(--success), #059669)', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
               <Icons.Check size={14} /> Archive
             </button>
-            <button onClick={() => { haptic.error(); [...selectedIds].forEach(id => handleDeleteDebt(id)); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+            <button onClick={async () => { await handleBulkDeleteDebts([...selectedIds]); exitSelection(); }} style={{ flex: 1, padding: '10px 8px', borderRadius: '10px', border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
               <Icons.Trash size={14} /> Delete
             </button>
           </div>
@@ -1628,6 +1772,92 @@ export default function DebtPanel({
 
       {/* Milestone Celebration Overlay */}
       <MilestoneCelebration celebration={debtCelebration} onDismiss={() => setDebtCelebration(null)} />
+
+      {/* Educational Info Sheets */}
+      <InfoSheet open={infoSheet === 'snowball'} onClose={() => setInfoSheet(null)} title="Snowball Method">
+        <p style={{ marginBottom: '12px' }}>
+          Pay the <strong>minimum on all debts</strong>, then throw every extra penny at the <strong>smallest balance first</strong>. Once it's gone, roll that payment into the next smallest.
+        </p>
+        <p style={{ marginBottom: '12px' }}>
+          Quick wins build momentum - each debt you eliminate frees up more money and more motivation to keep going.
+        </p>
+        <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--accent-primary) 15%, transparent)', fontSize: '13px' }}>
+          <strong style={{ color: 'var(--accent-primary)' }}>Best for:</strong> People who need psychological wins to stay motivated. Popularised by Dave Ramsey.
+        </div>
+      </InfoSheet>
+
+      <InfoSheet open={infoSheet === 'avalanche'} onClose={() => setInfoSheet(null)} title="Avalanche Method">
+        <p style={{ marginBottom: '12px' }}>
+          Pay the <strong>minimum on all debts</strong>, then throw every extra penny at the debt with the <strong>highest interest rate first</strong>. This saves the most money over time.
+        </p>
+        <p style={{ marginBottom: '12px' }}>
+          You'll pay less interest overall, but the first win may take longer - it requires patience and discipline.
+        </p>
+        <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'color-mix(in srgb, #a78bfa 8%, transparent)', border: '1px solid color-mix(in srgb, #a78bfa 15%, transparent)', fontSize: '13px' }}>
+          <strong style={{ color: '#a78bfa' }}>Best for:</strong> People motivated by saving the most money. Mathematically optimal.
+        </div>
+        <p style={{ marginTop: '12px', fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+          Both methods work - the best one is the one you stick with.
+        </p>
+      </InfoSheet>
+
+      <InfoSheet open={infoSheet === 'dti'} onClose={() => setInfoSheet(null)} title="Debt-to-Income Ratio">
+        <p style={{ marginBottom: '12px' }}>
+          Your <strong>DTI ratio</strong> is the percentage of your monthly income that goes toward debt payments. Lenders use this to assess affordability.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--success)', flexShrink: 0 }} />
+            <span><strong>0-36%</strong> - Healthy. You're in a strong position.</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--warning)', flexShrink: 0 }} />
+            <span><strong>37-50%</strong> - Moderate. Consider reducing debt before borrowing more.</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--danger)', flexShrink: 0 }} />
+            <span><strong>50%+</strong> - High. Most of your income goes to debt.</span>
+          </div>
+        </div>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+          Most UK lenders prefer a DTI below 40% for mortgage applications.
+        </p>
+      </InfoSheet>
+
+      <InfoSheet open={infoSheet === 'utilization'} onClose={() => setInfoSheet(null)} title="Credit Utilization">
+        <p style={{ marginBottom: '12px' }}>
+          <strong>Credit utilization</strong> is how much of your credit limit you're using. It's one of the biggest factors in your credit score.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--success)', flexShrink: 0 }} />
+            <span><strong>0-30%</strong> - Good. Shows responsible credit use.</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--accent-primary)', flexShrink: 0 }} />
+            <span><strong>30-50%</strong> - Fair. Could impact your score.</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--danger)', flexShrink: 0 }} />
+            <span><strong>50%+</strong> - High. Likely hurting your credit score.</span>
+          </div>
+        </div>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+          Aim to keep each card below 30%. Paying down balances before statement dates helps the most.
+        </p>
+      </InfoSheet>
+
+      <InfoSheet open={infoSheet === 'consolidation'} onClose={() => setInfoSheet(null)} title="Debt Consolidation">
+        <p style={{ marginBottom: '12px' }}>
+          <strong>Debt consolidation</strong> means combining multiple debts into a single loan, usually at a lower interest rate. Instead of juggling several payments, you make one.
+        </p>
+        <p style={{ marginBottom: '12px' }}>
+          It can save money if the new rate is lower than your current average, and simplifies your finances. But watch out for longer terms that increase total interest paid.
+        </p>
+        <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'color-mix(in srgb, var(--warning) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 15%, transparent)', fontSize: '13px' }}>
+          <strong style={{ color: 'var(--warning)' }}>Watch out:</strong> Consolidation only helps if you stop adding new debt. Otherwise you end up with the loan <em>and</em> new balances.
+        </div>
+      </InfoSheet>
     </>
   );
 }

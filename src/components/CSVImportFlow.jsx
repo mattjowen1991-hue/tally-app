@@ -56,19 +56,8 @@ const CAT_MAP = [
   ['aa breakdown',        'TRANSPORTATION'],
   ['aa renewal',          'TRANSPORTATION'],
   ['green flag',          'TRANSPORTATION'],
-  // CREDIT CARDS
-  ['barclaycard',         'CREDIT CARDS'],
-  ['capital one',         'CREDIT CARDS'],
-  ['american express',    'CREDIT CARDS'],
-  ['amex',                'CREDIT CARDS'],
-  ['mbna',                'CREDIT CARDS'],
-  ['vanquis',             'CREDIT CARDS'],
-  ['aqua card',           'CREDIT CARDS'],
-  ['marbles card',        'CREDIT CARDS'],
-  ['newday',              'CREDIT CARDS'],
-  ['creation finance',    'CREDIT CARDS'],
-  ['fluid card',          'CREDIT CARDS'],
-  ['tymit',               'CREDIT CARDS'],
+  // CREDIT CARDS - routed to Debts panel (not bills)
+  // ['barclaycard', 'capital one', 'amex', etc. detected by debt classification logic]
   // ENTERTAINMENT
   ['netflix',             'ENTERTAINMENT'],
   ['spotify',             'ENTERTAINMENT'],
@@ -1831,7 +1820,7 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
           border: '1px solid color-mix(in srgb, var(--warning) 20%, transparent)',
           borderRadius: '10px', padding: '10px 12px', fontSize: '12px', color: 'var(--warning)', marginBottom: '12px' }}>
           <Icons.Lightbulb size={14} style={{ flexShrink: 0 }} />
-          <span>Only {diagnostics.dayscovered} days of data — try a longer file for better results.</span>
+          <span>Only {diagnostics.dayscovered} days of data - try a longer file for better results.</span>
         </div>
       )}
 
@@ -2053,7 +2042,7 @@ export default function CSVImportFlow({ onComplete, onSkip, currencySymbol = '£
           <button className="btn btn-primary" onClick={() => { haptic.success(); setStage('summary'); }}
             style={{ width: '100%', justifyContent: 'center', fontSize: '15px', padding: '13px',
               background: 'linear-gradient(135deg,#10b981,#059669)', borderColor: '#10b981' }}>
-            Done — {addedCount} item{addedCount !== 1 ? 's' : ''} added
+            Done - {addedCount} item{addedCount !== 1 ? 's' : ''} added
           </button>
         ) : (
           <button onClick={() => { haptic.light(); onSkip(); }} style={{ width: '100%', background: 'none', border: '1px solid var(--border)',

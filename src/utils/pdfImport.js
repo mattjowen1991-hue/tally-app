@@ -744,9 +744,9 @@ function parseBudgetLines(lines) {
       category: isDebt ? 'CREDIT CARDS' : isSavings ? 'Emergency' : currentCategory,
       confidence: 0.85,
       confidenceLevel: 'high',
-      explainer: isDebt ? `From your budget — £${amount.toFixed(2)} owed`
-        : isSavings ? `From your budget — £${amount.toFixed(2)}/month savings`
-        : `From your budget — £${amount.toFixed(2)}/month`,
+      explainer: isDebt ? `From your budget - £${amount.toFixed(2)} owed`
+        : isSavings ? `From your budget - £${amount.toFixed(2)}/month savings`
+        : `From your budget - £${amount.toFixed(2)}/month`,
       occurrences: 1,
       nextDueEstimate: null,
     };
@@ -768,7 +768,7 @@ export async function importPDF(pdfData) {
 
   if (lines.length === 0) {
     throw new Error(
-      'Could not extract any text from this PDF. It may be a scanned image — please try a text-based PDF or export as CSV instead.'
+      'Could not extract any text from this PDF. It may be a scanned image - please try a text-based PDF or export as CSV instead.'
     );
   }
 
