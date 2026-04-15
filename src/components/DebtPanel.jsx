@@ -5,7 +5,9 @@ import * as Icons from './Icons';
 import haptic from '../utils/haptics';
 import { tc } from '../utils/themeColors';
 import { DEBT_TYPES } from '../data/initialData';
-import { calcDynamicMinimum } from '../utils/debtStrategy';
+import Picker from './Picker';
+import NumericInput from './NumericInput';
+import { calcDynamicMinimum, calcInstallmentPayment } from '../utils/debtStrategy';
 
 // Reusable bottom sheet for educational info
 function InfoSheet({ open, onClose, title, children }) {
@@ -149,15 +151,22 @@ const getBnplInfo = (debt) => {
   const isExpired = now >= endDate;
   const monthlyToClear = monthsRemaining > 0 && debt.totalAmount > 0 ? Math.round((debt.totalAmount / monthsRemaining) * 100) / 100 : 0;
   let postPromoInfo = null;
-  if (debt.bnplPostInterest > 0 && debt.bnplPostPayment > 0 && debt.totalAmount > 0) {
+  if (debt.bnplPostInterest > 0 && debt.totalAmount > 0) {
+    // If user didn't specify a post-promo payment, assume a 36-month payoff term
+    const assumedTermMonths = 36;
     const r = debt.bnplPostInterest / 100 / 12;
+    const monthlyPayment = debt.bnplPostPayment > 0
+      ? debt.bnplPostPayment
+      : (r > 0
+          ? Math.round((debt.totalAmount * (r * Math.pow(1 + r, assumedTermMonths)) / (Math.pow(1 + r, assumedTermMonths) - 1)) * 100) / 100
+          : Math.round((debt.totalAmount / assumedTermMonths) * 100) / 100);
     let bal = debt.totalAmount, m = 0, ti = 0;
     while (bal > 0 && m < 600) {
       const i = bal * r;
-      if (debt.bnplPostPayment <= i) { m = Infinity; break; }
-      ti += i; bal = bal + i - debt.bnplPostPayment; m++;
+      if (monthlyPayment <= i) { m = Infinity; break; }
+      ti += i; bal = bal + i - monthlyPayment; m++;
     }
-    postPromoInfo = { months: m, totalInterest: Math.round(ti * 100) / 100, monthlyPayment: debt.bnplPostPayment };
+    postPromoInfo = { months: m, totalInterest: Math.round(ti * 100) / 100, monthlyPayment, isEstimated: !debt.bnplPostPayment };
   }
   return { promoMonths, monthsRemaining, monthsElapsed, isExpired, endDate, monthlyToClear, postPromoInfo };
 };
@@ -168,7 +177,11 @@ const getInstallmentInfo = (debt) => {
   const startDate = debt.installmentStartDate ? new Date(debt.installmentStartDate) : null;
   if (!totalMonths || totalMonths <= 0) return null;
   const originalAmount = debt.originalAmount || debt.totalAmount;
-  const monthlyPayment = totalMonths > 0 ? Math.round((originalAmount / totalMonths) * 100) / 100 : 0;
+  const apr = debt.interestRate || 0;
+  // Proper amortised payment that includes APR
+  const monthlyPayment = calcInstallmentPayment(originalAmount, apr, totalMonths);
+  const totalRepayable = Math.round(monthlyPayment * totalMonths * 100) / 100;
+  const totalInterest = Math.round((totalRepayable - originalAmount) * 100) / 100;
   let paymentsMade = 0;
   if (startDate) {
     const now = new Date();
@@ -179,7 +192,7 @@ const getInstallmentInfo = (debt) => {
   }
   const paymentsRemaining = Math.max(0, totalMonths - paymentsMade);
   const endDate = startDate ? addMonths(startDate, totalMonths) : null;
-  return { totalMonths, monthlyPayment, paymentsMade, paymentsRemaining, endDate };
+  return { totalMonths, monthlyPayment, paymentsMade, paymentsRemaining, endDate, apr, totalRepayable, totalInterest, originalAmount };
 };
 
 const getDebtFreeDate = (debt, calculatePayoff) => {
@@ -188,7 +201,7 @@ const getDebtFreeDate = (debt, calculatePayoff) => {
   const result = calculatePayoff(debt, payment);
   if (!result || result.months === Infinity) return null;
   const date = addMonths(new Date(), result.months);
-  return { date, months: result.months };
+  return { date, months: result.months, totalInterest: result.totalInterest, totalPaid: result.totalPaid };
 };
 
 function getMilestoneLabel(pct) {
@@ -200,10 +213,10 @@ function getMilestoneLabel(pct) {
 }
 
 function getMilestoneIcon(pct) {
-  if (pct >= 100) return <Icons.PartyPopper size={28} style={{ color: '#fbbf24' }} />;
-  if (pct >= 75) return <Icons.Fire size={28} style={{ color: '#f97316' }} />;
-  if (pct >= 50) return <Icons.Trophy size={28} style={{ color: '#a78bfa' }} />;
-  return <Icons.Sparkle size={28} style={{ color: 'var(--accent-primary)' }} />;
+  if (pct >= 100) return <Icons.Trophy size={32} style={{ color: '#fbbf24' }} />;
+  if (pct >= 75) return <Icons.Fire size={32} style={{ color: '#f97316' }} />;
+  if (pct >= 50) return <Icons.Star size={32} style={{ color: '#a78bfa' }} />;
+  return <Icons.Sparkle size={32} style={{ color: 'var(--accent-primary)' }} />;
 }
 
 function getMilestoneColor(pct) {
@@ -214,17 +227,187 @@ function getMilestoneColor(pct) {
 }
 
 // Celebration overlay shown when a milestone is crossed
+// Space Invaders animation for 100% (debt destroyed!)
+function SpaceInvaderCelebration({ debtName, onDismiss }) {
+  // Pixelated invader pattern (11x8 grid)
+  const INVADER = [
+    '00100000100',
+    '00010001000',
+    '00111111100',
+    '01101110110',
+    '11111111111',
+    '10111111101',
+    '10100000101',
+    '00011011000',
+  ];
+  const PIXEL_SIZE = 8;
+  const INVADER_WIDTH = 11 * PIXEL_SIZE;
+  const INVADER_HEIGHT = 8 * PIXEL_SIZE;
+
+  // Build particle array from invader pixels (for explosion)
+  const particles = [];
+  INVADER.forEach((row, y) => {
+    [...row].forEach((cell, x) => {
+      if (cell === '1') {
+        particles.push({
+          x: x * PIXEL_SIZE - INVADER_WIDTH / 2 + PIXEL_SIZE / 2,
+          y: y * PIXEL_SIZE - INVADER_HEIGHT / 2 + PIXEL_SIZE / 2,
+          dx: (Math.random() - 0.5) * 200,
+          dy: (Math.random() - 0.5) * 200 - 50,
+          rot: (Math.random() - 0.5) * 720,
+        });
+      }
+    });
+  });
+
+  return ReactDOM.createPortal(
+    <div onClick={onDismiss} style={{
+      position: 'fixed', inset: 0, zIndex: 10000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+      animation: 'fadeIn 0.2s ease-out',
+    }}>
+      <div style={{
+        padding: '32px 36px', borderRadius: '20px',
+        background: '#000',
+        border: '2px solid #1f2937',
+        textAlign: 'center', maxWidth: '320px', width: '90%',
+        boxShadow: '0 12px 40px rgba(0,0,0,0.6), 0 0 80px rgba(16,185,129,0.3)',
+        position: 'relative', overflow: 'hidden',
+      }}>
+        {/* Animation stage */}
+        <div style={{ position: 'relative', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* Invader (visible 0-1.4s, then hidden) */}
+          <div style={{
+            position: 'absolute', top: '20px', left: '50%',
+            width: `${INVADER_WIDTH}px`, height: `${INVADER_HEIGHT}px`,
+            transform: 'translateX(-50%)',
+            animation: 'invaderBob 0.6s ease-in-out infinite, invaderHide 0s 1.4s forwards',
+          }}>
+            <svg width={INVADER_WIDTH} height={INVADER_HEIGHT} viewBox={`0 0 ${INVADER_WIDTH} ${INVADER_HEIGHT}`}>
+              {INVADER.map((row, y) => [...row].map((cell, x) =>
+                cell === '1' ? <rect key={`${x}-${y}`} x={x * PIXEL_SIZE} y={y * PIXEL_SIZE} width={PIXEL_SIZE} height={PIXEL_SIZE} fill="#ef4444" /> : null
+              ))}
+            </svg>
+          </div>
+
+          {/* Laser beam (shoots from bottom 0.5-1.4s) */}
+          <div style={{
+            position: 'absolute', bottom: '20px', left: '50%',
+            width: '4px', height: '0px',
+            background: 'linear-gradient(to top, #10b981, #6ee7b7)',
+            transform: 'translateX(-50%)',
+            opacity: 0,
+            animation: 'laserShoot 0.9s 0.5s ease-out forwards',
+            boxShadow: '0 0 8px #10b981',
+          }} />
+
+          {/* Cannon at bottom */}
+          <div style={{
+            position: 'absolute', bottom: '8px', left: '50%',
+            transform: 'translateX(-50%)',
+          }}>
+            <svg width="32" height="20" viewBox="0 0 32 20">
+              <rect x="14" y="0" width="4" height="6" fill="#10b981" />
+              <rect x="10" y="6" width="12" height="6" fill="#10b981" />
+              <rect x="2" y="12" width="28" height="8" fill="#10b981" />
+            </svg>
+          </div>
+
+          {/* Explosion particles (appear at 1.4s when laser hits) */}
+          <div style={{
+            position: 'absolute', top: `${20 + INVADER_HEIGHT / 2}px`, left: '50%',
+            width: '0', height: '0',
+            opacity: 0,
+            animation: 'particlesAppear 0s 1.4s forwards',
+          }}>
+            {particles.map((p, i) => (
+              <div key={i} style={{
+                position: 'absolute',
+                left: `${p.x}px`, top: `${p.y}px`,
+                width: `${PIXEL_SIZE}px`, height: `${PIXEL_SIZE}px`,
+                background: i % 3 === 0 ? '#ef4444' : i % 3 === 1 ? '#fbbf24' : '#f97316',
+                transform: 'translate(-50%, -50%)',
+                animation: `particleBlast 1.2s 1.4s ease-out forwards`,
+                '--dx': `${p.dx}px`,
+                '--dy': `${p.dy}px`,
+                '--rot': `${p.rot}deg`,
+              }} />
+            ))}
+          </div>
+        </div>
+
+        {/* Text appears after explosion */}
+        <div style={{
+          opacity: 0,
+          animation: 'textAppear 0.4s 2s ease-out forwards',
+        }}>
+          <div className="font-mono" style={{
+            fontSize: '22px', fontWeight: '900', color: '#10b981',
+            letterSpacing: '2px', marginBottom: '8px',
+            textShadow: '0 0 20px rgba(16,185,129,0.5)',
+          }}>
+            DEBT DESTROYED
+          </div>
+          <div style={{ fontSize: '13px', color: '#9ca3af', lineHeight: 1.4 }}>
+            <strong style={{ color: '#fff' }}>{debtName}</strong> is completely paid off
+          </div>
+          <div style={{ marginTop: '12px', fontSize: '11px', color: '#6b7280' }}>
+            Tap to dismiss
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes invaderBob {
+          0%, 100% { transform: translateX(-50%) translateY(0); }
+          50% { transform: translateX(-50%) translateY(-4px); }
+        }
+        @keyframes invaderHide {
+          to { opacity: 0; visibility: hidden; }
+        }
+        @keyframes laserShoot {
+          0% { height: 0px; bottom: 28px; opacity: 1; }
+          90% { height: 110px; bottom: 28px; opacity: 1; }
+          100% { height: 110px; bottom: 28px; opacity: 0; }
+        }
+        @keyframes particlesAppear {
+          to { opacity: 1; }
+        }
+        @keyframes particleBlast {
+          0% { transform: translate(-50%, -50%) rotate(0deg); opacity: 1; }
+          100% {
+            transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot));
+            opacity: 0;
+          }
+        }
+        @keyframes textAppear {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+    </div>,
+    document.body
+  );
+}
+
 function MilestoneCelebration({ celebration, onDismiss }) {
-  if (!celebration) return null;
-  const { milestone, debtName } = celebration;
-  const colors = getMilestoneColor(milestone);
+  const milestone = celebration?.milestone ?? 0;
+  const debtName = celebration?.debtName ?? '';
   const is100 = milestone >= 100;
 
   React.useEffect(() => {
-    const timer = setTimeout(onDismiss, is100 ? 3500 : 2500);
+    if (!celebration || is100) return undefined;
+    const timer = setTimeout(onDismiss, 2500);
     return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [celebration]);
+  }, [celebration, is100, onDismiss]);
+
+  if (!celebration) return null;
+
+  // 100% gets the Space Invaders treatment
+  if (is100) return <SpaceInvaderCelebration debtName={debtName} onDismiss={onDismiss} />;
+
+  const colors = getMilestoneColor(milestone);
 
   return ReactDOM.createPortal(
     <div onClick={onDismiss} style={{
@@ -234,44 +417,23 @@ function MilestoneCelebration({ celebration, onDismiss }) {
       animation: 'fadeIn 0.2s ease-out',
     }}>
       <div style={{
-        padding: is100 ? '32px 36px' : '24px 28px', borderRadius: '20px',
-        background: colors.bg, border: `1px solid ${colors.border}`,
+        padding: '24px 28px', borderRadius: '20px',
+        backgroundImage: colors.bg,
+        backgroundColor: 'var(--bg-primary, #0f1225)',
+        border: `1px solid ${colors.border}`,
         textAlign: 'center', maxWidth: '300px',
         animation: 'celebrationIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-        boxShadow: `0 12px 40px rgba(0,0,0,0.3), 0 0 60px ${colors.border}`,
+        boxShadow: `0 12px 40px rgba(0,0,0,0.4), 0 0 60px ${colors.border}`,
       }}>
-        {/* Confetti dots for 100% */}
-        {is100 && (
-          <div style={{ position: 'relative', height: '0', overflow: 'visible' }}>
-            {[...Array(6)].map((_, i) => (
-              <div key={i} style={{
-                position: 'absolute',
-                width: '6px', height: '6px', borderRadius: '50%',
-                background: ['#fbbf24', '#f97316', '#a78bfa', '#10b981', '#3b82f6', '#ec4899'][i],
-                left: `${15 + i * 14}%`, top: '-10px',
-                animation: `confettiFloat ${0.8 + i * 0.15}s ease-out ${i * 0.1}s forwards`,
-              }} />
-            ))}
-          </div>
-        )}
-        <div style={{ marginBottom: '12px', animation: is100 ? 'celebrationPulse 0.6s ease-in-out 0.3s' : undefined }}>
+        <div style={{ marginBottom: '12px' }}>
           {getMilestoneIcon(milestone)}
         </div>
-        <div style={{ fontSize: is100 ? '20px' : '17px', fontWeight: '800', color: colors.text, marginBottom: '6px' }}>
+        <div style={{ fontSize: '17px', fontWeight: '800', color: colors.text, marginBottom: '6px' }}>
           {getMilestoneLabel(milestone)}
         </div>
         <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-          {is100 ? (
-            <><strong>{debtName}</strong> is completely paid off!</>
-          ) : (
-            <><strong>{debtName}</strong> is {milestone}% paid off</>
-          )}
+          <strong>{debtName}</strong> is {milestone}% paid off
         </div>
-        {is100 && (
-          <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-muted)' }}>
-            Tap to dismiss
-          </div>
-        )}
       </div>
     </div>,
     document.body
@@ -400,8 +562,13 @@ function DebtInfoBanner({ debt, calculatePayoff }) {
     const info = getInstallmentInfo(debt);
     if (info) banners.push(
       <div key="inst" style={{ fontSize: '12px', padding: '7px 10px', borderRadius: '8px', color: tc.purple, background: tc.purpleTint, border: '1px solid rgba(124,58,237,0.15)' }}>
-        <div>{cs}{info.monthlyPayment.toFixed(2)}/mo · {info.paymentsMade} of {info.totalMonths} payments</div>
+        <div>{cs}{info.monthlyPayment.toFixed(2)}/mo · {info.paymentsMade} of {info.totalMonths} payments{info.apr > 0 ? ` · ${info.apr}% APR` : ' · 0% APR'}</div>
         {info.endDate && <div style={{ fontSize: '11px', marginTop: '2px', opacity: 0.8 }}>Ends {info.endDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} · {info.paymentsRemaining} left</div>}
+        {info.totalInterest > 0 && (
+          <div style={{ fontSize: '11px', marginTop: '4px', paddingTop: '4px', borderTop: '1px solid rgba(124,58,237,0.15)', opacity: 0.9 }}>
+            Total to repay: {cs}{info.totalRepayable.toFixed(2)} ({cs}{info.totalInterest.toFixed(2)} interest)
+          </div>
+        )}
       </div>
     );
   }
@@ -423,8 +590,12 @@ function DebtInfoBanner({ debt, calculatePayoff }) {
       if (info.postPromoInfo && debt.totalAmount > 0) {
         banners.push(
           <div key="bnpl-post" style={{ fontSize: '11px', padding: '7px 10px', borderRadius: '8px', color: 'var(--text-muted)', background: 'var(--glass)', border: '1px solid var(--border)' }}>
-            {info.isExpired ? 'Now paying' : 'If not cleared'}: {cs}{info.postPromoInfo.monthlyPayment.toFixed(2)}/mo at {debt.bnplPostInterest}% APR
-            {info.postPromoInfo.months !== Infinity && ` · ${formatMonths(info.postPromoInfo.months)} · ${cs}${info.postPromoInfo.totalInterest.toFixed(2)} interest`}
+            <div>{info.isExpired ? 'Now paying' : 'If not cleared'}: {cs}{info.postPromoInfo.monthlyPayment.toFixed(2)}/mo at {debt.bnplPostInterest}% APR{info.postPromoInfo.isEstimated ? ' (est. 36-month payoff)' : ''}</div>
+            {info.postPromoInfo.months !== Infinity && (
+              <div style={{ marginTop: '2px', opacity: 0.85 }}>
+                {formatMonths(info.postPromoInfo.months)} · {cs}{info.postPromoInfo.totalInterest.toFixed(2)} interest
+              </div>
+            )}
           </div>
         );
       }
@@ -436,7 +607,12 @@ function DebtInfoBanner({ debt, calculatePayoff }) {
     if (debtFree && debt.totalAmount > 0) {
       banners.push(
         <div key="debtfree" style={{ fontSize: '12px', color: tc.success, padding: '7px 10px', background: tc.successTintLight, borderRadius: '8px', border: '1px solid rgba(16,185,129,0.15)' }}>
-          Debt-free by {debtFree.date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} · {formatMonths(debtFree.months)}
+          <div>Debt-free by {debtFree.date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} · {formatMonths(debtFree.months)}</div>
+          {debtFree.totalInterest > 0 && (
+            <div style={{ fontSize: '11px', marginTop: '4px', paddingTop: '4px', borderTop: '1px solid rgba(16,185,129,0.15)', opacity: 0.9 }}>
+              Total to repay: {cs}{debtFree.totalPaid.toFixed(2)} ({cs}{debtFree.totalInterest.toFixed(2)} interest)
+            </div>
+          )}
         </div>
       );
     }
@@ -543,9 +719,9 @@ function MortgageOverpayCalc({ debt, calculatePayoff }) {
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{cs}</span>
-          <input type="number" className="input" placeholder="Extra per month" value={overpayAmt}
+          <NumericInput className="input" placeholder="Extra per month" value={overpayAmt}
             onChange={(e) => setOverpayAmt(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+           
             style={{ flex: 1, fontSize: '13px' }} />
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>/mo</span>
         </div>
@@ -736,15 +912,15 @@ function ConsolidationCalc({ totalBalance, currentMonthly, stratInterest, cs, se
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Loan APR %</label>
-              <input type="number" className="input" placeholder="e.g. 6.9" value={consolRate}
+              <NumericInput className="input" placeholder="e.g. 6.9" value={consolRate}
                 onChange={(e) => setConsolRate(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }} />
+                />
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Term (years)</label>
-              <input type="number" className="input" placeholder="e.g. 3" value={consolTerm}
+              <NumericInput className="input" placeholder="e.g. 3" value={consolTerm}
                 onChange={(e) => setConsolTerm(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }} />
+                />
             </div>
           </div>
           {consolMonthly > 0 && (
@@ -815,7 +991,17 @@ export default function DebtPanel({
   const [showTypeFilter, setShowTypeFilter] = React.useState(false);
   const [whatIfAmounts, setWhatIfAmounts] = React.useState({});
   const [showArchived, setShowArchived] = React.useState(false);
-  const [infoSheet, setInfoSheet] = React.useState(null); // 'snowball' | 'avalanche' | 'dti' | 'utilization' | 'consolidation'
+  const [infoSheet, setInfoSheet] = React.useState(null); // 'snowball' | 'avalanche' | 'dti' | 'utilization' | 'consolidation' | 'projection'
+  const [chartCollapsed, setChartCollapsed] = React.useState(() => {
+    try { return localStorage.getItem('tally-chart-collapsed') === 'true'; } catch { return false; }
+  });
+  const toggleChartCollapsed = () => {
+    setChartCollapsed(prev => {
+      const next = !prev;
+      try { localStorage.setItem('tally-chart-collapsed', String(next)); } catch {}
+      return next;
+    });
+  };
 
   // Selection mode
   const [selectionMode, setSelectionMode] = React.useState(false);
@@ -891,7 +1077,7 @@ export default function DebtPanel({
                   style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
                   <Icons.SlidersH size={16} />
                 </button>
-                <button className="btn btn-primary" onClick={() => setShowDebtModal(true)}><Icons.Plus size={18} /> Add</button>
+                <button className="btn btn-primary" onClick={() => { haptic.medium(); setShowDebtModal(true); }}><Icons.Plus size={18} /> Add</button>
               </>
             )}
           </div>
@@ -1118,15 +1304,40 @@ export default function DebtPanel({
           <div style={{ marginTop: '12px', padding: '16px', borderRadius: '12px', textAlign: 'center',
             background: 'color-mix(in srgb, var(--success) 10%, transparent)',
             border: '1px solid color-mix(in srgb, var(--success) 20%, transparent)' }}>
-            <div style={{ fontSize: '28px', marginBottom: '6px' }}><Icons.PartyPopper size={28} /></div>
+            <div style={{ fontSize: '28px', marginBottom: '6px', display: 'flex', justifyContent: 'center' }}><Icons.Trophy size={32} style={{ color: 'var(--success)' }} /></div>
             <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--success)' }}>You're debt-free!</div>
             {archivedDebts.length > 0 && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{archivedDebts.length} debt{archivedDebts.length !== 1 ? 's' : ''} paid off</div>}
           </div>
         )}
       </div>
 
-      {/* Strategy Comparison Card */}
-      {strategyResults && (
+      {/* Strategy Comparison Card — only show when meaningfully comparable */}
+      {(() => {
+        if (!strategyResults) return null;
+        const recurringDebts = debts.filter(d => !d.archived && d.totalAmount > 0 && (d.paymentMode || 'recurring') === 'recurring');
+        // Need 2+ recurring debts to compare strategies
+        if (recurringDebts.length < 2) return null;
+        // Need at least 2 distinct rates AND at least one non-zero rate
+        const rates = [...new Set(recurringDebts.map(d => Math.round((d.interestRate || 0) * 100) / 100))];
+        const hasNonZeroRate = rates.some(r => r > 0);
+        const hasRateDifference = rates.length >= 2;
+        if (!hasNonZeroRate || !hasRateDifference) {
+          // Same/zero rates — show a brief explanation instead of confusing identical numbers
+          return (
+            <div className="glass-card animate-in" style={{ padding: '16px', marginBottom: '16px', animationDelay: '0.1s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <Icons.InfoCircle size={16} style={{ color: 'var(--text-muted)' }} />
+                <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>Payoff Strategy</h3>
+              </div>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5', margin: 0 }}>
+                {!hasNonZeroRate
+                  ? 'Snowball and Avalanche produce the same result here because none of your debts have interest. Pick whichever feels more motivating to pay off first.'
+                  : 'Your debts share the same interest rate, so both strategies pay off in the same order. The choice matters when rates differ.'}
+              </p>
+            </div>
+          );
+        }
+        return (
         <div className="glass-card animate-in" style={{ padding: '20px', marginBottom: '16px', animationDelay: '0.1s' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>Payoff Strategy</h3>
@@ -1229,9 +1440,8 @@ export default function DebtPanel({
             </label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{cs}</span>
-              <input type="number" className="input" placeholder="0" value={extraDebtPayment || ''}
+              <NumericInput className="input" placeholder="0" value={extraDebtPayment || ''}
                 onChange={(e) => setExtraDebtPayment(Math.max(0, parseFloat(e.target.value) || 0))}
-                onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
                 style={{ flex: 1 }} />
             </div>
             {extraDebtPayment > 0 && (
@@ -1241,13 +1451,23 @@ export default function DebtPanel({
             )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
-      {/* Payoff Projection Chart */}
-      {strategyResults && strategyResults[debtStrategy]?.timeline?.length > 2 && (
+      {/* Payoff Projection Chart - only shown for 2+ active debts */}
+      {strategyResults && strategyResults[debtStrategy]?.timeline?.length > 2 && debts.filter(d => !d.archived && d.totalAmount > 0 && d.paymentMode !== 'one-off').length >= 2 && (
         <div className="glass-card animate-in" style={{ padding: '16px', marginBottom: '16px', animationDelay: '0.2s' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>Payoff Projection</h3>
-          <DebtPayoffChart strategyResults={strategyResults} debtStrategy={debtStrategy} debts={debts} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: chartCollapsed ? '0' : '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>Payoff Projection</h3>
+              <InfoButton onClick={() => setInfoSheet('projection')} />
+            </div>
+            <button onClick={() => { haptic.light(); toggleChartCollapsed(); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', color: 'var(--text-muted)' }}>
+              <Icons.ChevronDown size={16} style={{ transition: 'transform 0.2s', transform: chartCollapsed ? 'rotate(0deg)' : 'rotate(180deg)' }} />
+            </button>
+          </div>
+          {!chartCollapsed && <DebtPayoffChart key={debtStrategy} strategyResults={strategyResults} debtStrategy={debtStrategy} debts={debts} />}
         </div>
       )}
 
@@ -1330,7 +1550,7 @@ export default function DebtPanel({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: selectionMode && selectedIds.size > 0 ? '100px' : '0', transition: 'padding-bottom 0.2s' }}>
           {activeDebts.length === 0 && (
             <div className="glass-card" style={{ padding: '24px', textAlign: 'center' }}>
-              <p style={{ color: tc.success, fontSize: '14px', fontWeight: '600' }}><Icons.PartyPopper size={16} style={{ verticalAlign: '-2px' }} /> All debts paid off!</p>
+              <p style={{ color: tc.success, fontSize: '14px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Icons.Star size={14} /> All debts paid off!</p>
             </div>
           )}
 
@@ -1366,162 +1586,7 @@ export default function DebtPanel({
                       </span>
                     </div>
                   )}
-                  {editingDebtId === debt.id ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <input className="input" value={editDebtForm.name} onChange={(e) => setEditDebtForm({ ...editDebtForm, name: e.target.value })} placeholder="Debt name" />
-                      <select className="input" value={editDebtForm.type} onChange={(e) => setEditDebtForm({ ...editDebtForm, type: e.target.value })}>
-                        {(allDebtTypes || DEBT_TYPES).map((t) => (<option key={t} value={t}>{t}</option>))}
-                      </select>
-                      <div>
-                        <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '6px' }}>Payment Structure</label>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
-                          {PAYMENT_MODES.map((opt) => (
-                            <button key={opt.key} type="button" onClick={() => setEditDebtForm({ ...editDebtForm, paymentMode: opt.key })}
-                              style={{ padding: '8px 6px', borderRadius: '8px', border: (editDebtForm.paymentMode || 'recurring') === opt.key ? `2px solid ${opt.color}` : '1px solid var(--border)', background: (editDebtForm.paymentMode || 'recurring') === opt.key ? `${opt.color}15` : 'var(--glass)', color: (editDebtForm.paymentMode || 'recurring') === opt.key ? opt.color : 'var(--text-muted)', cursor: 'pointer', fontSize: '12px', fontWeight: '500', textAlign: 'center' }}>
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        <div>
-                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Balance</label>
-                          <input type="number" className="input" value={editDebtForm.totalAmount} onChange={(e) => setEditDebtForm({ ...editDebtForm, totalAmount: e.target.value })} />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Interest %</label>
-                          <input type="number" className="input" value={editDebtForm.interestRate} onChange={(e) => setEditDebtForm({ ...editDebtForm, interestRate: e.target.value })} />
-                        </div>
-                      </div>
-                      {editDebtForm.type === 'Credit Card' && (
-                        <div>
-                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Credit Limit</label>
-                          <input type="number" className="input" placeholder="e.g. 5000" value={editDebtForm.creditLimit || ''} onChange={(e) => setEditDebtForm({ ...editDebtForm, creditLimit: e.target.value })} />
-                        </div>
-                      )}
-                      {(editDebtForm.paymentMode || 'recurring') === 'recurring' && (
-                        <>
-                          <div>
-                            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Minimum Payment</label>
-                            <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
-                              <button type="button" onClick={() => setEditDebtForm({ ...editDebtForm, minPaymentMode: 'fixed' })}
-                                style={{ flex: 1, padding: '6px', borderRadius: '6px', fontSize: '11px', fontWeight: '500', cursor: 'pointer', textAlign: 'center',
-                                  border: (editDebtForm.minPaymentMode || 'fixed') === 'fixed' ? `2px solid ${tc.info}` : '1px solid var(--border)',
-                                  background: (editDebtForm.minPaymentMode || 'fixed') === 'fixed' ? tc.infoTint : 'var(--glass)',
-                                  color: (editDebtForm.minPaymentMode || 'fixed') === 'fixed' ? tc.info : 'var(--text-muted)',
-                                }}>Fixed</button>
-                              <button type="button" onClick={() => setEditDebtForm({ ...editDebtForm, minPaymentMode: 'percentage' })}
-                                style={{ flex: 1, padding: '6px', borderRadius: '6px', fontSize: '11px', fontWeight: '500', cursor: 'pointer', textAlign: 'center',
-                                  border: editDebtForm.minPaymentMode === 'percentage' ? `2px solid ${tc.purple}` : '1px solid var(--border)',
-                                  background: editDebtForm.minPaymentMode === 'percentage' ? tc.purpleTint : 'var(--glass)',
-                                  color: editDebtForm.minPaymentMode === 'percentage' ? tc.purple : 'var(--text-muted)',
-                                }}>% of Balance</button>
-                            </div>
-                            {(editDebtForm.minPaymentMode || 'fixed') === 'fixed' ? (
-                              <input type="number" className="input" placeholder="e.g. 25" value={editDebtForm.minimumPayment} onChange={(e) => setEditDebtForm({ ...editDebtForm, minimumPayment: e.target.value })} />
-                            ) : (
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                <div>
-                                  <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '10px', marginBottom: '3px' }}>% of balance</label>
-                                  <input type="number" className="input" placeholder="2.5" value={editDebtForm.minPaymentPct || ''} onChange={(e) => setEditDebtForm({ ...editDebtForm, minPaymentPct: e.target.value })} />
-                                </div>
-                                <div>
-                                  <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '10px', marginBottom: '3px' }}>Floor ({cs})</label>
-                                  <input type="number" className="input" placeholder="25" value={editDebtForm.minPaymentFloor || ''} onChange={(e) => setEditDebtForm({ ...editDebtForm, minPaymentFloor: e.target.value })} />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Auto Monthly</label>
-                            <input type="number" className="input" value={editDebtForm.recurringPayment} onChange={(e) => setEditDebtForm({ ...editDebtForm, recurringPayment: e.target.value })} />
-                          </div>
-                        </>
-                      )}
-                      {(editDebtForm.paymentMode || 'recurring') === 'one-off' && (
-                        <div>
-                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Due Date</label>
-                          <input type="date" className={`input ${editDebtForm.dueDate ? 'has-value' : ''}`} value={editDebtForm.dueDate || ''} onChange={(e) => setEditDebtForm({ ...editDebtForm, dueDate: e.target.value })} />
-                        </div>
-                      )}
-                      {(editDebtForm.paymentMode || 'recurring') === 'installment' && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                          <div>
-                            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Total Months</label>
-                            <input type="number" className="input" value={editDebtForm.installmentMonths || ''} onChange={(e) => setEditDebtForm({ ...editDebtForm, installmentMonths: e.target.value })} />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Start Date</label>
-                            <input type="date" className={`input ${editDebtForm.installmentStartDate ? 'has-value' : ''}`} value={editDebtForm.installmentStartDate || ''} onChange={(e) => setEditDebtForm({ ...editDebtForm, installmentStartDate: e.target.value })} />
-                          </div>
-                        </div>
-                      )}
-                      {(editDebtForm.paymentMode || 'recurring') === 'bnpl' && (
-                        <>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                            <div>
-                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Interest-Free Months</label>
-                              <input type="number" className="input" value={editDebtForm.bnplPromoMonths || ''} onChange={(e) => setEditDebtForm({ ...editDebtForm, bnplPromoMonths: e.target.value })} />
-                            </div>
-                            <div>
-                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Start Date</label>
-                              <input type="date" className={`input ${editDebtForm.bnplStartDate ? 'has-value' : ''}`} value={editDebtForm.bnplStartDate || ''} onChange={(e) => setEditDebtForm({ ...editDebtForm, bnplStartDate: e.target.value })} />
-                            </div>
-                          </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                            <div>
-                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>APR after end %</label>
-                              <input type="number" className="input" value={editDebtForm.bnplPostInterest || ''} onChange={(e) => setEditDebtForm({ ...editDebtForm, bnplPostInterest: e.target.value })} />
-                            </div>
-                            <div>
-                              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Payment after end</label>
-                              <input type="number" className="input" value={editDebtForm.bnplPostPayment || ''} onChange={(e) => setEditDebtForm({ ...editDebtForm, bnplPostPayment: e.target.value })} />
-                            </div>
-                          </div>
-                        </>
-                      )}
-                      {(editDebtForm.paymentMode || 'recurring') === 'recurring' && (
-                        <div>
-                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Payment Day (1-31)</label>
-                          <input type="number" className="input" placeholder="1-31" min="1" max="31" value={editDebtForm.paymentDate || ''} onChange={(e) => { const v = e.target.value; if (v === '') { setEditDebtForm({ ...editDebtForm, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setEditDebtForm({ ...editDebtForm, paymentDate: String(Math.min(31, Math.max(1, n))) }); }} />
-                        </div>
-                      )}
-                      {/* Balance Transfer (edit) */}
-                      {(editDebtForm.paymentMode || 'recurring') === 'recurring' && (editDebtForm.type === 'Credit Card' || editDebtForm.balanceTransfer) && (
-                        <div>
-                          <button type="button" onClick={() => setEditDebtForm({ ...editDebtForm, balanceTransfer: !editDebtForm.balanceTransfer })}
-                            style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', fontWeight: '500',
-                              border: editDebtForm.balanceTransfer ? `2px solid ${tc.info}` : '1px solid var(--border)',
-                              background: editDebtForm.balanceTransfer ? tc.infoTint : 'var(--glass)',
-                              color: editDebtForm.balanceTransfer ? tc.info : 'var(--text-muted)',
-                            }}>
-                            <span>0% Balance Transfer</span>
-                            <span style={{ fontSize: '10px', fontWeight: '600' }}>{editDebtForm.balanceTransfer ? 'ON' : 'OFF'}</span>
-                          </button>
-                          {editDebtForm.balanceTransfer && (
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '8px' }}>
-                              <div>
-                                <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>0% Ends</label>
-                                <input type="date" className={`input ${editDebtForm.btEndDate ? 'has-value' : ''}`} value={editDebtForm.btEndDate || ''} onChange={(e) => setEditDebtForm({ ...editDebtForm, btEndDate: e.target.value })} />
-                              </div>
-                              <div>
-                                <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Revert APR %</label>
-                                <input type="number" className="input" placeholder="e.g. 24.9" value={editDebtForm.btRevertRate || ''} onChange={(e) => setEditDebtForm({ ...editDebtForm, btRevertRate: e.target.value })} />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button className="btn btn-primary" onClick={handleDebtEditSave} style={{ flex: 1 }}><Icons.Check size={18} /> Save</button>
-                        <button className="btn btn-secondary" onClick={() => setEditingDebtId(null)} style={{ flex: 1 }}><Icons.X size={18} /> Cancel</button>
-                      </div>
-                      <button onClick={async () => { const deleted = await handleDeleteDebt(debt.id); if (deleted !== false) setEditingDebtId(null); }} style={{ width: '100%', marginTop: '8px', padding: '9px', background: tc.dangerTintLight, border: `1px solid ${tc.dangerTintStrong}`, borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: tc.danger }}>
-                        Delete debt
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
+                  <div>
                       {/* ── Row 1: Icon + Name + Amount ── */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
                         <div style={{
@@ -1541,7 +1606,7 @@ export default function DebtPanel({
                                 border: '1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent)',
                                 color: 'var(--accent-primary)', flexShrink: 0 }}><Icons.Star size={10} style={{ verticalAlign: '-1px' }} /> Focus</span>
                             )}
-                            {!selectionMode && <button onClick={() => handleDebtEditStart(debt)} style={{ width: '22px', height: '22px', borderRadius: '5px', border: '1px solid var(--accent-primary)', background: 'var(--info-tint)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)', flexShrink: 0 }}>
+                            {!selectionMode && <button onClick={() => { haptic.medium(); handleDebtEditStart(debt); }} style={{ width: '22px', height: '22px', borderRadius: '5px', border: '1px solid var(--accent-primary)', background: 'var(--info-tint)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)', flexShrink: 0 }}>
                               <Icons.Edit size={12} />
                             </button>}
                           </div>
@@ -1627,7 +1692,7 @@ export default function DebtPanel({
                       {!isPaidOff && !selectionMode && (
                         <div style={{ marginLeft: '46px' }}>
                           <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                            <input type="number" className="input" placeholder="Payment amount..." value={debtPaymentAmounts[debt.id] || ''} onChange={(e) => setDebtPaymentAmounts({ ...debtPaymentAmounts, [debt.id]: e.target.value })} style={{ flex: 1 }} />
+                            <NumericInput className="input" placeholder="Payment amount..." value={debtPaymentAmounts[debt.id] || ''} onChange={(e) => setDebtPaymentAmounts({ ...debtPaymentAmounts, [debt.id]: e.target.value })} onDone={() => handleMakePayment(debt.id)} style={{ flex: 1 }} />
                             <button className="btn btn-primary" onClick={() => handleMakePayment(debt.id)} style={{ whiteSpace: 'nowrap' }}>Pay</button>
                           </div>
 
@@ -1641,7 +1706,7 @@ export default function DebtPanel({
                               {showWhatIf[debt.id] && (
                                 <div style={{ marginTop: '8px', padding: '12px', background: 'var(--glass)', borderRadius: '10px', border: '1px solid var(--border)' }}>
                                   <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                                    <input type="number" className="input" placeholder="e.g. 200" value={whatIfAmounts[debt.id] || ''} onChange={(e) => setWhatIfAmounts({ ...whatIfAmounts, [debt.id]: e.target.value })} style={{ flex: 1 }} />
+                                    <NumericInput className="input" placeholder="e.g. 200" value={whatIfAmounts[debt.id] || ''} onChange={(e) => setWhatIfAmounts({ ...whatIfAmounts, [debt.id]: e.target.value })} style={{ flex: 1 }} />
                                     <span style={{ display: 'flex', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>/mo</span>
                                   </div>
                                   {(() => {
@@ -1708,7 +1773,6 @@ export default function DebtPanel({
                         </div>
                       )}
                     </div>
-                  )}
                 </div>
               </div>
             );
@@ -1845,6 +1909,18 @@ export default function DebtPanel({
         <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
           Aim to keep each card below 30%. Paying down balances before statement dates helps the most.
         </p>
+      </InfoSheet>
+
+      <InfoSheet open={infoSheet === 'projection'} onClose={() => setInfoSheet(null)} title="Payoff Projection">
+        <p style={{ marginBottom: '12px' }}>
+          This chart shows how your debts will reduce over time if you stick to your current strategy ({debtStrategy === 'avalanche' ? 'Avalanche' : 'Snowball'}).
+        </p>
+        <p style={{ marginBottom: '12px' }}>
+          Each colour represents a different debt, stacked together. As you make payments and debts get cleared, you will see them disappear from the chart - giving you a clear visual of your progress to debt-free.
+        </p>
+        <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--accent-primary) 15%, transparent)', fontSize: '13px' }}>
+          <strong style={{ color: 'var(--accent-primary)' }}>Tip:</strong> Try switching between Snowball and Avalanche strategies above to see how the projection changes. The chart updates instantly so you can compare timelines.
+        </div>
       </InfoSheet>
 
       <InfoSheet open={infoSheet === 'consolidation'} onClose={() => setInfoSheet(null)} title="Debt Consolidation">

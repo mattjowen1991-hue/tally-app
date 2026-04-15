@@ -50,20 +50,27 @@ export default function useSwipe(panelCount) {
   }, []);
 
   const finishSwipe = useCallback(() => {
-    if (!isSwiping.current) return;
     if (swipeRef.current) swipeRef.current.classList.remove('swiping');
 
     const threshold = window.innerWidth * 0.2;
     const panel = activePanelRef.current;
     let newPanel = panel;
-    if (touchDeltaX.current < -threshold && panel < panelCount - 1) newPanel = panel + 1;
-    else if (touchDeltaX.current > threshold && panel > 0) newPanel = panel - 1;
+    // Only consider switching if a real horizontal swipe was in progress
+    if (isSwiping.current) {
+      if (touchDeltaX.current < -threshold && panel < panelCount - 1) newPanel = panel + 1;
+      else if (touchDeltaX.current > threshold && panel > 0) newPanel = panel - 1;
+    }
 
     if (newPanel !== panel) {
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+        document.activeElement.blur();
+      }
       switchToPanel(panel, newPanel);
       haptic.selection();
     } else {
-      // Snap back to current panel
+      // Always snap back — even if the swipe didn't reach the lock threshold,
+      // the transform may have been partially applied and would otherwise leave
+      // the user stuck between panels.
       if (swipeRef.current) swipeRef.current.style.transform = `translateX(${-panel * 100}%)`;
     }
 
@@ -79,6 +86,10 @@ export default function useSwipe(panelCount) {
     if (!directionLocked.current && (Math.abs(dx) > 15 || Math.abs(dy) > 15)) {
       directionLocked.current = true;
       isSwiping.current = Math.abs(dx) > Math.abs(dy) * 1.5;
+      // Horizontal swipe detected — blur any focused input to dismiss keyboard & paste popup
+      if (isSwiping.current && document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+        document.activeElement.blur();
+      }
       if (!isSwiping.current) {
         document.removeEventListener('touchmove', onTouchMove);
         document.removeEventListener('touchend', onTouchEnd);

@@ -35,8 +35,12 @@ function applyStatusBar(theme) {
 
 export async function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
+  document.body?.setAttribute('data-theme', theme);
   // Set color-scheme on html element so native UI elements (select, confirm, etc.) respect theme
   document.documentElement.style.colorScheme = theme === 'light' ? 'light' : 'dark';
+  if (document.body) {
+    document.body.style.colorScheme = theme === 'light' ? 'light' : 'dark';
+  }
   // Also set/create meta color-scheme tag for Android WebView
   let colorSchemeMeta = document.querySelector('meta[name="color-scheme"]');
   if (!colorSchemeMeta) {
@@ -52,13 +56,32 @@ export async function applyTheme(theme) {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', color);
   applyStatusBar(theme);
+  applyKeyboardStyle(theme);
   await mirrorThemeToNative(theme);
+}
+
+// Set iOS keyboard appearance to match theme (prevents light->dark flicker on focus)
+function applyKeyboardStyle(theme) {
+  const setStyle = () => {
+    try {
+      const Keyboard = window.Capacitor?.Plugins?.Keyboard;
+      if (!Keyboard?.setStyle) return;
+      Keyboard.setStyle({ style: theme === 'light' ? 'LIGHT' : 'DARK' });
+    } catch {}
+  };
+  setStyle();
+  // Retry after a tick in case the plugin hasn't mounted yet on first boot
+  setTimeout(setStyle, 300);
 }
 
 async function mirrorThemeToNative(theme) {
   try {
     const prefs = window.Capacitor?.Plugins?.Preferences;
     if (prefs) await prefs.set({ key: '_tally_theme_native', value: theme });
+  } catch {}
+  // Tell native Android to switch night mode immediately (affects select dialogs, paste popup, etc.)
+  try {
+    if (window.TallyNative?.setTheme) window.TallyNative.setTheme(theme);
   } catch {}
 }
 export function applyStatusBarWhenReady(theme) {

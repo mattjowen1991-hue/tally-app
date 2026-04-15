@@ -4,6 +4,7 @@ import React from 'react';
 import haptic from '../utils/haptics';
 import { saveNotificationSettings } from '../utils/notifications';
 import * as Icons from './Icons';
+import Picker from './Picker';
 
 const CURRENCIES = [
   { code: 'GBP', symbol: '£', name: 'GBP (£)' },
@@ -228,7 +229,7 @@ function FeedbackModal({ show, onClose, bills, debts, savings, theme, currencyCo
                 style={{
                   width: '100%', minHeight: '120px', padding: '12px', borderRadius: '10px',
                   border: '1px solid var(--border)', background: 'var(--glass)',
-                  color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.5,
+                  color: 'var(--text-primary)', fontSize: '16px', lineHeight: 1.5,
                   resize: 'vertical', fontFamily: 'inherit',
                 }}
               />
@@ -432,37 +433,33 @@ export default function SettingsModal({ show, onClose, theme, onToggleTheme, not
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Reminder time:</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <select
+                  <Picker
                     value={notificationSettings?.reminderHour ?? 9}
                     onChange={(e) => updateSetting('reminderHour', parseInt(e.target.value))}
                     style={{
                       padding: '8px 6px', borderRadius: '8px', border: '1px solid var(--border)',
                       background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px',
-                      fontWeight: '600', cursor: 'pointer', appearance: 'none', textAlign: 'center',
+                      fontWeight: '600', cursor: 'pointer', textAlign: 'center',
                       width: '52px',
                     }}
-                  >
-                    {Array.from({ length: 24 }, (_, i) => (
-                      <option key={i} value={i}>
-                        {i === 0 ? '12' : i > 12 ? i - 12 : i}
-                      </option>
-                    ))}
-                  </select>
+                    options={Array.from({ length: 24 }, (_, i) => ({
+                      value: i, label: i === 0 ? '12' : i > 12 ? String(i - 12) : String(i)
+                    }))}
+                  />
                   <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>:</span>
-                  <select
+                  <Picker
                     value={notificationSettings?.reminderMinute ?? 0}
                     onChange={(e) => updateSetting('reminderMinute', parseInt(e.target.value))}
                     style={{
                       padding: '8px 6px', borderRadius: '8px', border: '1px solid var(--border)',
                       background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px',
-                      fontWeight: '600', cursor: 'pointer', appearance: 'none', textAlign: 'center',
+                      fontWeight: '600', cursor: 'pointer', textAlign: 'center',
                       width: '52px',
                     }}
-                  >
-                    {[0, 15, 30, 45].map(m => (
-                      <option key={m} value={m}>{String(m).padStart(2, '0')}</option>
-                    ))}
-                  </select>
+                    options={[0, 15, 30, 45].map(m => ({
+                      value: m, label: String(m).padStart(2, '0')
+                    }))}
+                  />
                   <span style={{ fontSize: '13px', color: 'var(--text-muted)', marginLeft: '4px' }}>
                     {(notificationSettings?.reminderHour ?? 9) < 12 ? 'AM' : 'PM'}
                   </span>

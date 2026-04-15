@@ -4,20 +4,20 @@ export function initKeyboardScroll() {
   if (!window.visualViewport) return;
 
   // Keep --vvh in sync with the visual viewport height.
-  // This drives .form-screen-inner { height: var(--vvh) } so the form content
-  // always fills exactly the space above the keyboard.
+  // NumericInput temporarily takes over by setting window.__tallyVvhLocked = true
+  // when the custom keypad is open — this stops viewport resize events from
+  // overwriting the locked value.
   function syncViewportHeight() {
+    if (window.__tallyVvhLocked) return;
     document.documentElement.style.setProperty('--vvh', window.visualViewport.height + 'px');
   }
   window.visualViewport.addEventListener('resize', syncViewportHeight);
   syncViewportHeight();
 
   // Prevent the main page from scrolling when a form-screen is open.
-  // Touches in the gap area (inside form-screen but outside form-screen-body)
-  // would otherwise propagate to the main page and cause the fixed form to drift.
   document.addEventListener('touchmove', (e) => {
     if (!document.querySelector('.form-screen.open')) return;
-    if (e.target.closest('.form-screen-body')) return; // allow scroll inside body
+    if (e.target.closest('.form-screen-body')) return;
     e.preventDefault();
   }, { passive: false });
 
@@ -50,7 +50,6 @@ export function initKeyboardScroll() {
     const containerRect = container.getBoundingClientRect();
     const elRect = el.getBoundingClientRect();
 
-    // Keyboard top relative to container top
     const visibleBottom = (vv.height + vv.offsetTop) - containerRect.top;
     const elBottom = elRect.bottom - containerRect.top;
 
@@ -59,6 +58,16 @@ export function initKeyboardScroll() {
     }
   }
 
+  // Tap outside an input → blur it (dismisses keyboard + native paste popup)
+  document.addEventListener('touchstart', (e) => {
+    const ae = document.activeElement;
+    if (!ae || (ae.tagName !== 'INPUT' && ae.tagName !== 'TEXTAREA')) return;
+    // If tapping on another input/button/select, let normal focus handling work
+    if (e.target.closest('input, textarea, button, select, a, [role="button"]')) return;
+    ae.blur();
+  }, { passive: true });
+
+
   // On focus, scroll immediately then again once the keyboard has finished resizing
   document.addEventListener('focusin', (e) => {
     const el = e.target;
@@ -66,14 +75,27 @@ export function initKeyboardScroll() {
     const container = el.closest('.modal-content') || el.closest('.form-screen-body') || el.closest('.swipe-panel');
     if (!container) return;
 
-    // First pass — keyboard may not be open yet
     requestAnimationFrame(() => ensureFieldVisible(el, container));
 
-    // Second pass — fires once after the keyboard finishes resizing the viewport
+    // Listen for viewport resize (when keyboard appears)
+    let fired = false;
     function onViewportResize() {
+      if (fired) return;
+      fired = true;
       window.visualViewport.removeEventListener('resize', onViewportResize);
       requestAnimationFrame(() => ensureFieldVisible(el, container));
     }
     window.visualViewport.addEventListener('resize', onViewportResize);
+
+    // Fallback timer — Android's numeric keypad doesn't always fire visualviewport
+    // resize events reliably, so we run scroll anyway after the keyboard's typical
+    // animation duration. Safe because ensureFieldVisible is a no-op if already visible.
+    setTimeout(() => {
+      if (fired) return;
+      fired = true;
+      window.visualViewport.removeEventListener('resize', onViewportResize);
+      ensureFieldVisible(el, container);
+    }, 350);
+    setTimeout(() => ensureFieldVisible(el, container), 600);
   }, true);
 }

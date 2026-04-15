@@ -5,6 +5,8 @@ import * as Icons from './Icons';
 // PDF import is loaded lazily to keep the main bundle small
 const loadPdfImport = () => import('../utils/pdfImport');
 import haptic from '../utils/haptics';
+import Picker from './Picker';
+import NumericInput from './NumericInput';
 
 async function pickFile() {
   const { FilePicker } = await import('@capawesome/capacitor-file-picker');
@@ -399,8 +401,8 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
             {editingAmount && pending ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>£</span>
-                <input autoFocus value={localAmount} onChange={e => setLocalAmount(e.target.value)} type="number"
-                  onBlur={commitAmount} onKeyDown={e => { if (e.key === 'Enter') { commitAmount(); e.target.blur(); } }}
+                <NumericInput autoFocus value={localAmount} onChange={e => setLocalAmount(e.target.value)}
+                  onBlur={commitAmount}
                   className="input" style={{ flex: 1 }} />
               </div>
             ) : (
@@ -422,7 +424,7 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
               <div>
                 <label style={LABEL_STYLE}>Category</label>
                 {!showNewCatInput ? (
-                  <select className="input" value={localCategory} onChange={(e) => {
+                  <Picker className="input" value={localCategory} onChange={(e) => {
                     if (e.target.value === '__new__') {
                       setShowNewCatInput(true);
                       return;
@@ -430,10 +432,7 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
                     haptic.light();
                     setLocalCategory(e.target.value);
                     onEditCategory(suggestion.id, e.target.value);
-                  }}>
-                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    <option value="__new__">+ Create new category...</option>
-                  </select>
+                  }} options={[...categories.map(c => ({value:c,label:c})), {value:'__new__',label:'+ Create new category...'}]} />
                 ) : (
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                     <input autoFocus value={newCatName} onChange={e => setNewCatName(e.target.value)}
@@ -486,18 +485,12 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
               {localRecurring && (
                 <div>
                   <label style={LABEL_STYLE}>Frequency</label>
-                  <select className="input" value={localFrequency} onChange={(e) => {
+                  <Picker className="input" value={localFrequency} onChange={(e) => {
                     haptic.light();
                     setLocalFrequency(e.target.value);
                     setLocalPaymentDate(''); setLocalPaymentDay(''); setLocalStartDate(''); setLocalStartMonth('');
                     onEditFrequency(suggestion.id, e.target.value);
-                  }}>
-                    <option value="Weekly">Weekly</option>
-                    <option value="Fortnightly">Fortnightly</option>
-                    <option value="Monthly">Monthly</option>
-                    <option value="Quarterly">Quarterly</option>
-                    <option value="Yearly">Yearly</option>
-                  </select>
+                  }} options={['Weekly','Fortnightly','Monthly','Quarterly','Yearly']} />
                 </div>
               )}
 
@@ -511,11 +504,7 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div>
                     <label style={LABEL_STYLE}>Day of week</label>
-                    <select className="input" value={localPaymentDay} onChange={e => setLocalPaymentDay(e.target.value)}>
-                      <option value="">Select day...</option>
-                      <option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option>
-                      <option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option>
-                    </select>
+                    <Picker className="input" value={localPaymentDay} onChange={e => setLocalPaymentDay(e.target.value)} placeholder="Select day..." options={[{value:'1',label:'Monday'},{value:'2',label:'Tuesday'},{value:'3',label:'Wednesday'},{value:'4',label:'Thursday'},{value:'5',label:'Friday'},{value:'6',label:'Saturday'},{value:'0',label:'Sunday'}]} />
                   </div>
                   {localFrequency === 'Fortnightly' && (
                     <div>
@@ -527,27 +516,21 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
               ) : localFrequency === 'Monthly' ? (
                 <div>
                   <label style={LABEL_STYLE}>Day of month</label>
-                  <input type="number" className="input" placeholder="1-31" min="1" max="31" value={localPaymentDate}
+                  <NumericInput className="input" placeholder="1-31" min="1" max="31" value={localPaymentDate}
                     onChange={e => { const v = e.target.value; if (v === '') { setLocalPaymentDate(''); return; } const n = parseInt(v); if (!isNaN(n)) setLocalPaymentDate(String(Math.min(31, Math.max(1, n)))); }}
-                    onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                    />
                 </div>
               ) : localFrequency === 'Quarterly' ? (
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <div style={{ flex: 1 }}>
                     <label style={LABEL_STYLE}>Day of month</label>
-                    <input type="number" className="input" placeholder="1-31" min="1" max="31" value={localPaymentDate}
+                    <NumericInput className="input" placeholder="1-31" min="1" max="31" value={localPaymentDate}
                       onChange={e => { const v = e.target.value; if (v === '') { setLocalPaymentDate(''); return; } const n = parseInt(v); if (!isNaN(n)) setLocalPaymentDate(String(Math.min(31, Math.max(1, n)))); }}
-                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                      />
                   </div>
                   <div style={{ flex: 1 }}>
                     <label style={LABEL_STYLE}>Starting month</label>
-                    <select className="input" value={localStartMonth} onChange={e => setLocalStartMonth(e.target.value)}>
-                      <option value="">Select...</option>
-                      <option value="1">January</option><option value="2">February</option><option value="3">March</option>
-                      <option value="4">April</option><option value="5">May</option><option value="6">June</option>
-                      <option value="7">July</option><option value="8">August</option><option value="9">September</option>
-                      <option value="10">October</option><option value="11">November</option><option value="12">December</option>
-                    </select>
+                    <Picker className="input" value={localStartMonth} onChange={e => setLocalStartMonth(e.target.value)} placeholder="Select..." options={[{value:'1',label:'January'},{value:'2',label:'February'},{value:'3',label:'March'},{value:'4',label:'April'},{value:'5',label:'May'},{value:'6',label:'June'},{value:'7',label:'July'},{value:'8',label:'August'},{value:'9',label:'September'},{value:'10',label:'October'},{value:'11',label:'November'},{value:'12',label:'December'}]} />
                   </div>
                 </div>
               ) : localFrequency === 'Yearly' ? (
@@ -568,9 +551,7 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
               </div>
               <div>
                 <label style={LABEL_STYLE}>Debt Type</label>
-                <select className="input" value={debtType} onChange={e => { haptic.light(); setDebtType(e.target.value); }}>
-                  {DEBT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+                <Picker className="input" value={debtType} onChange={e => { haptic.light(); setDebtType(e.target.value); }} options={DEBT_TYPES} />
               </div>
               <div>
                 <label style={LABEL_STYLE}>Payment Structure</label>
@@ -594,23 +575,23 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
                 <>
                   <div>
                     <label style={LABEL_STYLE}>Interest Rate (% APR)</label>
-                    <input type="number" className="input" placeholder="0" value={debtInterestRate} onChange={e => setDebtInterestRate(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                    <NumericInput className="input" placeholder="0" value={debtInterestRate} onChange={e => setDebtInterestRate(e.target.value)} />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
                       <label style={LABEL_STYLE}>Minimum Payment</label>
-                      <input type="number" className="input" placeholder="0.00" value={debtMinPayment} onChange={e => setDebtMinPayment(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                      <NumericInput className="input" placeholder="0.00" value={debtMinPayment} onChange={e => setDebtMinPayment(e.target.value)} />
                     </div>
                     <div>
                       <label style={LABEL_STYLE}>Auto Monthly</label>
-                      <input type="number" className="input" placeholder="0.00" value={debtRecurringPayment} onChange={e => setDebtRecurringPayment(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                      <NumericInput className="input" placeholder="0.00" value={debtRecurringPayment} onChange={e => setDebtRecurringPayment(e.target.value)} />
                     </div>
                   </div>
                   <div>
                     <label style={LABEL_STYLE}>Payment Day</label>
-                    <input type="number" className="input" placeholder="Day of month (1-31)" min="1" max="31" value={debtPaymentDate}
+                    <NumericInput className="input" placeholder="Day of month (1-31)" min="1" max="31" value={debtPaymentDate}
                       onChange={e => { const v = e.target.value; if (v === '') { setDebtPaymentDate(''); return; } const n = parseInt(v); if (!isNaN(n)) setDebtPaymentDate(String(Math.min(31, Math.max(1, n)))); }}
-                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                      />
                   </div>
                 </>
               )}
@@ -622,23 +603,21 @@ function SuggestionCard({ suggestion, checked, cardState = 'pending', categories
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
               <div>
                 <label style={LABEL_STYLE}>Category</label>
-                <select className="input" value={savingsCategory} onChange={e => { haptic.light(); setSavingsCategory(e.target.value); }}>
-                  {SAVINGS_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <Picker className="input" value={savingsCategory} onChange={e => { haptic.light(); setSavingsCategory(e.target.value); }} options={SAVINGS_CATEGORIES} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={LABEL_STYLE}>Starting Amount</label>
-                  <input type="number" className="input" placeholder="0.00 (optional)" value={savingsStarting} onChange={e => setSavingsStarting(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                  <NumericInput className="input" placeholder="0.00 (optional)" value={savingsStarting} onChange={e => setSavingsStarting(e.target.value)} />
                 </div>
                 <div>
                   <label style={LABEL_STYLE}>Target Amount</label>
-                  <input type="number" className="input" placeholder="0.00 (optional)" value={savingsTarget} onChange={e => setSavingsTarget(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                  <NumericInput className="input" placeholder="0.00 (optional)" value={savingsTarget} onChange={e => setSavingsTarget(e.target.value)} />
                 </div>
               </div>
               <div>
                 <label style={LABEL_STYLE}>Monthly Auto-Save</label>
-                <input type="number" className="input" placeholder="0.00 (optional)" value={savingsMonthly} onChange={e => setSavingsMonthly(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                <NumericInput className="input" placeholder="0.00 (optional)" value={savingsMonthly} onChange={e => setSavingsMonthly(e.target.value)} />
               </div>
             </div>
           )}
@@ -842,23 +821,18 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
                   </div>
                   <div>
                     <label style={LABEL_STYLE}>Category</label>
-                    <select className="input" value={billCategory} onChange={e => { haptic.light(); setBillCategory(e.target.value); }}>
-                      {DEFAULT_CATS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    </select>
+                    <Picker className="input" value={billCategory} onChange={e => { haptic.light(); setBillCategory(e.target.value); }} options={DEFAULT_CATS} />
                   </div>
                   <div>
                     <label style={LABEL_STYLE}>Frequency</label>
-                    <select className="input" value={billFrequency} onChange={e => { haptic.light(); setBillFrequency(e.target.value); }}>
-                      <option value="Weekly">Weekly</option><option value="Fortnightly">Fortnightly</option>
-                      <option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option><option value="Yearly">Yearly</option>
-                    </select>
+                    <Picker className="input" value={billFrequency} onChange={e => { haptic.light(); setBillFrequency(e.target.value); }} options={['Weekly','Fortnightly','Monthly','Quarterly','Yearly']} />
                   </div>
                   {billFrequency === 'Monthly' && (
                     <div>
                       <label style={LABEL_STYLE}>Day of month</label>
-                      <input type="number" className="input" placeholder="1-31" min="1" max="31" value={billPaymentDate}
+                      <NumericInput className="input" placeholder="1-31" min="1" max="31" value={billPaymentDate}
                         onChange={e => { const v = e.target.value; if (v === '') { setBillPaymentDate(''); return; } const n = parseInt(v); if (!isNaN(n)) setBillPaymentDate(String(Math.min(31, Math.max(1, n)))); }}
-                        onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                        />
                     </div>
                   )}
                 </>
@@ -869,15 +843,13 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
                 <>
                   <div>
                     <label style={LABEL_STYLE}>Category</label>
-                    <select className="input" value={savCat} onChange={e => { haptic.light(); setSavCat(e.target.value); }}>
-                      {SAVINGS_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    <Picker className="input" value={savCat} onChange={e => { haptic.light(); setSavCat(e.target.value); }} options={SAVINGS_CATEGORIES} />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <div><label style={LABEL_STYLE}>Starting Amount</label><input type="number" className="input" placeholder="0.00" value={savStarting} onChange={e => setSavStarting(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} /></div>
-                    <div><label style={LABEL_STYLE}>Target Amount</label><input type="number" className="input" placeholder="0.00" value={savTarget} onChange={e => setSavTarget(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} /></div>
+                    <div><label style={LABEL_STYLE}>Starting Amount</label><NumericInput className="input" placeholder="0.00" value={savStarting} onChange={e => setSavStarting(e.target.value)} /></div>
+                    <div><label style={LABEL_STYLE}>Target Amount</label><NumericInput className="input" placeholder="0.00" value={savTarget} onChange={e => setSavTarget(e.target.value)} /></div>
                   </div>
-                  <div><label style={LABEL_STYLE}>Monthly Auto-Save</label><input type="number" className="input" placeholder="0.00" value={savMonthly} onChange={e => setSavMonthly(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} /></div>
+                  <div><label style={LABEL_STYLE}>Monthly Auto-Save</label><NumericInput className="input" placeholder="0.00" value={savMonthly} onChange={e => setSavMonthly(e.target.value)} /></div>
                 </>
               )}
 
@@ -887,8 +859,8 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
               <div>
                 <label style={LABEL_STYLE}>Total Amount Owed</label>
                 {editingAmount ? (
-                  <input autoFocus value={localAmount} onChange={e => setLocalAmount(e.target.value)} type="number"
-                    onBlur={() => setEditingAmount(false)} onKeyDown={e => { if (e.key === 'Enter') { setEditingAmount(false); e.target.blur(); } }}
+                  <NumericInput autoFocus value={localAmount} onChange={e => setLocalAmount(e.target.value)}
+                    onBlur={() => setEditingAmount(false)}
                     className="input" />
                 ) : (
                   <div onClick={() => setEditingAmount(true)} className="input" style={{ cursor: 'text' }}>
@@ -900,9 +872,7 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
               {/* Debt Type */}
               <div>
                 <label style={LABEL_STYLE}>Debt Type</label>
-                <select className="input" value={debtType} onChange={e => { haptic.light(); setDebtType(e.target.value); }}>
-                  {DEBT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+                <Picker className="input" value={debtType} onChange={e => { haptic.light(); setDebtType(e.target.value); }} options={DEBT_TYPES} />
               </div>
 
               {/* Payment Structure */}
@@ -938,26 +908,26 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
                 <>
                   <div>
                     <label style={LABEL_STYLE}>Interest Rate (% APR)</label>
-                    <input type="number" className="input" placeholder="0" value={interestRate} onChange={e => setInterestRate(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                    <NumericInput className="input" placeholder="0" value={interestRate} onChange={e => setInterestRate(e.target.value)}
+                      />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
                       <label style={LABEL_STYLE}>Minimum Payment</label>
-                      <input type="number" className="input" placeholder="0.00" value={minimumPayment} onChange={e => setMinimumPayment(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                      <NumericInput className="input" placeholder="0.00" value={minimumPayment} onChange={e => setMinimumPayment(e.target.value)}
+                        />
                     </div>
                     <div>
                       <label style={LABEL_STYLE}>Auto Monthly</label>
-                      <input type="number" className="input" placeholder="0.00" value={recurringPayment} onChange={e => setRecurringPayment(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                      <NumericInput className="input" placeholder="0.00" value={recurringPayment} onChange={e => setRecurringPayment(e.target.value)}
+                        />
                     </div>
                   </div>
                   <div>
                     <label style={LABEL_STYLE}>Payment Day</label>
-                    <input type="number" className="input" placeholder="Day of month (1-31)" min="1" max="31" value={paymentDate}
+                    <NumericInput className="input" placeholder="Day of month (1-31)" min="1" max="31" value={paymentDate}
                       onChange={e => { const v = e.target.value; if (v === '') { setPaymentDate(''); return; } const n = parseInt(v); if (!isNaN(n)) setPaymentDate(String(Math.min(31, Math.max(1, n)))); }}
-                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                      />
                   </div>
                 </>
               )}
@@ -976,8 +946,8 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
                       <label style={LABEL_STYLE}>Number of Months</label>
-                      <input type="number" className="input" placeholder="e.g., 12" value={installmentMonths} onChange={e => setInstallmentMonths(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                      <NumericInput className="input" placeholder="e.g., 12" value={installmentMonths} onChange={e => setInstallmentMonths(e.target.value)}
+                        />
                     </div>
                     <div>
                       <label style={LABEL_STYLE}>Start Date</label>
@@ -986,8 +956,8 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
                   </div>
                   <div>
                     <label style={LABEL_STYLE}>Interest Rate (% APR)</label>
-                    <input type="number" className="input" placeholder="0 (often 0% for finance)" value={interestRate} onChange={e => setInterestRate(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                    <NumericInput className="input" placeholder="0 (often 0% for finance)" value={interestRate} onChange={e => setInterestRate(e.target.value)}
+                      />
                   </div>
                   {installmentMonthly > 0 && (
                     <div style={{ padding: '10px 14px', background: 'color-mix(in srgb, #a78bfa 8%, transparent)', borderRadius: '10px',
@@ -1004,8 +974,8 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
                       <label style={LABEL_STYLE}>Interest-Free Months</label>
-                      <input type="number" className="input" placeholder="e.g., 12" value={bnplPromoMonths} onChange={e => setBnplPromoMonths(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                      <NumericInput className="input" placeholder="e.g., 12" value={bnplPromoMonths} onChange={e => setBnplPromoMonths(e.target.value)}
+                        />
                     </div>
                     <div>
                       <label style={LABEL_STYLE}>Start Date</label>
@@ -1023,13 +993,13 @@ function DebtSuggestionCard({ suggestion, checked, cardState = 'pending', onTogg
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                       <div>
                         <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Interest Rate (%)</label>
-                        <input type="number" className="input" placeholder="e.g., 29.9" value={bnplPostInterest} onChange={e => setBnplPostInterest(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                        <NumericInput className="input" placeholder="e.g., 29.9" value={bnplPostInterest} onChange={e => setBnplPostInterest(e.target.value)}
+                          />
                       </div>
                       <div>
                         <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Monthly Payment</label>
-                        <input type="number" className="input" placeholder="0.00" value={bnplPostPayment} onChange={e => setBnplPostPayment(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} />
+                        <NumericInput className="input" placeholder="0.00" value={bnplPostPayment} onChange={e => setBnplPostPayment(e.target.value)}
+                          />
                       </div>
                     </div>
                   </div>
@@ -1193,18 +1163,13 @@ function SavingsSuggestionCard({ suggestion, checked, cardState = 'pending', onT
               {localType === 'bill' && (
                 <>
                   <div><label style={LABEL_STYLE}>Category</label>
-                    <select className="input" value={billCategory} onChange={e => { haptic.light(); setBillCategory(e.target.value); }}>
-                      {DEFAULT_CATS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    </select></div>
+                    <Picker className="input" value={billCategory} onChange={e => { haptic.light(); setBillCategory(e.target.value); }} options={DEFAULT_CATS} /></div>
                   <div><label style={LABEL_STYLE}>Frequency</label>
-                    <select className="input" value={billFrequency} onChange={e => { haptic.light(); setBillFrequency(e.target.value); }}>
-                      <option value="Weekly">Weekly</option><option value="Fortnightly">Fortnightly</option>
-                      <option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option><option value="Yearly">Yearly</option>
-                    </select></div>
+                    <Picker className="input" value={billFrequency} onChange={e => { haptic.light(); setBillFrequency(e.target.value); }} options={['Weekly','Fortnightly','Monthly','Quarterly','Yearly']} /></div>
                   {billFrequency === 'Monthly' && (<div><label style={LABEL_STYLE}>Day of month</label>
-                    <input type="number" className="input" placeholder="1-31" min="1" max="31" value={billPaymentDate}
+                    <NumericInput className="input" placeholder="1-31" min="1" max="31" value={billPaymentDate}
                       onChange={e => { const v = e.target.value; if (v === '') { setBillPaymentDate(''); return; } const n = parseInt(v); if (!isNaN(n)) setBillPaymentDate(String(Math.min(31, Math.max(1, n)))); }}
-                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} /></div>)}
+                      /></div>)}
                 </>
               )}
 
@@ -1214,9 +1179,7 @@ function SavingsSuggestionCard({ suggestion, checked, cardState = 'pending', onT
                   <div><label style={LABEL_STYLE}>Total Amount Owed</label>
                     <div className="input">£{suggestion.avgAmount.toFixed(2)}</div></div>
                   <div><label style={LABEL_STYLE}>Debt Type</label>
-                    <select className="input" value={debtType} onChange={e => { haptic.light(); setDebtType(e.target.value); }}>
-                      {DEBT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select></div>
+                    <Picker className="input" value={debtType} onChange={e => { haptic.light(); setDebtType(e.target.value); }} options={DEBT_TYPES} /></div>
                 </>
               )}
 
@@ -1224,21 +1187,19 @@ function SavingsSuggestionCard({ suggestion, checked, cardState = 'pending', onT
               {localType === 'savings' && (<>
               <div>
                 <label style={LABEL_STYLE}>Category</label>
-                <select className="input" value={savingsCategory} onChange={e => { haptic.light(); setSavingsCategory(e.target.value); }}>
-                  {SAVINGS_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <Picker className="input" value={savingsCategory} onChange={e => { haptic.light(); setSavingsCategory(e.target.value); }} options={SAVINGS_CATEGORIES} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div><label style={LABEL_STYLE}>Starting Amount</label>
-                  <input type="number" className="input" placeholder="0.00 (optional)" value={startingAmount}
-                    onChange={e => setStartingAmount(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} /></div>
+                  <NumericInput className="input" placeholder="0.00 (optional)" value={startingAmount}
+                    onChange={e => setStartingAmount(e.target.value)} /></div>
                 <div><label style={LABEL_STYLE}>Target Amount</label>
-                  <input type="number" className="input" placeholder="0.00 (optional)" value={targetAmount}
-                    onChange={e => setTargetAmount(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} /></div>
+                  <NumericInput className="input" placeholder="0.00 (optional)" value={targetAmount}
+                    onChange={e => setTargetAmount(e.target.value)} /></div>
               </div>
               <div><label style={LABEL_STYLE}>Monthly Auto-Save</label>
-                <input type="number" className="input" placeholder="0.00 (optional)" value={monthlyContribution}
-                  onChange={e => setMonthlyContribution(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }} /></div>
+                <NumericInput className="input" placeholder="0.00 (optional)" value={monthlyContribution}
+                  onChange={e => setMonthlyContribution(e.target.value)} /></div>
               </>)}
             </div>
           )}

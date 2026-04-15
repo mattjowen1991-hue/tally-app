@@ -19,6 +19,22 @@ export function getMinPaymentForBalance(debt, balance) {
   return debt.minimumPayment || 0;
 }
 
+// Months between two dates, accounting for day-of-month (e.g., Jan 15 to Feb 10 = 0 months, not 1)
+function monthsBetween(start, end) {
+  const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+  return end.getDate() < start.getDate() ? Math.max(0, months - 1) : Math.max(0, months);
+}
+
+// Calculate amortised monthly payment using standard loan formula: P × r(1+r)^n / ((1+r)^n - 1)
+// Returns the payment that fully amortises principal at given APR over given months
+export function calcInstallmentPayment(principal, annualRate, months) {
+  if (!principal || !months || months <= 0) return 0;
+  const r = (annualRate || 0) / 100 / 12;
+  if (r === 0) return Math.round((principal / months) * 100) / 100;
+  const payment = principal * (r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+  return Math.round(payment * 100) / 100;
+}
+
 // Get the effective monthly payment for a debt based on its mode
 export function getEffectivePayment(debt) {
   const mode = debt.paymentMode || 'recurring';
@@ -26,15 +42,15 @@ export function getEffectivePayment(debt) {
   if (mode === 'installment') {
     const months = debt.installmentMonths || 1;
     const original = debt.originalAmount || debt.totalAmount;
-    return months > 0 ? Math.round((original / months) * 100) / 100 : 0;
+    // Proper amortised payment that includes APR
+    return calcInstallmentPayment(original, debt.interestRate || 0, months);
   }
   if (mode === 'bnpl') {
     // During promo: divide balance by remaining months
     const promoMonths = debt.bnplPromoMonths || 0;
     const startDate = debt.bnplStartDate ? new Date(debt.bnplStartDate) : null;
     if (promoMonths > 0 && startDate) {
-      const now = new Date();
-      const elapsed = Math.max(0, (now.getFullYear() - startDate.getFullYear()) * 12 + (now.getMonth() - startDate.getMonth()));
+      const elapsed = monthsBetween(startDate, new Date());
       const remaining = Math.max(1, promoMonths - elapsed);
       return Math.round((debt.totalAmount / remaining) * 100) / 100;
     }
@@ -48,14 +64,14 @@ export function getEffectivePayment(debt) {
 // Get effective monthly interest rate
 export function getEffectiveRate(debt) {
   const mode = debt.paymentMode || 'recurring';
-  if (mode === 'one-off' || mode === 'installment') return 0;
+  if (mode === 'one-off') return 0;
+  if (mode === 'installment') return (debt.interestRate || 0) / 100 / 12;
   if (mode === 'bnpl') {
     // Check if promo has expired
     const promoMonths = debt.bnplPromoMonths || 0;
     const startDate = debt.bnplStartDate ? new Date(debt.bnplStartDate) : null;
     if (promoMonths > 0 && startDate) {
-      const now = new Date();
-      const elapsed = (now.getFullYear() - startDate.getFullYear()) * 12 + (now.getMonth() - startDate.getMonth());
+      const elapsed = monthsBetween(startDate, new Date());
       if (elapsed < promoMonths) return 0; // Still in promo
     }
     return (debt.bnplPostInterest || 0) / 100 / 12;
@@ -73,8 +89,7 @@ export function isFixedSchedule(debt) {
     const promoMonths = debt.bnplPromoMonths || 0;
     const startDate = debt.bnplStartDate ? new Date(debt.bnplStartDate) : null;
     if (promoMonths > 0 && startDate) {
-      const now = new Date();
-      const elapsed = (now.getFullYear() - startDate.getFullYear()) * 12 + (now.getMonth() - startDate.getMonth());
+      const elapsed = monthsBetween(startDate, new Date());
       if (elapsed < promoMonths) return true;
     }
   }
@@ -135,13 +150,15 @@ export function calculateStrategy(allDebts, strategy, extraMonthly = 0) {
   let firstWinDebtId = null;
   const timeline = [];
 
+  let cascadedPayments = 0; // Sum of minimum payments from already-cleared debts
   while (month < 600) {
     // Check if all debts are paid
     const allPaid = sorted.every(d => d.balance <= 0);
     if (allPaid) break;
 
     month++;
-    let availablePool = extraMonthly;
+    // availablePool starts with extra + all freed payments from previously paid-off debts
+    let availablePool = extraMonthly + cascadedPayments;
     let freedThisMonth = 0;
 
     // Step 1: Accrue interest on all debts
@@ -168,7 +185,7 @@ export function calculateStrategy(allDebts, strategy, extraMonthly = 0) {
       if (d.balance <= 0.005) { // Rounding tolerance
         d.balance = 0;
         freedThisMonth += d.minPayment - payment; // Leftover from final payment
-        availablePool += d.minPayment; // This debt's payment is now free for cascade
+        cascadedPayments += d.minPayment; // Add to persistent cascade pool for future months
         payoffCount++;
         results[d.id].monthsToPayoff = month;
         results[d.id].payoffOrder = payoffCount;
@@ -186,7 +203,7 @@ export function calculateStrategy(allDebts, strategy, extraMonthly = 0) {
       surplus -= payment;
       if (d.balance <= 0.005) {
         d.balance = 0;
-        availablePool += d.minPayment; // Free up this debt's payment too
+        cascadedPayments += d.minPayment; // Free up this debt's payment for next month
         payoffCount++;
         results[d.id].monthsToPayoff = month;
         results[d.id].payoffOrder = payoffCount;

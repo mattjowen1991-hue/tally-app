@@ -7,7 +7,10 @@
     "androidScheme": "https"
   },
   "plugins": {
-    "Keyboard": {},
+    "Keyboard": {
+      "style": "DARK",
+      "resize": "native"
+    },
 
     "SplashScreen": {
       "launchShowDuration": 2000,

@@ -1,5 +1,6 @@
 import { useCurrency } from './CurrencyContext';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
+import Picker from './Picker';
 import ReactDOM from 'react-dom';
 import * as Icons from './Icons';
 import haptic from '../utils/haptics';
@@ -102,67 +103,6 @@ function BillCard({
     : bill.paused
     ? { color: 'var(--warning)', tint: tc.warningTint, tintStrong: tc.warningTintStrong, label: 'Paused', icon: <Icons.Pause size={10} style={{ verticalAlign: 'middle', marginBottom: '1px' }} />, borderColor: 'var(--warning)' }
     : null;
-
-  if (editingId === bill.id) {
-    return (
-      <div className="mobile-bill-card" style={{ animation: 'slideInUp 0.2s' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <input className="input" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} placeholder="Bill name" />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            <div>
-              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Projected</label>
-              <input type="number" className="input" value={editForm.projected} onChange={(e) => setEditForm({ ...editForm, projected: e.target.value === '' ? '' : e.target.value })} onBlur={(e) => setEditForm({ ...editForm, projected: parseFloat(e.target.value) || 0 })} />
-            </div>
-            <div>
-              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Actual</label>
-              <input type="number" className="input" value={editForm.actual} onChange={(e) => setEditForm({ ...editForm, actual: e.target.value === '' ? '' : e.target.value })} onBlur={(e) => setEditForm({ ...editForm, actual: parseFloat(e.target.value) || 0 })} />
-            </div>
-          </div>
-          <select className="input" value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}>
-            {categories.filter(c => c !== 'ALL').map((cat) => (<option key={cat} value={cat}>{cat}</option>))}
-          </select>
-          {editForm.recurring && (
-            <button type="button" onClick={() => setEditForm({ ...editForm, autoPay: !editForm.autoPay })}
-              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', fontWeight: '500',
-                border: editForm.autoPay ? `2px solid ${tc.success}` : '1px solid var(--border)',
-                background: editForm.autoPay ? tc.successTintLight : 'var(--glass)',
-                color: editForm.autoPay ? tc.success : 'var(--text-muted)',
-              }}>
-              <span>{editForm.autoPay ? '✓ Auto-pay (Direct Debit)' : 'Manual Payment'}</span>
-              <span style={{ fontSize: '10px', fontWeight: '600' }}>{editForm.autoPay ? 'ON' : 'OFF'}</span>
-            </button>
-          )}
-          {!editForm.recurring || editForm.frequency === 'Monthly' || editForm.frequency === 'Quarterly' ? (
-            <div>
-              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>{editForm.recurring ? 'Day of month' : 'Due date'}</label>
-              {editForm.recurring ? (
-                <input type="number" className="input" placeholder="1-31" min="1" max="31" value={editForm.paymentDate || ''} onChange={(e) => { const v = e.target.value; if (v === '') { setEditForm({ ...editForm, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setEditForm({ ...editForm, paymentDate: String(Math.min(31, Math.max(1, n))) }); }} />
-              ) : (
-                <input type="date" className={`input ${editForm.paymentDate ? 'has-value' : ''}`} value={editForm.paymentDate || ''} onChange={(e) => setEditForm({ ...editForm, paymentDate: e.target.value })} />
-              )}
-            </div>
-          ) : (editForm.frequency === 'Weekly' || editForm.frequency === 'Fortnightly') ? (
-            <div>
-              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Day of week</label>
-              <select className="input" value={editForm.paymentDay || ''} onChange={(e) => setEditForm({ ...editForm, paymentDay: e.target.value })}>
-                <option value="">Select day...</option><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option>
-              </select>
-            </div>
-          ) : editForm.frequency === 'Yearly' ? (
-            <div>
-              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Annual date</label>
-              <input type="date" onKeyDown={(e) => e.preventDefault()} className="input" value={editForm.paymentDate || ''} onChange={(e) => setEditForm({ ...editForm, paymentDate: e.target.value })} />
-            </div>
-          ) : null}
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button className="btn btn-primary" onClick={() => { haptic.success(); handleEditSave(); }} style={{ flex: 1 }}><Icons.Check size={18} /> Save</button>
-            <button className="btn btn-secondary" onClick={() => { haptic.light(); setEditingId(null); }} style={{ flex: 1 }}><Icons.X size={18} /> Cancel</button>
-          </div>
-          <button onClick={async () => { haptic.error(); const deleted = await handleDelete(bill.id); if (deleted !== false) setEditingId(null); }} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `1px solid var(--danger-tint-strong)`, background: tc.dangerTintLight, color: tc.danger, cursor: 'pointer', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><Icons.Trash size={16} /> Delete Bill</button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div

@@ -3,6 +3,7 @@ import * as Icons from './Icons';
 import haptic from '../utils/haptics';
 import { tc } from '../utils/themeColors';
 import { applyTheme } from '../utils/theme';
+import NumericInput from './NumericInput';
 const CURRENCY_OPTIONS = [
   { code: 'GBP', symbol: '£', flag: '🇬🇧' },
   { code: 'USD', symbol: '$', flag: '🇺🇸' },
@@ -204,13 +205,11 @@ export default function OnboardingFlow({ onComplete, onSelectCurrency }) {
               }}>
                 {selectedCurrency ? CURRENCY_OPTIONS.find(c => c.code === selectedCurrency)?.symbol : '£'}
               </div>
-              <input
-                type="number"
+              <NumericInput
                 className="input"
                 placeholder="e.g. 2000"
                 value={income}
                 onChange={(e) => setIncome(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.target.blur(); handleFinish(); } }}
                 style={{ paddingLeft: '36px', fontSize: '24px', fontWeight: '700', height: '60px' }}
                 autoFocus
               />

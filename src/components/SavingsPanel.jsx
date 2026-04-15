@@ -5,6 +5,8 @@ import * as Icons from './Icons';
 import haptic from '../utils/haptics';
 import { tc } from '../utils/themeColors';
 import { SAVINGS_CATEGORIES } from '../data/initialData';
+import Picker from './Picker';
+import NumericInput from './NumericInput';
 
 // ── Reusable InfoSheet (bottom sheet for educational content) ──
 function InfoSheet({ open, onClose, title, children }) {
@@ -43,32 +45,184 @@ function InfoButton({ onClick }) {
 }
 
 // ── Milestone celebration overlay ──
+// Pac-Man animation for 100% (goal reached!)
+function PacManCelebration({ goalName, onDismiss }) {
+  const dotCount = 6;
+
+  return ReactDOM.createPortal(
+    <div onClick={onDismiss} style={{
+      position: 'fixed', inset: 0, zIndex: 10000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+      animation: 'fadeIn 0.2s ease-out',
+    }}>
+      <div style={{
+        padding: '32px 28px', borderRadius: '20px',
+        background: '#000',
+        border: '2px solid #1f2937',
+        textAlign: 'center', maxWidth: '320px', width: '90%',
+        boxShadow: '0 12px 40px rgba(0,0,0,0.6), 0 0 80px rgba(251,191,36,0.3)',
+        position: 'relative', overflow: 'hidden',
+      }}>
+        {/* Animation stage */}
+        <div style={{ position: 'relative', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+          {/* Pac-Man (moves left to right) */}
+          <div style={{
+            position: 'absolute', top: '50%', left: '0',
+            width: '32px', height: '32px',
+            transform: 'translateY(-50%)',
+            animation: 'pacmanMove 1.6s linear forwards',
+          }}>
+            <svg width="32" height="32" viewBox="0 0 32 32">
+              <defs>
+                <clipPath id="pacmanMouth">
+                  <polygon points="16,16 32,4 32,28">
+                    <animate attributeName="points"
+                      values="16,16 32,4 32,28;16,16 32,12 32,20;16,16 32,4 32,28"
+                      dur="0.3s" repeatCount="indefinite" />
+                  </polygon>
+                </clipPath>
+              </defs>
+              <circle cx="16" cy="16" r="14" fill="#fbbf24" />
+              <circle cx="16" cy="16" r="14" fill="#000" clipPath="url(#pacmanMouth)" />
+              <circle cx="20" cy="10" r="2" fill="#000" />
+            </svg>
+          </div>
+
+          {/* Dots (each disappears as Pac-Man passes) */}
+          {[...Array(dotCount)].map((_, i) => (
+            <div key={i} style={{
+              position: 'absolute', top: '50%',
+              left: `${20 + (i + 1) * 32}px`,
+              width: '8px', height: '8px', borderRadius: '50%',
+              background: '#fbbf24',
+              transform: 'translateY(-50%)',
+              animation: `dotEat 0.1s ${0.2 + i * 0.21}s ease-out forwards`,
+              boxShadow: '0 0 4px rgba(251,191,36,0.6)',
+            }} />
+          ))}
+
+          {/* Trophy at the end - chomped and explodes when Pac-Man arrives */}
+          <div style={{
+            position: 'absolute', top: '50%', right: '0',
+            width: '40px', height: '40px',
+            transform: 'translateY(-50%)',
+            animation: 'trophyChomp 0.5s 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+          }}>
+            <Icons.Trophy size={40} style={{ color: '#fbbf24' }} />
+          </div>
+
+          {/* Star burst at trophy on impact */}
+          <div style={{
+            position: 'absolute', top: '50%', right: '20px',
+            width: '0', height: '0',
+            opacity: 0,
+            animation: 'starsAppear 0s 1.7s forwards',
+          }}>
+            {[...Array(8)].map((_, i) => {
+              const angle = (i * 360) / 8;
+              const dx = Math.cos((angle * Math.PI) / 180) * 50;
+              const dy = Math.sin((angle * Math.PI) / 180) * 50;
+              return (
+                <div key={i} style={{
+                  position: 'absolute',
+                  width: '6px', height: '6px',
+                  background: i % 2 === 0 ? '#fbbf24' : '#fff',
+                  borderRadius: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  animation: 'starBurst 0.8s 1.7s ease-out forwards',
+                  '--dx': `${dx}px`,
+                  '--dy': `${dy}px`,
+                }} />
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Text appears after Pac-Man hits trophy */}
+        <div style={{
+          opacity: 0,
+          animation: 'textAppearSavings 0.4s 1.9s ease-out forwards',
+        }}>
+          <div className="font-mono" style={{
+            fontSize: '22px', fontWeight: '900', color: '#fbbf24',
+            letterSpacing: '2px', marginBottom: '8px',
+            textShadow: '0 0 20px rgba(251,191,36,0.5)',
+          }}>
+            GOAL REACHED
+          </div>
+          <div style={{ fontSize: '13px', color: '#9ca3af', lineHeight: 1.4 }}>
+            <strong style={{ color: '#fff' }}>{goalName}</strong> is fully funded
+          </div>
+          <div style={{ marginTop: '12px', fontSize: '11px', color: '#6b7280' }}>
+            Tap to dismiss
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes pacmanMove {
+          0% { left: 0; }
+          100% { left: calc(100% - 60px); }
+        }
+        @keyframes dotEat {
+          0% { opacity: 1; transform: translateY(-50%) scale(1); }
+          100% { opacity: 0; transform: translateY(-50%) scale(0); }
+        }
+        @keyframes trophyChomp {
+          0% { transform: translateY(-50%) scale(1); opacity: 1; }
+          40% { transform: translateY(-50%) scale(1.4) rotate(-15deg); opacity: 1; }
+          100% { transform: translateY(-50%) scale(0); opacity: 0; }
+        }
+        @keyframes starsAppear {
+          to { opacity: 1; }
+        }
+        @keyframes starBurst {
+          0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+          100% {
+            transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1);
+            opacity: 0;
+          }
+        }
+        @keyframes textAppearSavings {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+    </div>,
+    document.body
+  );
+}
+
 function SavingsCelebration({ celebration, onDismiss }) {
-  if (!celebration) return null;
-  const { milestone, goalName } = celebration;
+  const milestone = celebration?.milestone ?? 0;
+  const goalName = celebration?.goalName ?? '';
   const is100 = milestone >= 100;
+
   React.useEffect(() => {
-    const timer = setTimeout(onDismiss, is100 ? 3500 : 2500);
+    if (!celebration || is100) return undefined;
+    const timer = setTimeout(onDismiss, 2500);
     return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [celebration]);
-  const color = is100 ? '#fbbf24' : milestone >= 75 ? '#f97316' : milestone >= 50 ? '#a78bfa' : 'var(--accent-primary)';
+  }, [celebration, is100, onDismiss]);
+
+  if (!celebration) return null;
+
+  // 100% gets the Pac-Man treatment
+  if (is100) return <PacManCelebration goalName={goalName} onDismiss={onDismiss} />;
+
+  const color = milestone >= 75 ? '#f97316' : milestone >= 50 ? '#a78bfa' : 'var(--accent-primary)';
   return ReactDOM.createPortal(
     <div onClick={onDismiss} style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', animation: 'fadeIn 0.2s ease-out' }}>
-      <div style={{ padding: is100 ? '32px 36px' : '24px 28px', borderRadius: '20px', background: `linear-gradient(135deg, ${color}15, ${color}08)`, border: `1px solid ${color}30`, textAlign: 'center', maxWidth: '300px', animation: 'celebrationIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: `0 12px 40px rgba(0,0,0,0.3), 0 0 60px ${color}30` }}>
-        {is100 && <div style={{ position: 'relative', height: '0', overflow: 'visible' }}>
-          {[...Array(6)].map((_, i) => <div key={i} style={{ position: 'absolute', width: '6px', height: '6px', borderRadius: '50%', background: ['#fbbf24', '#f97316', '#a78bfa', '#10b981', '#3b82f6', '#ec4899'][i], left: `${15 + i * 14}%`, top: '-10px', animation: `confettiFloat ${0.8 + i * 0.15}s ease-out ${i * 0.1}s forwards` }} />)}
-        </div>}
-        <div style={{ marginBottom: '12px', animation: is100 ? 'celebrationPulse 0.6s ease-in-out 0.3s' : undefined }}>
-          {is100 ? <Icons.PartyPopper size={28} style={{ color }} /> : milestone >= 75 ? <Icons.Fire size={28} style={{ color }} /> : milestone >= 50 ? <Icons.Trophy size={28} style={{ color }} /> : <Icons.Sparkle size={28} style={{ color }} />}
+      <div style={{ padding: '24px 28px', borderRadius: '20px', backgroundImage: `linear-gradient(135deg, ${color}15, ${color}08)`, backgroundColor: 'var(--bg-primary, #0f1225)', border: `1px solid ${color}30`, textAlign: 'center', maxWidth: '300px', animation: 'celebrationIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: `0 12px 40px rgba(0,0,0,0.4), 0 0 60px ${color}30` }}>
+        <div style={{ marginBottom: '12px' }}>
+          {milestone >= 75 ? <Icons.Fire size={32} style={{ color }} /> : milestone >= 50 ? <Icons.Star size={32} style={{ color }} /> : <Icons.Sparkle size={32} style={{ color }} />}
         </div>
-        <div style={{ fontSize: is100 ? '20px' : '17px', fontWeight: '800', color, marginBottom: '6px' }}>
-          {is100 ? 'Goal reached!' : milestone >= 75 ? '75% saved!' : milestone >= 50 ? 'Halfway there!' : 'Quarter saved!'}
+        <div style={{ fontSize: '17px', fontWeight: '800', color, marginBottom: '6px' }}>
+          {milestone >= 75 ? '75% saved!' : milestone >= 50 ? 'Halfway there!' : 'Quarter saved!'}
         </div>
         <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-          {is100 ? <><strong>{goalName}</strong> is fully funded!</> : <><strong>{goalName}</strong> is {milestone}% funded</>}
+          <strong>{goalName}</strong> is {milestone}% funded
         </div>
-        {is100 && <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-muted)' }}>Tap to dismiss</div>}
       </div>
     </div>, document.body
   );
@@ -310,7 +464,7 @@ export default function SavingsPanel({
                   style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
                   <Icons.SlidersH size={16} />
                 </button>
-                <button className="btn btn-primary" onClick={() => setShowSavingsModal(true)}><Icons.Plus size={18} /> Add</button>
+                <button className="btn btn-primary" onClick={() => { haptic.medium(); setShowSavingsModal(true); }}><Icons.Plus size={18} /> Add</button>
               </>
             )}
           </div>
@@ -435,7 +589,7 @@ export default function SavingsPanel({
           {filteredSavings.length === 0 && (
             <div className="glass-card" style={{ padding: '24px', textAlign: 'center' }}>
               <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-                {savingsStatusFilter !== 'ALL' || selectedSavingsCategory !== 'ALL' ? 'No goals match this filter' : <><Icons.PartyPopper size={14} style={{ verticalAlign: '-2px' }} /> All goals reached!</>}
+                {savingsStatusFilter !== 'ALL' || selectedSavingsCategory !== 'ALL' ? 'No goals match this filter' : <><Icons.Trophy size={14} style={{ verticalAlign: '-2px' }} /> All goals reached!</>}
               </p>
             </div>
           )}
@@ -472,46 +626,7 @@ export default function SavingsPanel({
                       </span>
                     </div>
                   )}
-                  {editingSavingsId === goal.id ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <input className="input" value={editSavingsForm.name} onChange={(e) => setEditSavingsForm({ ...editSavingsForm, name: e.target.value })} placeholder="Goal name" />
-                      <select className="input" value={editSavingsForm.category} onChange={(e) => setEditSavingsForm({ ...editSavingsForm, category: e.target.value })}>
-                        {(allSavingsCategories || SAVINGS_CATEGORIES).map((c) => (<option key={c} value={c}>{c}</option>))}
-                      </select>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        <div>
-                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Current</label>
-                          <input type="number" className="input" value={editSavingsForm.currentAmount} onChange={(e) => setEditSavingsForm({ ...editSavingsForm, currentAmount: e.target.value })} />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Target</label>
-                          <input type="number" className="input" value={editSavingsForm.targetAmount} onChange={(e) => setEditSavingsForm({ ...editSavingsForm, targetAmount: e.target.value })} />
-                        </div>
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        <div>
-                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Auto Monthly</label>
-                          <input type="number" className="input" value={editSavingsForm.monthlyContribution} onChange={(e) => setEditSavingsForm({ ...editSavingsForm, monthlyContribution: e.target.value })} />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Target Date</label>
-                          <input type="date" className={`input ${editSavingsForm.targetDate ? 'has-value' : ''}`} value={editSavingsForm.targetDate || ''} onChange={(e) => setEditSavingsForm({ ...editSavingsForm, targetDate: e.target.value })} />
-                        </div>
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Goal Emoji (optional)</label>
-                        <EmojiPicker value={editSavingsForm.emoji || ''} onChange={(emoji) => setEditSavingsForm({ ...editSavingsForm, emoji })} />
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button className="btn btn-primary" onClick={handleSavingsEditSave} style={{ flex: 1 }}><Icons.Check size={18} /> Save</button>
-                        <button className="btn btn-secondary" onClick={() => setEditingSavingsId(null)} style={{ flex: 1 }}><Icons.X size={18} /> Cancel</button>
-                      </div>
-                      <button onClick={async () => { const deleted = await handleDeleteSavings(goal.id); if (deleted !== false) setEditingSavingsId(null); }} style={{ width: '100%', marginTop: '8px', padding: '9px', background: tc.dangerTintLight, border: `1px solid ${tc.dangerTintStrong}`, borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: tc.danger }}>
-                        Delete goal
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
+                  <div>
                       {/* ── Row 1: Icon + Name + Amount ── */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
                         <div style={{
@@ -527,7 +642,7 @@ export default function SavingsPanel({
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ fontWeight: '600', fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{goal.name}</span>
-                            {!selectionMode && <button onClick={() => handleSavingsEditStart(goal)} style={{ width: '22px', height: '22px', borderRadius: '5px', border: '1px solid var(--accent-primary)', background: 'var(--info-tint)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)', flexShrink: 0 }}>
+                            {!selectionMode && <button onClick={() => { haptic.medium(); handleSavingsEditStart(goal); }} style={{ width: '22px', height: '22px', borderRadius: '5px', border: '1px solid var(--accent-primary)', background: 'var(--info-tint)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)', flexShrink: 0 }}>
                               <Icons.Edit size={12} />
                             </button>}
                           </div>
@@ -579,21 +694,26 @@ export default function SavingsPanel({
                         const target = new Date(goal.targetDate);
                         const now = new Date();
                         const daysLeft = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
-                        const monthsLeft = Math.max(1, Math.ceil(daysLeft / 30.44));
+                        const isPast = daysLeft < 0;
+                        const monthsLeft = isPast ? 0 : Math.max(1, Math.ceil(daysLeft / 30.44));
                         const remaining = Math.max(0, goal.targetAmount - (goal.currentAmount || 0));
-                        const neededPerMonth = remaining / monthsLeft;
+                        const neededPerMonth = monthsLeft > 0 ? remaining / monthsLeft : 0;
                         const currentMonthly = goal.monthlyContribution || 0;
                         const isOnTrack = currentMonthly >= neededPerMonth;
-                        const isPast = daysLeft < 0;
                         const color = isPast ? tc.danger : isOnTrack ? tc.success : tc.warning;
                         const tintBg = isPast ? tc.dangerTint : isOnTrack ? tc.successTintLight : tc.warningTint;
                         const tintBorder = isPast ? tc.dangerTintStrong : isOnTrack ? tc.successTintStrong : tc.warningTintStrong;
+                        const daysOverdue = Math.abs(daysLeft);
                         return (
                           <div style={{ marginBottom: '8px', marginLeft: '46px', fontSize: '11px', padding: '6px 8px', borderRadius: '8px', background: tintBg, border: `1px solid ${tintBorder}`, color }}>
                             <div style={{ fontWeight: '600' }}>
-                              {isPast ? <><Icons.Warning size={13} style={{ verticalAlign: '-2px' }} /> Target date passed</> : `Target: ${target.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} · ${daysLeft} days`}
+                              {isPast ? <><Icons.Warning size={13} style={{ verticalAlign: '-2px' }} /> Target date passed {daysOverdue} day{daysOverdue !== 1 ? 's' : ''} ago</> : `Target: ${target.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} · ${daysLeft} days`}
                             </div>
-                            {!isPast && (
+                            {isPast ? (
+                              <div style={{ opacity: 0.85, marginTop: '2px' }}>
+                                Still need {cs}{remaining.toFixed(0)} - update your target date or keep saving
+                              </div>
+                            ) : (
                               <div style={{ opacity: 0.8, marginTop: '2px' }}>
                                 {isOnTrack ? '✓ On track' : `Need ${cs}${neededPerMonth.toFixed(0)}/mo (currently ${cs}${currentMonthly.toFixed(0)})`}
                               </div>
@@ -654,13 +774,14 @@ export default function SavingsPanel({
                           {showWhatIf[goal.id] && (
                             <div style={{ marginTop: '8px', padding: '12px', background: 'var(--glass)', borderRadius: '10px', border: '1px solid var(--border)' }}>
                               <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                                <input type="number" className="input" placeholder="e.g. 200" value={whatIfAmounts[goal.id] || ''} onChange={(e) => setWhatIfAmounts({ ...whatIfAmounts, [goal.id]: e.target.value })} style={{ flex: 1 }} />
+                                <NumericInput className="input" placeholder="e.g. 200" value={whatIfAmounts[goal.id] || ''} onChange={(e) => setWhatIfAmounts({ ...whatIfAmounts, [goal.id]: e.target.value })} style={{ flex: 1 }} />
                                 <span style={{ display: 'flex', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>/mo</span>
                               </div>
                               {(() => {
                                 const amt = parseFloat(whatIfAmounts[goal.id]);
                                 if (!amt || amt <= 0) return <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Enter a monthly amount to see when you'll reach your goal</div>;
                                 const remaining = Math.max(0, goal.targetAmount - (goal.currentAmount || 0));
+                                if (remaining <= 0) return <div style={{ fontSize: '12px', color: tc.success, fontWeight: '600' }}>You've already reached this goal!</div>;
                                 const months = Math.ceil(remaining / amt);
                                 const date = new Date(); date.setMonth(date.getMonth() + months);
                                 const currentMonthly = goal.monthlyContribution || 0;
@@ -685,7 +806,7 @@ export default function SavingsPanel({
                       {/* ── Action buttons (hidden in selection mode) ── */}
                       {!selectionMode && !isComplete ? (
                         <div style={{ display: 'flex', gap: '6px', marginLeft: '46px' }}>
-                          <input type="number" className="input" placeholder="Amount..." value={savingsTransactionAmounts[goal.id] || ''} onChange={(e) => setSavingsTransactionAmounts({ ...savingsTransactionAmounts, [goal.id]: e.target.value })} style={{ flex: 1 }} />
+                          <NumericInput className="input" placeholder="Amount..." value={savingsTransactionAmounts[goal.id] || ''} onChange={(e) => setSavingsTransactionAmounts({ ...savingsTransactionAmounts, [goal.id]: e.target.value })} onDone={() => handleSavingsDeposit(goal.id)} style={{ flex: 1 }} />
                           <button className="btn btn-primary" onClick={() => handleSavingsDeposit(goal.id)} style={{ whiteSpace: 'nowrap', padding: '0 14px' }}>+ Add</button>
                           <button className="btn btn-secondary" onClick={() => handleSavingsWithdraw(goal.id)} style={{ whiteSpace: 'nowrap', padding: '0 12px', color: tc.danger }}>- Take</button>
                         </div>
@@ -718,7 +839,6 @@ export default function SavingsPanel({
                         </div>
                       )}
                     </div>
-                  )}
                 </div>
               </div>
             );

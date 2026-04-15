@@ -3,7 +3,9 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import * as Icons from './Icons';
 import { tc } from '../utils/themeColors';
+import Picker from './Picker';
 import haptic from '../utils/haptics';
+import NumericInput from './NumericInput';
 
 // ── 2024/25 UK Tax constants ──────────────────────────────────────────────────
 const UK_PERSONAL_ALLOWANCE = 12570;
@@ -223,7 +225,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
                 ))}
               </div>
             </div>
-            <input type="number" className="input" placeholder={settings.grossInput === 'yearly' ? 'e.g. 35000' : 'e.g. 2917'} value={settings.gross} onChange={(e) => updateSettings({ gross: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }} style={{ fontSize: '16px' }} />
+            <NumericInput className="input" placeholder={settings.grossInput === 'yearly' ? 'e.g. 35000' : 'e.g. 2917'} value={settings.gross} onChange={(e) => updateSettings({ gross: e.target.value })} style={{ fontSize: '16px' }} />
           </div>
 
           {/* UK deductions */}
@@ -297,9 +299,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
                       </div>
                       <div style={{ fontSize: '12px', color: tc.muted, marginTop: '2px' }}>9% above threshold</div>
                     </div>
-                    <select className="input" value={settings.studentPlan} onChange={(e) => updateSettings({ studentPlan: e.target.value })} style={{ width: 'auto', fontSize: '12px', padding: '6px 10px', height: 'auto' }}>
-                      {STUDENT_PLANS.map(p => <option key={p.key} value={p.key}>{p.label}{p.threshold ? ` (£${p.threshold.toLocaleString()})` : ''}</option>)}
-                    </select>
+                    <Picker className="input" value={settings.studentPlan} onChange={(e) => updateSettings({ studentPlan: e.target.value })} style={{ width: 'auto', fontSize: '12px', padding: '6px 10px', height: 'auto' }} options={STUDENT_PLANS.map(p => ({ value: p.key, label: p.label + (p.threshold ? ` (£${p.threshold.toLocaleString()})` : '') }))} />
                   </div>
                 </div>
                 <div style={{ padding: '14px 16px' }}>
@@ -325,7 +325,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
                   } />
                   {settings.pension && (
                     <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                      <input type="number" className="input" value={settings.pensionPercent} onChange={(e) => updateSettings({ pensionPercent: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }} style={{ width: '80px' }} placeholder="%" />
+                      <NumericInput className="input" value={settings.pensionPercent} onChange={(e) => updateSettings({ pensionPercent: e.target.value })} style={{ width: '80px' }} placeholder="%" />
                       <span style={{ fontSize: '13px', color: tc.muted }}>% contribution</span>
                       <InfoTip title="Pre-tax vs Post-tax" text={
                         <div>
@@ -372,7 +372,7 @@ function TakeHomeModal({ show, onClose, settings, updateSettings, cs, netMonthly
               ))}
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input className="input" placeholder="Name" value={newDeduction.name} onChange={(e) => setNewDeduction(d => ({ ...d, name: e.target.value }))} style={{ flex: 2 }} />
-                <input type="number" className="input" placeholder="Amount" value={newDeduction.value} onChange={(e) => setNewDeduction(d => ({ ...d, value: e.target.value }))} style={{ flex: 1 }} />
+                <NumericInput className="input" placeholder="Amount" value={newDeduction.value} onChange={(e) => setNewDeduction(d => ({ ...d, value: e.target.value }))} style={{ flex: 1 }} />
                 <button onClick={() => { haptic.light(); setNewDeduction(d => ({ ...d, type: d.type === 'fixed' ? 'percent' : 'fixed' })); }} style={{ padding: '0 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--glass)', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                   {newDeduction.type === 'fixed' ? cs : '%'}
                 </button>
@@ -575,7 +575,7 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
   };
 
   return (
-    <div className="glass-card animate-in" style={{ padding: '20px', animationDelay: '0.6s' }}>
+    <div data-actions-panel className="glass-card animate-in" style={{ padding: '20px', animationDelay: '0.6s' }}>
       <h2 className="font-display" style={{ fontSize: '24px', marginBottom: '20px' }}>Quick Actions</h2>
 
       {/* ── Income ── */}
@@ -640,13 +640,10 @@ export default function ActionsPanel({ income, setIncome, categoryTotals, setSho
             </div>
           </div>
         ) : (
-          <input
-            type="number"
+          <NumericInput
             className="input"
             value={income}
             onChange={(e) => setIncome(e.target.value === '' ? '' : e.target.value)}
-            onBlur={(e) => setIncome(parseFloat(e.target.value) || 0)}
-            onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
           />
         )}
 

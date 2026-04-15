@@ -67,6 +67,13 @@ export const X = ({ size = 24, style = {}, className = '' }) => (
   </svg>
 );
 
+export const Backspace = ({ size = 24, style = {}, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} className={className}>
+    <path d="M22 5H9l-7 7 7 7h13a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+    <path d="M14 9l-4 4M10 9l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
 export const PieChart = ({ size = 24, style = {}, className = '' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} className={className}>
     <path d="M12 2a10 10 0 1 0 10 10H12V2z" fill="currentColor" opacity="0.15"/>

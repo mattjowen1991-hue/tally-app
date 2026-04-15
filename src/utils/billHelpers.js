@@ -1,4 +1,14 @@
 /**
+ * Get the effective payment day for a bill in the current month.
+ * If the configured day exceeds the days in the current month (e.g., 31 in February),
+ * clamp to the last day of the month.
+ */
+function effectivePaymentDay(configuredDay, year, month) {
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  return Math.min(configuredDay, daysInMonth);
+}
+
+/**
  * Determines if a non-autoPay bill is overdue and should be flagged as missed.
  * Grace period: 2 days past the due date.
  */
@@ -30,13 +40,16 @@ export function shouldAutoMiss(bill) {
       const daysSince = (todayDay - payDay + 7) % 7;
       return daysSince >= grace;
     }
-    case 'Monthly':
-      return todayDate >= parseInt(bill.paymentDate) + grace;
+    case 'Monthly': {
+      const payDay = effectivePaymentDay(parseInt(bill.paymentDate), now.getFullYear(), now.getMonth());
+      return todayDate >= payDay + grace;
+    }
     case 'Quarterly': {
       const startMonth = parseInt(bill.startMonth) || 1;
       const currentMonth = now.getMonth() + 1;
       const payMonths = [startMonth, startMonth + 3, startMonth + 6, startMonth + 9].map(m => ((m - 1) % 12) + 1);
-      return payMonths.includes(currentMonth) && todayDate >= parseInt(bill.paymentDate) + grace;
+      const payDay = effectivePaymentDay(parseInt(bill.paymentDate), now.getFullYear(), now.getMonth());
+      return payMonths.includes(currentMonth) && todayDate >= payDay + grace;
     }
     default:
       return false;
@@ -80,15 +93,18 @@ export function shouldAutoPay(bill) {
       return daysSince >= 0 && daysSince < 7;
     }
 
-    case 'Monthly':
-      return todayDate >= parseInt(bill.paymentDate);
+    case 'Monthly': {
+      const payDay = effectivePaymentDay(parseInt(bill.paymentDate), now.getFullYear(), now.getMonth());
+      return todayDate >= payDay;
+    }
 
     case 'Quarterly': {
       const startMonth = parseInt(bill.startMonth) || 1;
       const payMonths = [startMonth, startMonth + 3, startMonth + 6, startMonth + 9].map(
         (m) => ((m - 1) % 12) + 1
       );
-      return payMonths.includes(currentMonth) && todayDate >= parseInt(bill.paymentDate);
+      const payDay = effectivePaymentDay(parseInt(bill.paymentDate), now.getFullYear(), now.getMonth());
+      return payMonths.includes(currentMonth) && todayDate >= payDay;
     }
 
     case 'Yearly': {

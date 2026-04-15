@@ -6,7 +6,7 @@ import { DEFAULT_CATEGORIES, DEBT_TYPES, SAVINGS_CATEGORIES } from './data/initi
 import useSwipe from './hooks/useSwipe';
 import haptic from './utils/haptics';
 import { ToastProvider, useToast } from './components/Toast';
-import { initTheme, toggleTheme } from './utils/theme';
+import { initTheme, toggleTheme, applyTheme } from './utils/theme';
 import { auth, cloudData } from './utils/supabase';
 import AccountModal from './components/AccountModal';
 import SettingsModal from './components/SettingsModal';
@@ -14,7 +14,8 @@ import CurrencyPrompt from './components/CurrencyPrompt';
 import OnboardingFlow from './components/OnboardingFlow';
 import CSVImportModal from './components/CSVImportModal';
 import { initKeyboardScroll } from './utils/keyboardScroll';
-import { compareStrategies, calcDynamicMinimum } from './utils/debtStrategy';
+import { initCustomClipboard } from './utils/customClipboard';
+import { compareStrategies, calcDynamicMinimum, calcInstallmentPayment } from './utils/debtStrategy';
 import { CurrencyProvider } from './components/CurrencyContext';
 import { getSymbol, loadCurrencyPreference, saveCurrencyPreference, CURRENCIES } from './utils/currency';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -53,7 +54,7 @@ import DebtPanel from './components/DebtPanel';
 import SavingsPanel from './components/SavingsPanel';
 
 // Modal components
-import { AddBillScreen, ManageCategoriesModal, AddDebtScreen, AddSavingsScreen } from './components/Modals';
+import { AddBillScreen, ManageCategoriesModal, AddDebtScreen, AddSavingsScreen, EditDebtScreen, EditSavingsScreen, EditBillScreen } from './components/Modals';
 
 const PANEL_NAMES = ['Overview', 'Actions', 'Bills', 'Debt', 'Savings'];
 
@@ -121,7 +122,7 @@ function AppContent() {
   const confirm = useConfirm();
   // ── Theme ──
   const [theme, setTheme] = useState(() => initTheme());
-  useEffect(() => { initKeyboardScroll(); }, []);
+  useEffect(() => { initKeyboardScroll(); initCustomClipboard(); }, []);
   useEffect(() => { (async () => {
     const color = theme === 'light' ? '#f1f5f9' : '#0a0e27';
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
@@ -197,7 +198,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [editDebtForm, setEditDebtForm] = useState({});
   const [debtPaymentAmounts, setDebtPaymentAmounts] = useState({});
   const [showDebtHistory, setShowDebtHistory] = useState({});
-  const emptyDebt = { name: '', type: 'Credit Card', totalAmount: '', interestRate: '', minimumPayment: '', recurringPayment: '', paymentDate: '', paymentMode: 'recurring', dueDate: '', installmentMonths: '', installmentStartDate: '', bnplPromoMonths: '', bnplStartDate: '', bnplPostInterest: '', bnplPostPayment: '', balanceTransfer: false, btEndDate: '', btRevertRate: '', minPaymentMode: 'fixed', minPaymentPct: '', minPaymentFloor: '', creditLimit: '' };
+  const emptyDebt = { name: '', type: 'Credit Card', totalAmount: '', startingPaid: '', interestRate: '', minimumPayment: '', recurringPayment: '', paymentDate: '', paymentMode: 'recurring', dueDate: '', installmentMonths: '', installmentStartDate: '', bnplPromoMonths: '', bnplStartDate: '', bnplPostInterest: '', bnplPostPayment: '', balanceTransfer: false, btEndDate: '', btRevertRate: '', minPaymentMode: 'fixed', minPaymentPct: '', minPaymentFloor: '', creditLimit: '' };
   const [newDebt, setNewDebt] = useState({ ...emptyDebt });
   const [debtStrategy, setDebtStrategy] = useState('avalanche');
   const [extraDebtPayment, setExtraDebtPayment] = useState(0);
@@ -264,6 +265,26 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   // ── Swipe navigation ──
   const { activePanel, swipeRef, handleTouchStart, goToPanel } = useSwipe(PANEL_NAMES.length);
 
+  // Pre-warm all panels after first paint — forces layout & paint on each panel
+  // so the first swipe doesn't lag while the GPU uploads the off-screen content.
+  useEffect(() => {
+    if (!isMobile) return;
+    const warm = () => {
+      const panels = swipeRef.current?.children;
+      if (!panels) return;
+      for (const panel of panels) {
+        void panel.offsetHeight;
+        panel.style.willChange = 'transform';
+      }
+      setTimeout(() => {
+        if (!swipeRef.current) return;
+        for (const panel of swipeRef.current.children) panel.style.willChange = 'auto';
+      }, 2000);
+    };
+    const cb = window.requestIdleCallback || ((fn) => setTimeout(fn, 200));
+    cb(warm);
+  }, [isMobile, swipeRef]);
+
   // ── Detect mobile ──
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 768);
@@ -295,7 +316,11 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   // ── Cloud sync functions ──
   const getAppData = () => ({
     bills, income: parseFloat(income) || 0, debts, savings,
-    customCategories, categoryOrder, monthlySnapshots, salaryCalc,
+    customCategories, categoryOrder, customDebtTypes, customSavingsCategories,
+    monthlySnapshots, salaryCalc,
+    // User preferences
+    notificationSettings, currencyCode, theme,
+    debtStrategy, extraDebtPayment, expenseScope,
     lastMonth: new Date().getFullYear() + '-' + (new Date().getMonth() + 1),
   });
 
@@ -362,9 +387,16 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     if (d.customSavingsCategories) setCustomSavingsCategories(d.customSavingsCategories);
     if (d.monthlySnapshots) setMonthlySnapshots(d.monthlySnapshots);
     if (d.salaryCalc) setSalaryCalc(d.salaryCalc);
+    // User preferences
+    if (d.notificationSettings) setNotificationSettings(d.notificationSettings);
+    if (d.currencyCode) { setCurrencyCode(d.currencyCode); saveCurrencyPreference(d.currencyCode); }
+    if (d.theme && d.theme !== theme) { setTheme(d.theme); applyTheme(d.theme); }
+    if (d.debtStrategy) setDebtStrategy(d.debtStrategy);
+    if (d.extraDebtPayment !== undefined) setExtraDebtPayment(d.extraDebtPayment);
+    if (d.expenseScope) setExpenseScope(d.expenseScope);
   };
 
-  // Auto-save to cloud when data changes (debounced)
+  // Auto-save to cloud when data or settings change (debounced)
   useEffect(() => {
     if (!user || deletingAccountRef.current) return;
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
@@ -372,7 +404,8 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
       saveToCloud();
     }, 3000); // 3 second debounce
     return () => { if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current); };
-  }, [bills, income, debts, savings, customCategories, salaryCalc, user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bills, income, debts, savings, customCategories, categoryOrder, customDebtTypes, customSavingsCategories, salaryCalc, notificationSettings, currencyCode, theme, debtStrategy, extraDebtPayment, expenseScope, user]);
 
   // Load last sync time on mount
   useEffect(() => {
@@ -380,6 +413,29 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
       if (result?.value) setLastSynced(result.value);
     }).catch(() => {});
   }, []);
+
+  // Flush pending sync when app goes to background (catches the "change & close" edge case)
+  useEffect(() => {
+    if (!user) return;
+    const flushIfPending = () => {
+      if (deletingAccountRef.current) return;
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+        syncTimeoutRef.current = null;
+        saveToCloud();
+      }
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') flushIfPending();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', flushIfPending);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', flushIfPending);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // ── Schedule notifications when bills/debts change ──
   useEffect(() => {
@@ -490,14 +546,16 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 
     const collapseHeader = (el) => {
       headerCollapsedRef.current = true;
-      el.style.transform = 'translateY(-100%) scaleY(0)';
+      // Use only translateY (no scaleY which causes instant snap on iOS)
+      // marginBottom collapses the layout space to match the slide
+      el.style.transform = 'translateY(-100%)';
       el.style.opacity = '0';
-      el.style.marginBottom = '-50px';
+      el.style.marginBottom = `-${el.offsetHeight}px`;
     };
 
     const expandHeader = (el) => {
       headerCollapsedRef.current = false;
-      el.style.transform = 'translateY(0) scaleY(1)';
+      el.style.transform = 'translateY(0)';
       el.style.opacity = '1';
       el.style.marginBottom = '0px';
     };
@@ -530,7 +588,10 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
           lastScrollY.current = ap ? ap.scrollTop : 0;
           document.body.removeAttribute('data-switching');
         }, 300);
-      } else if (!scrollingDown && headerCollapsedRef.current && currentY < 30) {
+      } else if (!scrollingDown && headerCollapsedRef.current && (Math.abs(delta) > 20 || currentY < 100)) {
+        // Expand on meaningful upward scroll OR proactively when nearing the top.
+        // The "near top" trigger ensures the header expansion finishes BEFORE we hit
+        // scrollTop=0, so there's no layout-shift stutter at the scroll boundary.
         expandHeader(el);
         lastScrollY.current = currentY;
         document.body.setAttribute('data-switching', 'true');
@@ -661,8 +722,9 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
         }
 
         loadedBills = loadedBills.map((b) => {
-          if (b.missed) return isNewMonth ? { ...b, paid: false } : b;
-          if (isNewMonth) b = { ...b, paid: false };
+          // New month: clear missed and paid for recurring bills (fresh slate). One-off bills keep their state.
+          if (isNewMonth && b.recurring) b = { ...b, paid: false, missed: false };
+          else if (b.missed) return b; // Keep missed state mid-month or for one-off bills
           if (!b.recurring) return b;
           if (b.frequency === 'Weekly' || b.frequency === 'Fortnightly') {
             if (b.paid && b.lastAutoPaid) {
@@ -671,7 +733,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
               if (daysSince >= (b.frequency === 'Weekly' ? 6 : 13)) b = { ...b, paid: false };
             }
           }
-          if (b.paid) return b;
+          if (b.paid || b.paused) return b;
           if (shouldAutoPay(b)) return { ...b, paid: true, lastAutoPaid: new Date().toISOString() };
           if (shouldAutoMiss(b)) return { ...b, missed: true };
           return b;
@@ -714,13 +776,16 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
         if (data.customDebtTypes) setCustomDebtTypes(data.customDebtTypes);
         if (data.customSavingsCategories) setCustomSavingsCategories(data.customSavingsCategories);
         if (data.salaryCalc) setSalaryCalc(data.salaryCalc);
+        if (data.debtStrategy) setDebtStrategy(data.debtStrategy);
+        if (data.extraDebtPayment !== undefined) setExtraDebtPayment(data.extraDebtPayment);
+        if (data.expenseScope) setExpenseScope(data.expenseScope);
       } else { setBills([]); setDebts([]); }
     } catch (error) { console.log('No stored data, starting fresh'); setBills([]); setDebts([]); }
   };
 
   // ── Save data ──
-  useEffect(() => { if (bills.length > 0 || debts.length > 0 || savings.length > 0 || customCategories.length > 0) saveData(); }, [bills, income, debts, savings, customCategories, categoryOrder, customDebtTypes, customSavingsCategories, salaryCalc]);
-  const saveData = async () => { try { await window.storage.set('bills-data', JSON.stringify({ bills, income: parseFloat(income) || 0, debts, savings, customCategories, categoryOrder, customDebtTypes, customSavingsCategories, monthlySnapshots, salaryCalc, lastMonth: new Date().getFullYear() + '-' + (new Date().getMonth() + 1) })); } catch (e) { console.error('Error saving:', e); } };
+  useEffect(() => { if (bills.length > 0 || debts.length > 0 || savings.length > 0 || customCategories.length > 0) saveData(); }, [bills, income, debts, savings, customCategories, categoryOrder, customDebtTypes, customSavingsCategories, salaryCalc, debtStrategy, extraDebtPayment, expenseScope]);
+  const saveData = async () => { try { await window.storage.set('bills-data', JSON.stringify({ bills, income: parseFloat(income) || 0, debts, savings, customCategories, categoryOrder, customDebtTypes, customSavingsCategories, monthlySnapshots, salaryCalc, debtStrategy, extraDebtPayment, expenseScope, lastMonth: new Date().getFullYear() + '-' + (new Date().getMonth() + 1) })); } catch (e) { console.error('Error saving:', e); } };
 
   // ── Calculations ──
   const categories = categoryOrder.filter(c => DEFAULT_CATEGORIES.includes(c) || customCategories.includes(c));
@@ -781,7 +846,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const handleAddBill = () => {
     const errors = {};
     if (!newBill.name.trim()) errors['bill-name'] = true;
-    if (!newBill.amount && newBill.amount !== 0) errors['bill-amount'] = true;
+    if (!newBill.amount || parseFloat(newBill.amount) <= 0) errors['bill-amount'] = true;
     if (Object.keys(errors).length > 0) { setValidationErrors(errors); haptic.warning(); return; }
     setValidationErrors({});
     const id = Date.now().toString(), amount = parseFloat(newBill.amount) || 0;
@@ -812,7 +877,8 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     if (Object.keys(errors).length > 0) { setValidationErrors(errors); haptic.warning(); return; }
     setValidationErrors({});
     const id = Date.now().toString(), total = parseFloat(newDebt.totalAmount) || 0;
-    const debt = { ...newDebt, id, totalAmount: total, originalAmount: total,
+    const startingPaid = Math.max(0, parseFloat(newDebt.startingPaid) || 0);
+    const debt = { ...newDebt, id, totalAmount: total, originalAmount: total + startingPaid, startingPaid,
       interestRate: Math.max(0, parseFloat(newDebt.interestRate) || 0),
       minimumPayment: Math.max(0, parseFloat(newDebt.minimumPayment) || 0),
       recurringPayment: Math.max(0, parseFloat(newDebt.recurringPayment) || 0),
@@ -829,7 +895,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
       creditLimit: Math.max(0, parseFloat(newDebt.creditLimit) || 0),
       payments: [] };
     if (debt.paymentMode === 'installment' && debt.installmentMonths > 0) {
-      debt.recurringPayment = Math.round((total / debt.installmentMonths) * 100) / 100;
+      debt.recurringPayment = calcInstallmentPayment(total, debt.interestRate || 0, debt.installmentMonths);
     }
     setDebts([...debts, debt]); setShowDebtModal(false); setValidationErrors({}); setNewDebt({ ...emptyDebt }); haptic.success(); toast('Debt added', 'success');
   };
@@ -843,14 +909,17 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     setDebts(debts.map((d) => {
       if (d.id !== editingDebtId) return d;
       const newTotal = parseFloat(editDebtForm.totalAmount) || 0;
-      // If user increased the total debt amount, update originalAmount too
-      // so the progress bar doesn't show false progress
-      const newOriginal = newTotal > (d.originalAmount || d.totalAmount)
-        ? newTotal
-        : (d.originalAmount || d.totalAmount);
+      const newStartingPaid = Math.max(0, parseFloat(editDebtForm.startingPaid) || 0);
+      // If startingPaid changed, recompute originalAmount as balance + already-paid.
+      // Otherwise preserve originalAmount; bump it up only if balance grew above it.
+      const startingPaidChanged = newStartingPaid !== (parseFloat(d.startingPaid) || 0);
+      const newOriginal = startingPaidChanged
+        ? newTotal + newStartingPaid + ((d.payments || []).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0))
+        : (newTotal > (d.originalAmount || d.totalAmount) ? newTotal : (d.originalAmount || d.totalAmount));
       const saved = {
         ...editDebtForm,
         totalAmount: Math.max(0, newTotal),
+        startingPaid: newStartingPaid,
         originalAmount: Math.max(0, newOriginal),
         interestRate: Math.max(0, parseFloat(editDebtForm.interestRate) || 0),
         minimumPayment: Math.max(0, parseFloat(editDebtForm.minimumPayment) || 0),
@@ -870,7 +939,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
       };
       // Recalculate installment recurringPayment if in installment mode
       if (saved.paymentMode === 'installment' && saved.installmentMonths > 0 && saved.originalAmount > 0) {
-        saved.recurringPayment = Math.round((saved.originalAmount / saved.installmentMonths) * 100) / 100;
+        saved.recurringPayment = calcInstallmentPayment(saved.originalAmount, saved.interestRate || 0, saved.installmentMonths);
       }
       return saved;
     }));
@@ -940,7 +1009,21 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   };
 
   // ── Savings handlers ──
-  const handleAddSavings = () => { const errors = {}; if (!newSavingsGoal.name.trim()) errors['savings-name'] = true; if (Object.keys(errors).length > 0) { setValidationErrors(errors); haptic.warning(); return; } setValidationErrors({}); const id = Date.now().toString(); const startingAmount = parseFloat(newSavingsGoal.startingAmount) || 0; const transactions = startingAmount > 0 ? [{ type: 'deposit', amount: startingAmount, date: new Date().toISOString(), note: 'Starting balance' }] : []; setSavings([...savings, { ...newSavingsGoal, id, currentAmount: startingAmount, targetAmount: parseFloat(newSavingsGoal.targetAmount) || 0, monthlyContribution: parseFloat(newSavingsGoal.monthlyContribution) || 0, transactions }]); setShowSavingsModal(false); setValidationErrors({}); setNewSavingsGoal({ ...emptySavings }); haptic.success(); toast('Savings goal created', 'success'); };
+  const handleAddSavings = () => {
+    const errors = {};
+    if (!newSavingsGoal.name.trim()) errors['savings-name'] = true;
+    if (!newSavingsGoal.targetAmount || parseFloat(newSavingsGoal.targetAmount) <= 0) errors['savings-targetAmount'] = true;
+    if (Object.keys(errors).length > 0) { setValidationErrors(errors); haptic.warning(); return; }
+    setValidationErrors({});
+    const id = Date.now().toString();
+    const startingAmount = Math.max(0, parseFloat(newSavingsGoal.startingAmount) || 0);
+    const targetAmount = Math.max(0, parseFloat(newSavingsGoal.targetAmount) || 0);
+    const monthlyContribution = Math.max(0, parseFloat(newSavingsGoal.monthlyContribution) || 0);
+    const transactions = startingAmount > 0 ? [{ type: 'deposit', amount: startingAmount, date: new Date().toISOString(), note: 'Starting balance' }] : [];
+    setSavings([...savings, { ...newSavingsGoal, id, currentAmount: startingAmount, targetAmount, monthlyContribution, transactions }]);
+    setShowSavingsModal(false); setValidationErrors({}); setNewSavingsGoal({ ...emptySavings });
+    haptic.success(); toast('Savings goal created', 'success');
+  };
   const handleDeleteSavings = async (id) => { if (await confirm('Delete this savings goal?', { title: 'Delete Goal', okText: 'Delete', danger: true })) { setSavings(prev => prev.filter((s) => s.id !== id)); haptic.error(); toast('Goal deleted', 'error'); return true; } return false; };
   const handleBulkDeleteSavings = async (ids) => { if (await confirm(`Delete ${ids.length} goal${ids.length > 1 ? 's' : ''}?`, { title: 'Delete Goals', okText: 'Delete', danger: true })) { setSavings(prev => prev.filter((s) => !ids.includes(s.id))); haptic.error(); toast(`${ids.length} goal${ids.length > 1 ? 's' : ''} deleted`, 'error'); } };
   const handleBulkArchiveSavings = (ids) => { setSavings(prev => prev.map((s) => !ids.includes(s.id) ? s : { ...s, archived: true, archivedAt: s.archivedAt || new Date().toISOString() })); haptic.success(); toast(`${ids.length} goal${ids.length > 1 ? 's' : ''} archived`, 'success'); };
@@ -1040,7 +1123,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
         <div style={{ position: 'sticky', top: 0, zIndex: 100, background: 'var(--bg-primary)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', marginLeft: '-12px', marginRight: '-12px', marginTop: '-12px', paddingTop: 'calc(env(safe-area-inset-top) + 12px)', paddingLeft: '12px', paddingRight: '12px' }}>
           <div ref={headerRef} data-header-logo style={{
             overflow: 'hidden',
-            transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin-bottom 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: 'transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin-bottom 0.32s cubic-bezier(0.4, 0, 0.2, 1)',
             transform: 'translateY(0) scaleY(1)',
             transformOrigin: 'top center',
             opacity: 1,
@@ -1100,7 +1183,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 
       {/* Swipe Container */}
       {isMobile ? (
-        <div className="swipe-container" onTouchStart={(e) => { if (window.__tallySelectionMode || window.__tallyModalOpen || document.querySelector('.form-screen.open')) return; handleTouchStart(e); }}>
+        <div className="swipe-container" onTouchStart={(e) => { if (window.__tallySelectionMode || window.__tallyModalOpen || document.querySelector('.form-screen.open')) return; const ae = document.activeElement; if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) return; handleTouchStart(e); }}>
           <div className="swipe-track" ref={swipeRef} style={{ transform: `translateX(${-activePanel * 100}%)` }}>
             <div className={`swipe-panel ${activePanel === 0 ? 'panel-active' : ''}`}>
               <OverviewPanel totals={totals} incomeNum={incomeNum} categoryTotals={categoryTotals} isMobile={isMobile} monthlySnapshots={monthlySnapshots} totalDebt={totalDebt} totalSaved={totalSaved} insights={insights} bills={bills} debts={debts} savings={savings} strategyResults={strategyResults} debtStrategy={debtStrategy} calculateSavingsEstimate={calculateSavingsEstimate} expenseScope={expenseScope} setExpenseScope={setExpenseScope} monthlyDebtPayments={monthlyDebtPayments} monthlySavingsContributions={monthlySavingsContributions} />
@@ -1123,9 +1206,76 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 
       {/* Modals */}
       <AddBillScreen show={showAddModal} onClose={() => setShowAddModal(false)} newBill={newBill} setNewBill={setNewBill} handleAddBill={handleAddBill} categories={categories} validationErrors={validationErrors} setValidationErrors={setValidationErrors} emptyBill={emptyBill} />
+      {(() => {
+        const editingBill = editingId ? bills.find(b => b.id === editingId) : null;
+        return (
+          <EditBillScreen
+            show={!!editingId}
+            onClose={() => { setEditingId(null); setEditForm({}); }}
+            bill={editingBill}
+            editForm={editForm}
+            setEditForm={setEditForm}
+            handleSave={() => { handleEditSave(); }}
+            handleDelete={async () => { const id = editingId; const deleted = await handleDelete(id); if (deleted !== false) { setEditingId(null); setEditForm({}); } }}
+            categories={categories}
+          />
+        );
+      })()}
       <ManageCategoriesModal show={showCategoryModal} onClose={() => setShowCategoryModal(false)} bills={bills} customCategories={customCategories} categoryOrder={categoryOrder} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} handleDeleteCategory={handleDeleteCategory} handleRenameCategory={handleRenameCategory} handleMoveCategory={handleMoveCategory} debts={debts} customDebtTypes={customDebtTypes} setCustomDebtTypes={setCustomDebtTypes} savings={savings} customSavingsCategories={customSavingsCategories} setCustomSavingsCategories={setCustomSavingsCategories} defaultSection={categorySection} />
       <AddDebtScreen show={showDebtModal} onClose={() => setShowDebtModal(false)} newDebt={newDebt} setNewDebt={setNewDebt} handleAddDebt={handleAddDebt} emptyDebt={emptyDebt} validationErrors={validationErrors} setValidationErrors={setValidationErrors} allDebtTypes={allDebtTypes} />
+      {(() => {
+        const editingDebt = editingDebtId ? debts.find(d => d.id === editingDebtId) : null;
+        return (
+          <EditDebtScreen
+            show={!!editingDebtId}
+            onClose={() => { setEditingDebtId(null); setEditDebtForm({}); }}
+            debt={editingDebt}
+            editForm={editDebtForm}
+            setEditForm={setEditDebtForm}
+            handleSave={() => { handleDebtEditSave(); setEditingDebtId(null); setEditDebtForm({}); }}
+            handleDelete={async () => { const id = editingDebtId; const deleted = await handleDeleteDebt(id); if (deleted !== false) { setEditingDebtId(null); setEditDebtForm({}); } }}
+            handleArchive={() => { handleArchiveDebt(editingDebtId); setEditingDebtId(null); setEditDebtForm({}); }}
+            handleUnarchive={() => { handleUnarchiveDebt(editingDebtId); setEditingDebtId(null); setEditDebtForm({}); }}
+            allDebtTypes={allDebtTypes}
+            calculatePayoff={(debt) => {
+              const minPay = debt.minimumPayment || 0;
+              const recurPay = debt.recurringPayment || 0;
+              const monthly = Math.max(minPay, recurPay);
+              return monthly > 0 ? (() => {
+                const r = (debt.interestRate || 0) / 100 / 12;
+                let bal = debt.totalAmount, m = 0, ti = 0;
+                while (bal > 0 && m < 600) {
+                  const i = bal * r;
+                  const principal = monthly - i;
+                  if (principal <= 0) return { months: 600, totalInterest: 0 };
+                  bal -= principal; ti += i; m++;
+                }
+                return { months: m, totalInterest: ti };
+              })() : null;
+            }}
+            paymentHistory={editingDebt?.payments || []}
+          />
+        );
+      })()}
       <AddSavingsScreen show={showSavingsModal} onClose={() => setShowSavingsModal(false)} newSavingsGoal={newSavingsGoal} setNewSavingsGoal={setNewSavingsGoal} handleAddSavings={handleAddSavings} emptySavings={emptySavings} validationErrors={validationErrors} setValidationErrors={setValidationErrors} allSavingsCategories={allSavingsCategories} />
+      {(() => {
+        const editingGoal = editingSavingsId ? savings.find(s => s.id === editingSavingsId) : null;
+        return (
+          <EditSavingsScreen
+            show={!!editingSavingsId}
+            onClose={() => { setEditingSavingsId(null); setEditSavingsForm({}); }}
+            goal={editingGoal}
+            editForm={editSavingsForm}
+            setEditForm={setEditSavingsForm}
+            handleSave={() => { handleSavingsEditSave(); }}
+            handleDelete={async () => { const id = editingSavingsId; const deleted = await handleDeleteSavings(id); if (deleted !== false) { setEditingSavingsId(null); setEditSavingsForm({}); } }}
+            handleArchive={() => { handleArchiveSavings(editingSavingsId); setEditingSavingsId(null); setEditSavingsForm({}); }}
+            handleUnarchive={() => { handleUnarchiveSavings(editingSavingsId); setEditingSavingsId(null); setEditSavingsForm({}); }}
+            allSavingsCategories={allSavingsCategories}
+            transactions={editingGoal?.transactions || []}
+          />
+        );
+      })()}
         <AccountModal show={showAccountModal} onClose={() => setShowAccountModal(false)} user={user} onSignIn={handleSignIn} onSignUp={handleSignUp} onSignOut={handleSignOut} onResetPassword={handleResetPassword} onGoogleSignIn={handleGoogleSignIn} syncStatus={syncStatus} onSyncNow={saveToCloud} onDeleteAccount={handleDeleteAccount} onClearLocalData={handleClearLocalData} lastSynced={lastSynced} />
         <SettingsModal show={showSettingsModal} onClose={() => setShowSettingsModal(false)} theme={theme} onToggleTheme={handleToggleTheme} notificationSettings={notificationSettings} onNotificationSettingsChange={setNotificationSettings} currencyCode={currencyCode} onCurrencyChange={(code) => { setCurrencyCode(code); saveCurrencyPreference(code); }} bills={bills} debts={debts} savings={savings} />
         {showImportModal && (

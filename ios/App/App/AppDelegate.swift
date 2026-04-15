@@ -8,12 +8,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Force dark mode across the entire app — prevents keyboard light-flash
+        // and ensures the WKWebView background matches during keyboard dismiss
+        window?.overrideUserInterfaceStyle = .dark
+
         // Disable bounce/rubber-band scrolling on the WebView
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             if let webView = self.window?.rootViewController?.view.subviews.compactMap({ $0 as? WKWebView }).first {
                 webView.scrollView.bounces = false
                 webView.scrollView.alwaysBounceVertical = false
                 webView.scrollView.alwaysBounceHorizontal = false
+
+                // Match WebView background to app — eliminates white flash on keyboard dismiss
+                let bgColor = UIColor(red: 10/255, green: 14/255, blue: 39/255, alpha: 1) // #0a0e27
+                webView.isOpaque = false
+                webView.backgroundColor = bgColor
+                webView.scrollView.backgroundColor = bgColor
             }
         }
         return true
