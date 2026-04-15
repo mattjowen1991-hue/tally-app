@@ -28,6 +28,7 @@ export default function Picker({ value, onChange, options, className, style, pla
       <button
         ref={triggerRef}
         type="button"
+        data-picker-trigger="true"
         className={className || 'input'}
         onClick={(e) => { e.stopPropagation(); setOpen(true); }}
         style={{

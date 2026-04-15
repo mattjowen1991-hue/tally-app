@@ -244,13 +244,18 @@ function NumericKeypad({ myId, onAppend, onBackspace, onCancel, onCommit, allowD
           touchStartY = null;
           return;
         }
-        // If tap was on a button/link (e.g. Pay, edit pencil), commit the
-        // value so the action receives the typed input. If tap was on empty
-        // space, cancel and revert.
+        // If tap was on a button/link (e.g. Pay, Save), commit the value so
+        // the action receives the typed input. We DELAY the actual close so
+        // the browser's synthetic click event has time to land on the button
+        // before our layout cleanup (translateY reset, padding removal) shifts
+        // it out from under the touch coordinates.
         const isAction = target.closest('button, a, [role="button"]');
         haptic.light();
         if (isAction) {
-          onCommit();
+          // Defer ~150ms — long enough for the browser's click to fire on the
+          // original target before the panel reflows. Matches native iOS/Android
+          // single-tap-fires-action behavior.
+          setTimeout(() => onCommit(), 150);
         } else {
           onCancel();
         }

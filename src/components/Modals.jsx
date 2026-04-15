@@ -625,7 +625,7 @@ export function AddDebtScreen({ show, onClose, newDebt, setNewDebt, handleAddDeb
               </div>
               <div>
                 <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Payment Day</label>
-                <NumericInput className="input" placeholder="Day of month (1-31)" min="1" max="31" value={newDebt.paymentDate || ''} onChange={(e) => { const v = e.target.value; if (v === '') { setNewDebt({ ...newDebt, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setNewDebt({ ...newDebt, paymentDate: String(Math.min(31, Math.max(1, n))) }); }} />
+                <NumericInput className={`input ${validationErrors?.['debt-paymentDate'] ? 'input-error' : ''}`} placeholder="Day of month (1-31)" min="1" max="31" value={newDebt.paymentDate || ''} onChange={(e) => { const v = e.target.value; if (v === '') { setNewDebt({ ...newDebt, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setNewDebt({ ...newDebt, paymentDate: String(Math.min(31, Math.max(1, n))) }); if (validationErrors?.['debt-paymentDate']) { const errs = { ...validationErrors }; delete errs['debt-paymentDate']; setValidationErrors(errs); } }} />
               </div>
 
               {/* Balance Transfer */}
@@ -845,7 +845,7 @@ export function AddSavingsScreen({ show, onClose, newSavingsGoal, setNewSavingsG
 // ══════════════════════════════════════
 // Edit Debt Screen (full-page detail/edit panel)
 // ══════════════════════════════════════
-export function EditDebtScreen({ show, onClose, debt, editForm, setEditForm, handleSave, handleDelete, handleArchive, handleUnarchive, allDebtTypes, calculatePayoff, paymentHistory }) {
+export function EditDebtScreen({ show, onClose, debt, editForm, setEditForm, handleSave, handleDelete, handleArchive, handleUnarchive, allDebtTypes, calculatePayoff, paymentHistory, validationErrors, setValidationErrors }) {
   const cs = useCurrency();
   // Tap-to-close (back arrow / Cancel) gets a haptic; swipe-back uses system haptic
   const handleClose = (skipHaptic = false) => {
@@ -932,7 +932,7 @@ export function EditDebtScreen({ show, onClose, debt, editForm, setEditForm, han
           {/* ── Editable fields (mirror AddDebtScreen) ── */}
           <div>
             <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Name</label>
-            <input className="input" placeholder="e.g., Barclaycard" value={editForm.name || ''} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+            <input className={`input ${validationErrors?.['debt-name'] ? 'input-error' : ''}`} placeholder="e.g., Barclaycard" value={editForm.name || ''} onChange={(e) => { setEditForm({ ...editForm, name: e.target.value }); if (validationErrors?.['debt-name']) { const v = { ...validationErrors }; delete v['debt-name']; setValidationErrors(v); } }} />
           </div>
           <div>
             <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Type</label>
@@ -940,7 +940,7 @@ export function EditDebtScreen({ show, onClose, debt, editForm, setEditForm, han
           </div>
           <div>
             <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Current Balance</label>
-            <NumericInput className="input" placeholder="0.00" value={editForm.totalAmount} onChange={(e) => setEditForm({ ...editForm, totalAmount: e.target.value })} />
+            <NumericInput className={`input ${validationErrors?.['debt-amount'] ? 'input-error' : ''}`} placeholder="0.00" value={editForm.totalAmount} onChange={(e) => { setEditForm({ ...editForm, totalAmount: e.target.value }); if (validationErrors?.['debt-amount']) { const v = { ...validationErrors }; delete v['debt-amount']; setValidationErrors(v); } }} />
           </div>
           <div>
             <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Already Paid (before Tally)</label>
@@ -1007,7 +1007,7 @@ export function EditDebtScreen({ show, onClose, debt, editForm, setEditForm, han
               </div>
               <div>
                 <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Payment Day</label>
-                <NumericInput className="input" placeholder="Day of month (1-31)" min="1" max="31" value={editForm.paymentDate || ''} onChange={(e) => { const v = e.target.value; if (v === '') { setEditForm({ ...editForm, paymentDate: '' }); return; } const n = parseInt(v); if (!isNaN(n)) setEditForm({ ...editForm, paymentDate: String(Math.min(31, Math.max(1, n))) }); }} />
+                <NumericInput className={`input ${validationErrors?.['debt-paymentDate'] ? 'input-error' : ''}`} placeholder="Day of month (1-31)" min="1" max="31" value={editForm.paymentDate || ''} onChange={(e) => { const v = e.target.value; if (v === '') { setEditForm({ ...editForm, paymentDate: '' }); } else { const n = parseInt(v); if (!isNaN(n)) setEditForm({ ...editForm, paymentDate: String(Math.min(31, Math.max(1, n))) }); } if (validationErrors?.['debt-paymentDate']) { const errs = { ...validationErrors }; delete errs['debt-paymentDate']; setValidationErrors(errs); } }} />
               </div>
             </>
           )}
@@ -1137,7 +1137,7 @@ export function EditDebtScreen({ show, onClose, debt, editForm, setEditForm, han
 // ══════════════════════════════════════
 // Edit Savings Screen (full-page detail/edit panel)
 // ══════════════════════════════════════
-export function EditSavingsScreen({ show, onClose, goal, editForm, setEditForm, handleSave, handleDelete, handleArchive, handleUnarchive, allSavingsCategories, transactions }) {
+export function EditSavingsScreen({ show, onClose, goal, editForm, setEditForm, handleSave, handleDelete, handleArchive, handleUnarchive, allSavingsCategories, transactions, validationErrors, setValidationErrors }) {
   const cs = useCurrency();
   const handleClose = (skipHaptic = false) => {
     if (!skipHaptic) haptic.light();
@@ -1260,7 +1260,7 @@ export function EditSavingsScreen({ show, onClose, goal, editForm, setEditForm, 
           {/* ── Editable fields ── */}
           <div>
             <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Goal Name</label>
-            <input className="input" placeholder="e.g., Holiday Fund" value={editForm.name || ''} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+            <input className={`input ${validationErrors?.['savings-name'] ? 'input-error' : ''}`} placeholder="e.g., Holiday Fund" value={editForm.name || ''} onChange={(e) => { setEditForm({ ...editForm, name: e.target.value }); if (validationErrors?.['savings-name']) { const v = { ...validationErrors }; delete v['savings-name']; setValidationErrors(v); } }} />
           </div>
           <div>
             <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Category</label>
@@ -1273,7 +1273,7 @@ export function EditSavingsScreen({ show, onClose, goal, editForm, setEditForm, 
             </div>
             <div>
               <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Target</label>
-              <NumericInput className="input" placeholder="0.00" value={editForm.targetAmount} onChange={(e) => setEditForm({ ...editForm, targetAmount: e.target.value })} />
+              <NumericInput className={`input ${validationErrors?.['savings-targetAmount'] ? 'input-error' : ''}`} placeholder="0.00" value={editForm.targetAmount} onChange={(e) => { setEditForm({ ...editForm, targetAmount: e.target.value }); if (validationErrors?.['savings-targetAmount']) { const v = { ...validationErrors }; delete v['savings-targetAmount']; setValidationErrors(v); } }} />
             </div>
           </div>
           <div>
@@ -1351,7 +1351,7 @@ export function EditSavingsScreen({ show, onClose, goal, editForm, setEditForm, 
 // ══════════════════════════════════════
 // Edit Bill Screen (full-page detail/edit panel)
 // ══════════════════════════════════════
-export function EditBillScreen({ show, onClose, bill, editForm, setEditForm, handleSave, handleDelete, categories }) {
+export function EditBillScreen({ show, onClose, bill, editForm, setEditForm, handleSave, handleDelete, categories, validationErrors, setValidationErrors }) {
   const cs = useCurrency();
   const handleClose = (skipHaptic = false) => {
     if (!skipHaptic) haptic.light();
@@ -1423,7 +1423,7 @@ export function EditBillScreen({ show, onClose, bill, editForm, setEditForm, han
           {/* ── Editable fields ── */}
           <div>
             <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Bill Name</label>
-            <input className="input" placeholder="e.g., Electric Bill" value={editForm.name || ''} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+            <input className={`input ${validationErrors?.['bill-name'] ? 'input-error' : ''}`} placeholder="e.g., Electric Bill" value={editForm.name || ''} onChange={(e) => { setEditForm({ ...editForm, name: e.target.value }); if (validationErrors?.['bill-name']) { const v = { ...validationErrors }; delete v['bill-name']; setValidationErrors(v); } }} />
           </div>
           <div>
             <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>Category</label>

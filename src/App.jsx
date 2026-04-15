@@ -837,7 +837,16 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // ── Bill handlers ──
   const handleEditStart = (bill) => { setEditingId(bill.id); setEditForm({ ...bill }); };
-  const handleEditSave = () => { setBills(bills.map((b) => (b.id === editingId ? { ...editForm, projected: parseFloat(editForm.projected) || 0, actual: parseFloat(editForm.actual) || 0 } : b))); setEditingId(null); setEditForm({}); haptic.medium(); toast('Bill updated', 'success'); };
+  const handleEditSave = () => {
+    const errors = {};
+    if (!editForm.name?.trim()) errors['bill-name'] = true;
+    if (!editForm.actual && !editForm.projected) errors['bill-amount'] = true;
+    if (Object.keys(errors).length > 0) { setValidationErrors(errors); haptic.warning(); return false; }
+    setValidationErrors({});
+    setBills(bills.map((b) => (b.id === editingId ? { ...editForm, projected: parseFloat(editForm.projected) || 0, actual: parseFloat(editForm.actual) || 0 } : b)));
+    setEditingId(null); setEditForm({}); haptic.medium(); toast('Bill updated', 'success');
+    return true;
+  };
   const handleDelete = async (id) => { if (await confirm('Delete this bill?', { title: 'Delete Bill', okText: 'Delete', danger: true })) { setBills(bills.filter((b) => b.id !== id)); haptic.error(); toast('Bill deleted', 'error'); return true; } return false; };
   const handleBulkDeleteBills = (ids) => { setBills(bills.filter((b) => !ids.includes(b.id))); haptic.error(); toast(`${ids.length} bill${ids.length > 1 ? 's' : ''} deleted`, 'error'); };
   const handleBulkTogglePaid = (ids) => { setBills(bills.map((b) => ids.includes(b.id) ? { ...b, paid: true, missed: false, paused: false } : b)); haptic.success(); toast(`${ids.length} bill${ids.length > 1 ? 's' : ''} marked paid`, 'success'); };
@@ -869,6 +878,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     if (!newDebt.name.trim()) errors['debt-name'] = true;
     if (!newDebt.totalAmount || parseFloat(newDebt.totalAmount) <= 0) errors['debt-amount'] = true;
     const mode = newDebt.paymentMode || 'recurring';
+    if (mode === 'recurring' && !newDebt.paymentDate) errors['debt-paymentDate'] = true;
     if (mode === 'one-off' && !newDebt.dueDate) errors['debt-dueDate'] = true;
     if (mode === 'installment' && (!newDebt.installmentMonths || parseInt(newDebt.installmentMonths) <= 0)) errors['debt-installmentMonths'] = true;
     if (mode === 'installment' && !newDebt.installmentStartDate) errors['debt-installmentStartDate'] = true;
@@ -906,6 +916,18 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const handleUnarchiveDebt = (id) => { setDebts(debts.map((d) => d.id !== id ? d : { ...d, archived: false })); haptic.medium(); toast('Debt restored', 'info'); };
   const handleDebtEditStart = (debt) => { setEditingDebtId(debt.id); setEditDebtForm({ ...debt }); };
   const handleDebtEditSave = () => {
+    const errors = {};
+    if (!editDebtForm.name?.trim()) errors['debt-name'] = true;
+    if (!editDebtForm.totalAmount || parseFloat(editDebtForm.totalAmount) < 0) errors['debt-amount'] = true;
+    const editMode = editDebtForm.paymentMode || 'recurring';
+    if (editMode === 'recurring' && !editDebtForm.paymentDate) errors['debt-paymentDate'] = true;
+    if (editMode === 'one-off' && !editDebtForm.dueDate) errors['debt-dueDate'] = true;
+    if (editMode === 'installment' && (!editDebtForm.installmentMonths || parseInt(editDebtForm.installmentMonths) <= 0)) errors['debt-installmentMonths'] = true;
+    if (editMode === 'installment' && !editDebtForm.installmentStartDate) errors['debt-installmentStartDate'] = true;
+    if (editMode === 'bnpl' && (!editDebtForm.bnplPromoMonths || parseInt(editDebtForm.bnplPromoMonths) <= 0)) errors['debt-bnplPromoMonths'] = true;
+    if (editMode === 'bnpl' && !editDebtForm.bnplStartDate) errors['debt-bnplStartDate'] = true;
+    if (Object.keys(errors).length > 0) { setValidationErrors(errors); haptic.warning(); return false; }
+    setValidationErrors({});
     setDebts(debts.map((d) => {
       if (d.id !== editingDebtId) return d;
       const newTotal = parseFloat(editDebtForm.totalAmount) || 0;
@@ -947,6 +969,7 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
     setEditDebtForm({});
     haptic.medium();
     toast('Debt updated', 'success');
+    return true;
   };
   const handleMakePayment = (debtId) => {
     const amount = parseFloat(debtPaymentAmounts[debtId]);
@@ -1030,7 +1053,16 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
   const handleArchiveSavings = (id) => { setSavings(savings.map((s) => s.id !== id ? s : { ...s, archived: true, archivedAt: s.archivedAt || new Date().toISOString() })); haptic.success(); toast('Goal archived', 'success'); };
   const handleUnarchiveSavings = (id) => { setSavings(savings.map((s) => s.id !== id ? s : { ...s, archived: false })); haptic.medium(); toast('Goal restored', 'info'); };
   const handleSavingsEditStart = (goal) => { setEditingSavingsId(goal.id); setEditSavingsForm({ ...goal }); };
-  const handleSavingsEditSave = () => { setSavings(savings.map((s) => s.id === editingSavingsId ? { ...editSavingsForm, targetAmount: parseFloat(editSavingsForm.targetAmount) || 0, monthlyContribution: parseFloat(editSavingsForm.monthlyContribution) || 0, currentAmount: parseFloat(editSavingsForm.currentAmount) || 0 } : s)); setEditingSavingsId(null); setEditSavingsForm({}); haptic.medium(); toast('Goal updated', 'success'); };
+  const handleSavingsEditSave = () => {
+    const errors = {};
+    if (!editSavingsForm.name?.trim()) errors['savings-name'] = true;
+    if (!editSavingsForm.targetAmount || parseFloat(editSavingsForm.targetAmount) <= 0) errors['savings-targetAmount'] = true;
+    if (Object.keys(errors).length > 0) { setValidationErrors(errors); haptic.warning(); return false; }
+    setValidationErrors({});
+    setSavings(savings.map((s) => s.id === editingSavingsId ? { ...editSavingsForm, targetAmount: parseFloat(editSavingsForm.targetAmount) || 0, monthlyContribution: parseFloat(editSavingsForm.monthlyContribution) || 0, currentAmount: parseFloat(editSavingsForm.currentAmount) || 0 } : s));
+    setEditingSavingsId(null); setEditSavingsForm({}); haptic.medium(); toast('Goal updated', 'success');
+    return true;
+  };
   const handleSavingsDeposit = (goalId) => { const a = parseFloat(savingsTransactionAmounts[goalId]); if (!a || a === 0) return; doSavingsTransaction(goalId, Math.abs(a), 'deposit'); };
   const handleSavingsWithdraw = (goalId) => { const a = parseFloat(savingsTransactionAmounts[goalId]); if (!a || a === 0) return; doSavingsTransaction(goalId, -Math.abs(a), 'withdrawal'); };
   const doSavingsTransaction = (goalId, amount, type) => {
@@ -1211,13 +1243,15 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
         return (
           <EditBillScreen
             show={!!editingId}
-            onClose={() => { setEditingId(null); setEditForm({}); }}
+            onClose={() => { setEditingId(null); setEditForm({}); setValidationErrors({}); }}
             bill={editingBill}
             editForm={editForm}
             setEditForm={setEditForm}
-            handleSave={() => { handleEditSave(); }}
-            handleDelete={async () => { const id = editingId; const deleted = await handleDelete(id); if (deleted !== false) { setEditingId(null); setEditForm({}); } }}
+            handleSave={() => handleEditSave()}
+            handleDelete={async () => { const id = editingId; const deleted = await handleDelete(id); if (deleted !== false) { setEditingId(null); setEditForm({}); setValidationErrors({}); } }}
             categories={categories}
+            validationErrors={validationErrors}
+            setValidationErrors={setValidationErrors}
           />
         );
       })()}
@@ -1228,15 +1262,17 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
         return (
           <EditDebtScreen
             show={!!editingDebtId}
-            onClose={() => { setEditingDebtId(null); setEditDebtForm({}); }}
+            onClose={() => { setEditingDebtId(null); setEditDebtForm({}); setValidationErrors({}); }}
             debt={editingDebt}
             editForm={editDebtForm}
             setEditForm={setEditDebtForm}
-            handleSave={() => { handleDebtEditSave(); setEditingDebtId(null); setEditDebtForm({}); }}
-            handleDelete={async () => { const id = editingDebtId; const deleted = await handleDeleteDebt(id); if (deleted !== false) { setEditingDebtId(null); setEditDebtForm({}); } }}
-            handleArchive={() => { handleArchiveDebt(editingDebtId); setEditingDebtId(null); setEditDebtForm({}); }}
-            handleUnarchive={() => { handleUnarchiveDebt(editingDebtId); setEditingDebtId(null); setEditDebtForm({}); }}
+            handleSave={() => handleDebtEditSave()}
+            handleDelete={async () => { const id = editingDebtId; const deleted = await handleDeleteDebt(id); if (deleted !== false) { setEditingDebtId(null); setEditDebtForm({}); setValidationErrors({}); } }}
+            handleArchive={() => { handleArchiveDebt(editingDebtId); setEditingDebtId(null); setEditDebtForm({}); setValidationErrors({}); }}
+            handleUnarchive={() => { handleUnarchiveDebt(editingDebtId); setEditingDebtId(null); setEditDebtForm({}); setValidationErrors({}); }}
             allDebtTypes={allDebtTypes}
+            validationErrors={validationErrors}
+            setValidationErrors={setValidationErrors}
             calculatePayoff={(debt) => {
               const minPay = debt.minimumPayment || 0;
               const recurPay = debt.recurringPayment || 0;
@@ -1263,16 +1299,18 @@ const [showSettingsModal, setShowSettingsModal] = useState(false);
         return (
           <EditSavingsScreen
             show={!!editingSavingsId}
-            onClose={() => { setEditingSavingsId(null); setEditSavingsForm({}); }}
+            onClose={() => { setEditingSavingsId(null); setEditSavingsForm({}); setValidationErrors({}); }}
             goal={editingGoal}
             editForm={editSavingsForm}
             setEditForm={setEditSavingsForm}
-            handleSave={() => { handleSavingsEditSave(); }}
-            handleDelete={async () => { const id = editingSavingsId; const deleted = await handleDeleteSavings(id); if (deleted !== false) { setEditingSavingsId(null); setEditSavingsForm({}); } }}
-            handleArchive={() => { handleArchiveSavings(editingSavingsId); setEditingSavingsId(null); setEditSavingsForm({}); }}
-            handleUnarchive={() => { handleUnarchiveSavings(editingSavingsId); setEditingSavingsId(null); setEditSavingsForm({}); }}
+            handleSave={() => handleSavingsEditSave()}
+            handleDelete={async () => { const id = editingSavingsId; const deleted = await handleDeleteSavings(id); if (deleted !== false) { setEditingSavingsId(null); setEditSavingsForm({}); setValidationErrors({}); } }}
+            handleArchive={() => { handleArchiveSavings(editingSavingsId); setEditingSavingsId(null); setEditSavingsForm({}); setValidationErrors({}); }}
+            handleUnarchive={() => { handleUnarchiveSavings(editingSavingsId); setEditingSavingsId(null); setEditSavingsForm({}); setValidationErrors({}); }}
             allSavingsCategories={allSavingsCategories}
             transactions={editingGoal?.transactions || []}
+            validationErrors={validationErrors}
+            setValidationErrors={setValidationErrors}
           />
         );
       })()}

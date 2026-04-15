@@ -79,10 +79,22 @@ async function mirrorThemeToNative(theme) {
     const prefs = window.Capacitor?.Plugins?.Preferences;
     if (prefs) await prefs.set({ key: '_tally_theme_native', value: theme });
   } catch {}
-  // Tell native Android to switch night mode immediately (affects select dialogs, paste popup, etc.)
-  try {
-    if (window.TallyNative?.setTheme) window.TallyNative.setTheme(theme);
-  } catch {}
+  // Tell native Android to switch night mode immediately. Critical: this
+  // controls the Activity's theme context, which is what native popups
+  // (date picker, text-selection handle backdrop) inherit. If we miss this
+  // call, the whole app shows native UI in the wrong theme.
+  // Retry until TallyNative is registered (it's injected on first paint).
+  let attempts = 0;
+  const tryNotify = () => {
+    try {
+      if (window.TallyNative?.setTheme) {
+        window.TallyNative.setTheme(theme);
+        return;
+      }
+    } catch {}
+    if (++attempts < 50) setTimeout(tryNotify, 100);
+  };
+  tryNotify();
 }
 export function applyStatusBarWhenReady(theme) {
   if (window.Capacitor?.Plugins?.StatusBar) {

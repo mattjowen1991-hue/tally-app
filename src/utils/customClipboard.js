@@ -8,11 +8,29 @@ export function initCustomClipboard() {
     }
   }, { passive: false });
 
-  // Block selectionchange-driven action mode by clearing selection on touchend
-  document.addEventListener('selectstart', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-      // Allow selection inside inputs (needed for cursor positioning) but block
-      // the long-press selection that triggers the action mode.
-    }
-  });
+  // Detect long-press on inputs and clear any selection it creates so the
+  // native action mode (selection handles + copy/paste menu) doesn't start.
+  let pressTimer = null;
+  let pressTarget = null;
+  document.addEventListener('touchstart', (e) => {
+    const el = e.target;
+    if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return;
+    pressTarget = el;
+    pressTimer = setTimeout(() => {
+      // After the long-press threshold, blur and re-focus to clear any
+      // selection that was about to be created
+      if (pressTarget) {
+        const cursorPos = pressTarget.selectionStart;
+        pressTarget.setSelectionRange(cursorPos, cursorPos);
+      }
+    }, 400);
+  }, { passive: true });
+
+  const cancelPress = () => {
+    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+    pressTarget = null;
+  };
+  document.addEventListener('touchmove', cancelPress, { passive: true });
+  document.addEventListener('touchend', cancelPress, { passive: true });
+  document.addEventListener('touchcancel', cancelPress, { passive: true });
 }

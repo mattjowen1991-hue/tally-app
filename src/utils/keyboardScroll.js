@@ -21,13 +21,26 @@ export function initKeyboardScroll() {
     e.preventDefault();
   }, { passive: false });
 
-  // Move focus to next text input in the modal, form-screen, or inline panel edit form
+  // Global Enter handler: move focus to next text input, dismiss keyboard at last
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const el = e.target;
+    if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return;
+    if (el.type === 'submit' || el.type === 'button') return;
+    e.preventDefault();
+    window.moveFocusToNext?.(el);
+  });
+
+  // Move focus to next interactive form element in the surrounding container.
+  // Includes inputs, textareas, and our custom <Picker> trigger buttons so
+  // pressing Enter on the alphabetical keyboard advances through every field
+  // in document order, opening the picker if it's next.
   window.moveFocusToNext = (currentEl) => {
     const container = currentEl.closest('.modal-content') || currentEl.closest('.form-screen-body') || currentEl.closest('.swipe-panel');
     if (!container) return;
 
     const focusable = Array.from(
-      container.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea:not([disabled])')
+      container.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), button[data-picker-trigger]')
     ).filter(el => {
       if (el.offsetParent === null) return false;
       if (el.type === 'date') return false;
@@ -38,7 +51,15 @@ export function initKeyboardScroll() {
     if (idx === -1) return;
 
     if (idx < focusable.length - 1) {
-      focusable[idx + 1].focus();
+      const next = focusable[idx + 1];
+      // Blur current first so the keyboard dismisses cleanly before opening the picker
+      currentEl.blur();
+      if (next.dataset.pickerTrigger) {
+        // Open the picker bottom sheet directly
+        setTimeout(() => next.click(), 50);
+      } else {
+        next.focus();
+      }
     } else {
       currentEl.blur();
     }

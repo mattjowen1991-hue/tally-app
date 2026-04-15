@@ -6,6 +6,7 @@
         <item name="colorAccent">@color/colorAccent</item>
         <item name="android:statusBarColor">@color/colorPrimary</item>
         <item name="android:windowLightStatusBar">false</item>
+        <item name="android:textSelectHandleWindowStyle">@style/TextSelectHandleWindow</item>
     </style>
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
@@ -14,6 +15,22 @@
         <item name="android:statusBarColor">#0a0e27</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowBackground">@color/colorPrimary</item>
+        <!-- Fix: WebView renders text selection handles inside a PopupWindow
+             styled by textSelectHandleWindowStyle. The default style does NOT
+             set popupBackground, so it inherits the theme's opaque dark popup
+             background — causing a visible dark rectangle behind the handle.
+             Override it with a transparent background so the handle renders
+             cleanly, exactly like native EditText fields. -->
+        <item name="android:textSelectHandleWindowStyle">@style/TextSelectHandleWindow</item>
+    </style>
+
+    <!-- Transparent popup background for WebView text selection handles.
+         Cannot use Widget.TextSelectHandle as parent (it's @hide/private).
+         That style only sets popupAnimationStyle, so we replicate it here
+         and add the transparent popupBackground to eliminate the dark rect. -->
+    <style name="TextSelectHandleWindow">
+        <item name="android:popupAnimationStyle">@android:style/Animation</item>
+        <item name="android:popupBackground">@android:color/transparent</item>
     </style>
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
