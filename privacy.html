@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tally - Privacy Policy</title>
+    <style>
+        :root {
+            --bg: #0A0E27;
+            --surface: #121630;
+            --text: #E8ECF4;
+            --muted: #9CA3AF;
+            --primary: #00D4FF;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 0 20px;
+        }
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 40px 0 80px;
+        }
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #1E63D6, #34C759);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .updated {
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+        h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 32px 0 12px;
+            color: var(--primary);
+        }
+        h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 20px 0 8px;
+        }
+        p, li {
+            color: var(--muted);
+            margin-bottom: 12px;
+        }
+        ul {
+            padding-left: 20px;
+            margin-bottom: 16px;
+        }
+        li { margin-bottom: 6px; }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 16px 0;
+        }
+        .highlight {
+            color: var(--text);
+            font-weight: 500;
+        }
+        a { color: var(--primary); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .badge {
+            display: inline-block;
+            background: rgba(0,212,255,0.1);
+            border: 1px solid rgba(0,212,255,0.2);
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 13px;
+            color: var(--primary);
+        }
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg: #FFFFFF;
+                --surface: #F3F4F6;
+                --text: #111827;
+                --muted: #6B7280;
+                --primary: #0891B2;
+                --border: rgba(0,0,0,0.08);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Privacy Policy</h1>
+        <p class="updated">Last updated: 29 April 2026</p>
+
+        <p>Tally ("we", "our", "the app") is a personal finance tracking application. Your privacy matters to us. This policy explains what data we collect, why, how we store it, and your rights.</p>
+
+        <div class="card">
+            <p class="highlight">The short version: Tally works fully offline. You don't need an account. If you do sign in, your data syncs to a secure cloud database so you can access it across devices. We never sell your data, show ads, or use analytics trackers.</p>
+        </div>
+
+        <h2>1. What Data We Collect</h2>
+
+        <h3>Data you provide</h3>
+        <ul>
+            <li><span class="highlight">Financial tracking data</span> - bill names, amounts, due dates, categories, payment status; debt names, balances, interest rates, payment history; savings goal names, targets, deposits, withdrawals</li>
+            <li><span class="highlight">Preferences</span> - monthly income, currency, theme, notification settings, calculator settings</li>
+            <li><span class="highlight">Account data</span> (optional) - email address and authentication credentials if you choose to create an account for cloud sync</li>
+        </ul>
+
+        <h3>Data we collect automatically</h3>
+        <ul>
+            <li><span class="highlight">None by default.</span> We do not use analytics, crash reporting services, advertising SDKs, or tracking pixels.</li>
+            <li>If you choose to send a bug report via Settings, diagnostic data about your device (model, OS version, screen size, battery level) is attached. This <span class="highlight">never includes your financial data, income, or bill/debt amounts.</span></li>
+        </ul>
+
+        <h3>Data we do NOT collect</h3>
+        <ul>
+            <li>Bank account numbers, sort codes, or card details</li>
+            <li>Location data</li>
+            <li>Contacts, photos, or files</li>
+            <li>Browsing history or app usage analytics</li>
+            <li>Advertising identifiers</li>
+        </ul>
+
+        <h2>2. Why We Collect It</h2>
+        <ul>
+            <li><span class="highlight">Financial tracking data</span> - to provide the core bill, debt, and savings tracking features you use the app for</li>
+            <li><span class="highlight">Preferences</span> - to remember your settings (currency, theme, notification time) between sessions</li>
+            <li><span class="highlight">Account data</span> - to authenticate you and sync your data across devices if you choose to sign in</li>
+            <li><span class="highlight">Diagnostic data</span> (only when you send a bug report) - to help us fix issues you report</li>
+        </ul>
+
+        <h2>3. How We Store Your Data</h2>
+
+        <h3>On your device (local storage)</h3>
+        <p>All your financial data is stored locally on your device in a private database that only the Tally app can access. This works without an internet connection or account.</p>
+
+        <h3>In the cloud (optional)</h3>
+        <p>If you sign in, your data is encrypted in transit (HTTPS/TLS) and synced to our cloud database hosted by <a href="https://supabase.com">Supabase</a> (PostgreSQL). Supabase provides encryption at rest for all stored data. Your data is accessible only to your authenticated account.</p>
+
+        <div class="card">
+            <p class="highlight">You are always in control. You can use Tally entirely offline with no account. Cloud sync is optional and can be disabled at any time by signing out.</p>
+        </div>
+
+        <h2>4. Third-Party Services</h2>
+        <p>We use a small number of third-party services, only for core functionality:</p>
+        <ul>
+            <li><span class="highlight">Supabase</span> - cloud database and authentication (stores your synced data if you sign in)</li>
+            <li><span class="highlight">Google Sign-In</span> - optional authentication method (we receive your email address only)</li>
+        </ul>
+        <p>We do <span class="highlight">not</span> use:</p>
+        <ul>
+            <li>Google Analytics, Firebase Analytics, or any analytics service</li>
+            <li>Advertising networks or ad SDKs</li>
+            <li>Crash reporting services (Crashlytics, Sentry, etc.)</li>
+            <li>Social media tracking pixels</li>
+        </ul>
+
+        <h2>5. Data Sharing</h2>
+        <p>We <span class="highlight">never</span> sell, rent, or trade your personal data. We do not share your financial information with advertisers, data brokers, or any third party for marketing purposes.</p>
+        <p>Your data is shared only with:</p>
+        <ul>
+            <li><span class="highlight">Supabase</span> - our cloud database provider, solely for the purpose of storing and syncing your data</li>
+            <li><span class="highlight">Google</span> - solely for authentication if you use Google Sign-In</li>
+        </ul>
+
+        <h2>6. Data Retention</h2>
+        <ul>
+            <li><span class="highlight">Local data</span> - stored on your device until you delete it via Settings or uninstall the app</li>
+            <li><span class="highlight">Cloud data</span> - stored as long as your account exists. You can delete all cloud data at any time by signing out and using the "Clear All Data" option in Settings</li>
+            <li><span class="highlight">Authentication data</span> - managed by Supabase. Session tokens expire and are refreshed automatically</li>
+        </ul>
+
+        <h2>7. Your Rights</h2>
+        <p>Under UK GDPR, EU GDPR, and applicable data protection laws, you have the right to:</p>
+        <ul>
+            <li><span class="highlight">Access</span> - view all your data within the app at any time</li>
+            <li><span class="highlight">Rectification</span> - edit any of your data through the app's edit screens</li>
+            <li><span class="highlight">Erasure</span> - delete all local data via Settings > Clear All Data. Cloud data can be removed by contacting us</li>
+            <li><span class="highlight">Portability</span> - your data is stored in standard formats and can be accessed through the app</li>
+            <li><span class="highlight">Restriction</span> - you can use the app entirely offline without sharing any data</li>
+            <li><span class="highlight">Withdraw consent</span> - sign out at any time to stop cloud sync</li>
+        </ul>
+        <p>To exercise any of these rights, contact us at <a href="mailto:tallytracking@gmail.com">tallytracking@gmail.com</a>.</p>
+
+        <h2>8. Security</h2>
+        <ul>
+            <li>All data transmitted between your device and our servers is encrypted using HTTPS/TLS</li>
+            <li>Cloud data is encrypted at rest by our database provider (Supabase)</li>
+            <li>Passwords are hashed using industry-standard bcrypt (never stored in plaintext)</li>
+            <li>Local data is stored in Android's private app sandbox, inaccessible to other apps</li>
+            <li>Authentication uses secure JWT tokens with automatic expiry and refresh</li>
+        </ul>
+
+        <h2>9. Android Permissions</h2>
+        <p>Tally requests only the minimum permissions needed:</p>
+        <ul>
+            <li><span class="badge">INTERNET</span> Cloud sync and authentication</li>
+            <li><span class="badge">POST_NOTIFICATIONS</span> Bill and debt payment reminders (requested at runtime, optional)</li>
+            <li><span class="badge">VIBRATE</span> Haptic feedback on button presses</li>
+            <li><span class="badge">RECEIVE_BOOT_COMPLETED</span> Reschedule notification alarms after device restart</li>
+        </ul>
+        <p>We do <span class="highlight">not</span> request access to your camera, contacts, location, microphone, calendar, SMS, or files.</p>
+
+        <h2>10. Children's Privacy</h2>
+        <p>Tally is designed for adults managing their personal finances. We do not knowingly collect data from children under 16. If you believe a child has provided us with personal data, please contact us and we will delete it.</p>
+
+        <h2>11. Changes to This Policy</h2>
+        <p>We may update this privacy policy from time to time. Material changes will be communicated through the app or via email if you have an account. The "Last updated" date at the top of this page reflects the most recent revision.</p>
+
+        <h2>12. Contact Us</h2>
+        <p>If you have questions about this privacy policy or how your data is handled, contact us at:</p>
+        <p><a href="mailto:tallytracking@gmail.com">tallytracking@gmail.com</a></p>
+
+        <div class="card" style="margin-top: 40px;">
+            <p style="color: var(--muted); font-size: 13px; margin: 0;">Tally is developed and maintained independently. We are committed to transparency and user privacy. This policy applies to the Tally app on Android and iOS.</p>
+        </div>
+    </div>
+</body>
+</html>
